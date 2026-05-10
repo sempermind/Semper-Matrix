@@ -161,8 +161,8 @@ Return ONLY valid JSON. No markdown, no backticks, no explanation.
     {"title": "RISK TITLE IN ALL CAPS", "body": "2 sentences — what happens if this risk materializes and the one specific action that protects against it."}
   ],
   "iq_questions": [
-    {"question": "Full iQ question: opening phrase + specific current state intel from Matrix + connecting word + specific future state intel from Matrix + impact prompt + personal or career consequence. Never operational. Use specific numbers or dates from Matrix if available.", "timing": "Use [early/mid/late in conversation] — one sentence on what this question surfaces and why it matters at that moment."},
-    {"question": "Second iQ question built from different Matrix cells than the first.", "timing": "Use [timing] — rationale."}
+    {"question": "Built using the iQ Formula: CURRENT REALITY (one specific insight from the CURRENT STATE row) + FUTURE STATE (one specific insight from the FUTURE STATE row) + IMPACT (what is personally at stake for them — drawn from whichever Matrix box carries the sharpest personal or professional consequence right now: could be Public Commitments, Missing Support, Career Trajectory, Resource Requirements, or any other box where the stakes are most personal). Impact must always be personal — career, reputation, a relationship, a public promise they've made — never operational. Use specific numbers, timelines, or details from the Matrix. Frame as a question that makes them stop and think, not a question they've rehearsed an answer to.", "timing": "Use [early/mid/late in conversation] — one sentence on what this question surfaces and why it matters at that moment."},
+    {"question": "Second iQ question using the same formula — CURRENT REALITY + FUTURE STATE + IMPACT — but drawing from different Matrix cells than the first question. The impact box should be whichever creates the most personal tension for this person given everything else in the Matrix.", "timing": "Use [timing] — rationale."}
   ],
   "watch_for": [
     "Observable behavior — specific to this person and this deal, not a generic buying signal",
@@ -812,7 +812,7 @@ function AnalysisScreen({ deal, analysis, aiSources, onBack, onRedo }) {
 
   // ── SECTION BADGE (matches screenshot red outlined pill with diamond icon) ──
   const SectionBadge = ({ icon = "◆", label }) => (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
       <span style={{ color: RED, fontSize: "9px" }}>{icon}</span>
       <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>{label}</span>
     </div>
@@ -900,8 +900,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
             {/* WHAT THE MATRIX IS TELLING YOU */}
             {(analysis.findings || []).length > 0 && (
               <div style={{ marginBottom: "36px" }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                  <span style={{ color: "#000", fontSize: "9px" }}>◆</span>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
                   <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>WHAT THE MATRIX IS TELLING YOU</span>
                 </div>
                 {(analysis.findings || []).map((f, i) => (
@@ -917,8 +916,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                 {/* GAPS */}
                 {(analysis.gaps || []).length > 0 && (
                   <div>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "12px" }}>
-                      <span style={{ color: "#000", fontSize: "9px" }}>▣</span>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "12px" }}>
                       <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>INTELLIGENCE GAPS</span>
                     </div>
                     <div style={{ fontSize: "10px", color: "#555", fontFamily: MONO, marginBottom: "14px" }}>
@@ -937,8 +935,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                 {/* DEFENSE */}
                 {(analysis.defense || []).length > 0 && (
                   <div>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                      <span style={{ color: "#000", fontSize: "9px" }}>◎</span>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
                       <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>DEFENSE STRATEGY</span>
                     </div>
                     {(analysis.defense || []).map((risk, i) => (
@@ -955,8 +952,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
             {/* iQ QUESTIONS */}
             {(analysis.iq_questions || []).length > 0 && (
               <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                  <span style={{ color: "#000", fontSize: "9px" }}>◉</span>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
                   <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>iQ QUESTIONS — USE NEXT CALL</span>
                 </div>
                 {(analysis.iq_questions || []).map((q, i) => (
@@ -973,8 +969,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
 
                 <div>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                    <span style={{ color: "#000", fontSize: "9px" }}>◆</span>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
                     <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>MOMENTUM SIGNALS</span>
                   </div>
                   {(analysis.watch_for || []).map((s, i) => (
@@ -986,8 +981,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                 </div>
 
                 <div>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                    <span style={{ color: "#000", fontSize: "9px" }}>◆</span>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
                     <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>RESISTANCE SIGNALS</span>
                   </div>
                   {(analysis.watch_out || []).map((s, i) => (
@@ -1003,8 +997,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
             {/* RECOMMENDED NEXT ACTIONS */}
             {(analysis.next_actions || []).length > 0 && (
               <div style={{ marginBottom: "40px" }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                  <span style={{ color: "#000", fontSize: "9px" }}>◆</span>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
                   <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>RECOMMENDED NEXT ACTIONS</span>
                 </div>
                 {(analysis.next_actions || []).map((action, i) => (
