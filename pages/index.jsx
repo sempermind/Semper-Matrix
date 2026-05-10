@@ -106,48 +106,88 @@ Return format:
 OR
 {"found": false}`;
 
-const ANALYSIS_PROMPT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine. A sales rep has submitted their Connection Intelligence Matrix. Generate a structured Matrix Analysis report.
+const ANALYSIS_PROMPT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine — a senior sales strategist briefing a field sales professional before a high-stakes call.
 
 Deal: ${deal.prospect} (${deal.role} @ ${deal.company})${deal.opportunity ? `\nOpportunity: ${deal.opportunity}` : ""}
 
 Matrix:
 ${matrixText}
 
-Return ONLY a valid JSON object with NO other text, preamble, or markdown. Use this exact structure:
+LANGUAGE RULES — NON-NEGOTIABLE:
+- Write for an experienced field sales professional, not a trainer or consultant
+- Never use the words "actually" or "real" or "really"
+- Never use passive voice
+- No therapy language ("may feel", "could be experiencing")
+- Use hedged but direct language: "The data suggests...", "The patterns indicate...", "Based on what's here...", "The Matrix points to...", "This intel suggests...", "If this read is right..."
+- When data is thin: "With limited intel here, the pattern is harder to read, but..."
+- Every sentence must be about THIS specific person with THIS specific intel — no generic sales advice
+- Corporate softness is not permitted: "this person will hedge" not "there may be some hesitation"
+
+TWELVE PATTERNS TO RUN SILENTLY — never name these in output, surface only what they reveal:
+1. Decision Authority vs. Influence: Box 1 + Box 2
+2. Unengaged Stakeholder Risk: Box 2 + Box 5 + Box 8
+3. Personal Motivation Driver: Box 3 + Box 4 + Box 6
+4. Current to Future State Gap: Boxes 1-3 vs 4-6
+5. Primary Deal Vulnerabilities: Box 7 + Box 8 + Box 9
+6. Breakthrough Question Indicator: Box 3 + Box 7 + Box 9
+7. Buying Momentum Assessment: Box 6 + Box 7 + Box 9
+8. Timeline Credibility: Box 6 + Box 7 + Box 9
+9. Authority Ceiling: Box 1 + Box 9
+10. Stated Goals vs. Goals: Box 3 + Box 6 + Box 4
+11. Coalition Risk: Box 2 + Box 8
+12. Competitive Vulnerability Window: Box 4 + Box 5
+
+MATRIX HEALTH — choose exactly one based on intel quality and coverage:
+- "STRONG FOUNDATION" — enough intel across all three rows to run a confident analysis
+- "PARTIAL PICTURE" — meaningful findings possible but specific gaps create blind spots
+- "FLYING BLIND" — too little intel for reliable analysis; next conversation must be discovery
+
+Return ONLY valid JSON. No markdown, no backticks, no explanation.
 
 {
-  "intel_strip": {
-    "role": "1-sentence summary of their decision authority and formal position",
-    "reach": "1-sentence summary of their influence network and relationships",
-    "results": "1-sentence summary of their performance pressures and metrics"
-  },
+  "matrix_health": "STRONG FOUNDATION or PARTIAL PICTURE or FLYING BLIND",
+  "matrix_health_note": "One direct sentence — what this Matrix gives the rep and what it doesn't. Written as a briefing statement, not an evaluation.",
+  "findings": [
+    "FINDING 1 — Patterns 3+10: 2-4 sentences on who this person is, what drives their decisions, what they are protecting. Hedged language. Specific to this intel.",
+    "FINDING 2 — Patterns 1+2+9+11: 2-4 sentences on where the power sits in this deal — formal authority vs. influence, whether the rep is at the right altitude, who else needs to be in the conversation.",
+    "FINDING 3 — Patterns 4+7+8+12: 2-4 sentences on how motivated this person is to move — whether urgency is genuine, what is driving it, whether a competitor can walk in right now.",
+    "FINDING 4 — Patterns 5+6+8: 2-4 sentences on where this deal can break — the internal conditions that kill deals before the rep gets a no. Include timeline credibility if relevant.",
+    "FINDING 5 — Patterns 3+10: 2-4 sentences on what this person is optimizing for — the gap between their stated goals and what the patterns suggest they care about most."
+  ],
   "gaps": [
-    {"cell": "ROW / COLUMN", "label": "Cell label name", "severity": "HIGH|MEDIUM|LOW", "note": "Why this gap matters for this deal specifically"}
+    {"cell": "CURRENT STATE / ROLE", "label": "Decision Authority", "severity": "HIGH", "note": "One sentence on why this gap creates a specific blind spot in this deal. HIGH or MEDIUM only. No LOW gaps."}
   ],
-  "defense": {
-    "risks": [
-      {"title": "Risk name", "cell": "FUTURE STATE / REACH", "action": "One specific protective action"},
-      {"title": "Risk name", "cell": "CURRENT STATE / RESULTS", "action": "One specific protective action"},
-      {"title": "Risk name", "cell": "NEEDS / RESULTS", "action": "One specific protective action"}
-    ]
-  },
+  "defense": [
+    {"title": "RISK TITLE IN ALL CAPS", "body": "2 sentences — what happens if this risk materializes and the one specific action that protects against it."}
+  ],
   "iq_questions": [
-    {"question": "Full iQ question using formula: opening phrase + current state intel + connecting word + future state intel + impact prompt + personal/career consequence", "timing": "When to use: pre-call / early discovery / mid-cycle"},
-    {"question": "Second iQ question", "timing": "When to use: ..."}
+    {"question": "Full iQ question: opening phrase + specific current state intel from Matrix + connecting word + specific future state intel from Matrix + impact prompt + personal or career consequence. Never operational. Use specific numbers or dates from Matrix if available.", "timing": "Use [early/mid/late in conversation] — one sentence on what this question surfaces and why it matters at that moment."},
+    {"question": "Second iQ question built from different Matrix cells than the first.", "timing": "Use [timing] — rationale."}
   ],
-  "momentum_signals": {
-    "watch_for": ["Signal 1 specific to this deal", "Signal 2", "Signal 3"],
-    "resistance_watch": ["Resistance indicator 1 specific to this deal", "Resistance indicator 2"]
-  },
-  "human_read": "2-3 sentences: your honest read of this person based on the Matrix patterns you see — what drives them, what they're afraid of, and where your real leverage is. Be specific to the actual intel, not generic."
+  "watch_for": [
+    "Observable behavior — specific to this person and this deal, not a generic buying signal",
+    "Observable behavior — specific to this person and this deal"
+  ],
+  "watch_out": [
+    "Observable resistance behavior — specific to this deal",
+    "Observable resistance behavior — specific to this deal"
+  ],
+  "next_actions": [
+    "Specific immediately executable action tied to a finding or gap — enough context that the rep knows exactly what to do and why.",
+    "Second action — specific and tied to the intel above.",
+    "Third action — specific and tied to the intel above."
+  ]
 }
 
-CRITICAL RULES:
-- iQ questions must follow the ONE-PIECE RULE: exactly ONE current reality intel + ONE future state intel + personal/career impact. Never operational consequences. Use specific numbers/dates from the Matrix if available.
-- Only call out gaps for cells that are actually empty or thin — never manufacture gaps from filled cells.
-- Defense risks must map to specific Matrix cells: "CURRENT STATE / ROLE", "FUTURE STATE / REACH", etc.
-- Human Read must be specific to this person's Matrix — never generic sales advice.
-- Return pure JSON only. No backticks, no markdown, no explanation.`;
+RULES:
+- findings: EXACTLY 5 strings, in order, no labels or keys — just the paragraph text
+- gaps: HIGH and MEDIUM severity only, only gaps that affected the findings above, maximum 4
+- defense: maximum 3 items, each title in ALL CAPS
+- iq_questions: exactly 2, each must use SPECIFIC intel from Matrix cells
+- watch_for and watch_out: exactly 2 each, observable behaviors not internal states
+- next_actions: exactly 3, specific and immediately executable
+- Return pure JSON only`;
+
 
 // ─── SHARED COMPONENTS ─────────────────────────
 
@@ -711,149 +751,223 @@ function ReportCard({ children, style = {} }) {
 function AnalysisScreen({ deal, analysis, aiSources, onBack, onRedo }) {
   const hasAnalysis = !!analysis;
 
+  // ── SECTION BADGE (matches screenshot red outlined pill with diamond icon) ──
+  const SectionBadge = ({ icon = "◆", label }) => (
+    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "20px" }}>
+      <span style={{ color: RED, fontSize: "9px" }}>{icon}</span>
+      <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>{label}</span>
+    </div>
+  );
+
   const exportHTML = useCallback(() => {
     if (!analysis) return;
     const now = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-    const gapsHTML = (analysis.gaps || []).map(g => `<div style="border-left:3px solid ${SEVERITY_COLOR[g.severity]||RED};padding:10px 14px;background:#181818;border-radius:0 3px 3px 0;margin-bottom:8px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><span style="font-size:11px;font-weight:700;color:#fff;font-family:'IBM Plex Mono',monospace;">${g.cell}</span><span style="font-size:9px;font-weight:700;color:${SEVERITY_COLOR[g.severity]||RED};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.1em;">${g.severity}</span></div><div style="font-size:12px;color:#ccc;font-family:'IBM Plex Mono',monospace;line-height:1.5;">${g.note}</div></div>`).join("");
-    const risksHTML = (analysis.defense?.risks||[]).map((r,i)=>`<div style="border:1px solid #2a2a2a;border-radius:3px;padding:14px 16px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;"><span style="font-size:9px;font-weight:700;color:#CC0000;border:1px solid #CC0000;padding:2px 7px;border-radius:2px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.14em;">RISK ${i+1}</span><span style="font-size:12px;font-weight:700;color:#fff;font-family:'Barlow Condensed',sans-serif;">${r.title}</span></div><div style="font-size:10px;color:#555;font-family:'IBM Plex Mono',monospace;margin-bottom:7px;">${r.cell}</div><div style="font-size:12px;color:#ccc;font-family:'IBM Plex Mono',monospace;line-height:1.5;">→ ${r.action}</div></div>`).join("");
-    const iqHTML = (analysis.iq_questions||[]).map(q=>`<div style="border:1px solid #2a2a2a;border-radius:3px;padding:14px 16px;margin-bottom:8px;"><div style="font-size:12px;color:#fff;font-family:'IBM Plex Mono',monospace;line-height:1.7;margin-bottom:8px;">"${q.question}"</div><div style="font-size:10px;color:#555;font-family:'IBM Plex Mono',monospace;font-style:italic;">${q.timing}</div></div>`).join("");
-    const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Matrix Analysis — ${deal.prospect}</title><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0d0d0d;color:#fff;font-family:'IBM Plex Mono',monospace;padding:40px 32px;max-width:900px;margin:0 auto}@media print{body{background:#fff;color:#000}}</style></head><body><div style="margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #CC0000;"><div style="font-size:10px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.18em;margin-bottom:6px;">SEMPER SELLING® — MATRIX ANALYSIS</div><div style="font-size:28px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;">${deal.prospect}</div><div style="font-size:13px;color:#888;font-family:'IBM Plex Mono',monospace;margin-top:4px;">${deal.role} @ ${deal.company}${deal.opportunity?` · ${deal.opportunity}`:""}</div><div style="font-size:10px;color:#555;margin-top:4px;">${now}</div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;"><div style="background:#141414;border:1px solid #2a2a2a;border-radius:4px;padding:14px 16px;"><div style="font-size:9px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.14em;font-weight:700;margin-bottom:6px;">ROLE</div><div style="font-size:12px;color:#ccc;line-height:1.5;">${analysis.intel_strip?.role||"—"}</div></div><div style="background:#141414;border:1px solid #2a2a2a;border-radius:4px;padding:14px 16px;"><div style="font-size:9px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.14em;font-weight:700;margin-bottom:6px;">REACH</div><div style="font-size:12px;color:#ccc;line-height:1.5;">${analysis.intel_strip?.reach||"—"}</div></div><div style="background:#141414;border:1px solid #2a2a2a;border-radius:4px;padding:14px 16px;"><div style="font-size:9px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.14em;font-weight:700;margin-bottom:6px;">RESULTS</div><div style="font-size:12px;color:#ccc;line-height:1.5;">${analysis.intel_strip?.results||"—"}</div></div></div>${analysis.gaps?.length?`<div style="margin-bottom:28px;"><div style="font-size:11px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;margin-bottom:12px;">INTELLIGENCE GAPS</div>${gapsHTML}</div>`:""}${analysis.defense?.risks?.length?`<div style="margin-bottom:28px;"><div style="font-size:11px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;margin-bottom:12px;">DEFENSE STRATEGY</div>${risksHTML}</div>`:""}${analysis.iq_questions?.length?`<div style="margin-bottom:28px;"><div style="font-size:11px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;margin-bottom:12px;">iQ QUESTIONS</div>${iqHTML}</div>`:""}${analysis.momentum_signals?`<div style="margin-bottom:28px;"><div style="font-size:11px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;margin-bottom:12px;">MOMENTUM SIGNALS</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"><div style="background:#141414;border:1px solid #1a3a1a;border-radius:4px;padding:14px 16px;"><div style="font-size:9px;color:#22c55e;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;font-weight:700;margin-bottom:8px;">WATCH FOR</div>${(analysis.momentum_signals.watch_for||[]).map(s=>`<div style="font-size:11px;color:#ccc;padding:5px 0;border-bottom:1px solid #1e1e1e;line-height:1.4;">${s}</div>`).join("")}</div><div style="background:#141414;border:1px solid #3a1a1a;border-radius:4px;padding:14px 16px;"><div style="font-size:9px;color:#ff4444;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;font-weight:700;margin-bottom:8px;">RESISTANCE</div>${(analysis.momentum_signals.resistance_watch||[]).map(s=>`<div style="font-size:11px;color:#ccc;padding:5px 0;border-bottom:1px solid #1e1e1e;line-height:1.4;">${s}</div>`).join("")}</div></div></div>`:""}${analysis.human_read?`<div style="background:#141414;border-left:3px solid #CC0000;padding:16px 20px;border-radius:0 4px 4px 0;"><div style="font-size:9px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.14em;font-weight:700;margin-bottom:8px;">HUMAN READ</div><div style="font-size:13px;color:#ccc;line-height:1.7;">${analysis.human_read}</div></div>`:""}<div style="margin-top:40px;padding-top:16px;border-top:1px solid #2a2a2a;font-size:10px;color:#444;">SEMPER MIND © 2026 — SEMPERMIND.COM</div></body></html>`;
-    const blob=new Blob([html],{type:"text/html;charset=utf-8"});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url;a.download=`matrix_analysis_${deal.prospect.replace(/[^a-z0-9]/gi,"_").toLowerCase()}.html`;
-    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Matrix Analysis — ${deal.prospect}</title><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:'IBM Plex Mono',monospace;padding:40px 48px;max-width:1000px;margin:0 auto;line-height:1.6}@media print{body{background:#fff;color:#000}}</style></head><body>
+<div style="margin-bottom:8px;font-size:10px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.18em;">◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
+<div style="font-size:38px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.04em;line-height:1;">${deal.prospect.toUpperCase()}</div>
+<div style="font-size:13px;color:#888;font-family:'IBM Plex Mono',monospace;margin-top:6px;margin-bottom:24px;">${deal.role}${deal.company ? ` · ${deal.company}` : ""}${deal.opportunity ? ` · ${deal.opportunity}` : ""}</div>
+${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;padding:10px 16px;margin-bottom:32px;font-size:13px;color:#ccc;font-style:italic;line-height:1.7;">● ${analysis.matrix_health_note}</div>` : ""}
+${(analysis.findings||[]).length ? `<div style="margin-bottom:32px;"><div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:16px;"><span style="color:#CC0000;font-size:9px;">◆</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">WHAT THE MATRIX IS TELLING YOU</span></div>${(analysis.findings||[]).map(f=>`<p style="font-size:13px;color:#ccc;line-height:1.75;margin-bottom:14px;">${f}</p>`).join("")}</div>` : ""}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px;">
+<div>${(analysis.gaps||[]).length ? `<div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:12px;"><span style="color:#CC0000;font-size:9px;">▣</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">INTELLIGENCE GAPS</span></div><div style="font-size:10px;color:#666;font-family:'IBM Plex Mono',monospace;margin-bottom:12px;">HIGH — critical to close &nbsp;|&nbsp; MEDIUM — worth exploring</div>${(analysis.gaps||[]).map(g=>`<div style="border-left:3px solid ${g.severity==='HIGH'?'#CC0000':'#f59e0b'};padding:8px 14px;margin-bottom:10px;"><div style="font-size:10px;font-weight:700;color:${g.severity==='HIGH'?'#CC0000':'#f59e0b'};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:4px;">${g.cell}</div><div style="font-size:12px;color:#ccc;line-height:1.55;">${g.note}</div></div>`).join("")}` : ""}</div>
+<div>${(analysis.defense||[]).length ? `<div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:12px;"><span style="color:#CC0000;font-size:9px;">◎</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">DEFENSE STRATEGY</span></div>${(analysis.defense||[]).map(r=>`<div style="margin-bottom:14px;"><div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:5px;">${r.title}</div><div style="font-size:12px;color:#ccc;line-height:1.6;">${r.body}</div></div>`).join("")}` : ""}</div>
+</div>
+${(analysis.iq_questions||[]).length ? `<div style="margin-bottom:32px;"><div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:16px;"><span style="color:#CC0000;font-size:9px;">◉</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">iQ QUESTIONS — USE NEXT CALL</span></div>${(analysis.iq_questions||[]).map(q=>`<div style="margin-bottom:18px;padding-left:16px;border-left:2px solid #333;"><div style="font-size:13px;color:#fff;font-style:italic;line-height:1.75;margin-bottom:6px;">"${q.question}"</div><div style="font-size:11px;color:#666;">${q.timing}</div></div>`).join("")}</div>` : ""}
+${(analysis.watch_for||analysis.watch_out) ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px;">
+<div><div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:16px;"><span style="color:#CC0000;font-size:9px;">◆</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">MOMENTUM SIGNALS — WATCH FOR</span></div>${(analysis.watch_for||[]).map(s=>`<div style="display:flex;gap:12px;margin-bottom:12px;align-items:flex-start;"><div style="flex-shrink:0;border:1px solid #22c55e;border-radius:2px;padding:2px 8px;font-size:9px;font-family:'Barlow Condensed',sans-serif;font-weight:700;color:#22c55e;letter-spacing:0.1em;margin-top:2px;">WATCH FOR</div><div style="font-size:12px;color:#ccc;line-height:1.6;">${s}</div></div>`).join("")}</div>
+<div><div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:16px;"><span style="color:#CC0000;font-size:9px;">◆</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">RESISTANCE SIGNALS — WATCH OUT</span></div>${(analysis.watch_out||[]).map(s=>`<div style="display:flex;gap:12px;margin-bottom:12px;align-items:flex-start;"><div style="flex-shrink:0;border:1px solid #CC0000;border-radius:2px;padding:2px 8px;font-size:9px;font-family:'Barlow Condensed',sans-serif;font-weight:700;color:#CC0000;letter-spacing:0.1em;margin-top:2px;">WATCH OUT</div><div style="font-size:12px;color:#ccc;line-height:1.6;">${s}</div></div>`).join("")}</div>
+</div>` : ""}
+${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:16px;"><span style="color:#CC0000;font-size:9px;">◆</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">RECOMMENDED NEXT ACTIONS</span></div>${(analysis.next_actions||[]).map((a,i)=>`<div style="display:flex;gap:16px;margin-bottom:14px;"><div style="color:#CC0000;font-size:13px;font-weight:700;font-family:'Barlow Condensed',sans-serif;flex-shrink:0;padding-top:1px;">${i+1}.</div><div style="font-size:13px;color:#ccc;line-height:1.7;">${a}</div></div>`).join("")}</div>` : ""}
+<div style="margin-top:40px;padding-top:16px;border-top:1px solid #1e1e1e;font-size:10px;color:#444;">SEMPER MIND © 2026 — SEMPERMIND.COM · ${now}</div>
+</body></html>`;
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `matrix_analysis_${deal.prospect.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.html`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   }, [analysis, deal]);
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, display: "flex", flexDirection: "column" }}>
-      <div style={{ padding: "14px 28px", borderBottom: `1px solid ${BORDER}`, background: SURFACE, display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+    <div style={{ minHeight: "100vh", background: "#0a0a0a", display: "flex", flexDirection: "column" }}>
+
+      {/* Header bar */}
+      <div style={{ padding: "14px 28px", borderBottom: `1px solid #1a1a1a`, background: "#0d0d0d", display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
         <Btn variant="ghost" onClick={onBack} style={{ padding: "6px 12px", fontSize: "11px" }}>← EDIT MATRIX</Btn>
-        <div style={{ width: "1px", height: "24px", background: "#333" }} />
-        <span style={{ color: RED, fontSize: "15px", fontWeight: "700", fontFamily: CONDENSED, letterSpacing: "0.1em" }}>MATRIX ANALYSIS</span>
-        <span style={{ color: "#888", fontSize: "11px", fontFamily: MONO }}>{deal.prospect} · {deal.company}</span>
+        <div style={{ width: "1px", height: "24px", background: "#222" }} />
+        <span style={{ color: RED, fontSize: "11px", fontFamily: MONO, letterSpacing: "0.14em" }}>CONNECTION INTELLIGENCE — MATRIX ANALYSIS</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
-          {hasAnalysis && <button onClick={exportHTML} style={{ background: "none", border: `1px solid ${BORDER}`, color: "#888", borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.15s" }} onMouseEnter={e => { e.currentTarget.style.borderColor = "#22c55e"; e.currentTarget.style.color = "#22c55e"; }} onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = "#888"; }}>↓ EXPORT HTML</button>}
-          <button onClick={onRedo} style={{ background: "none", border: `1px solid ${BORDER}`, color: "#888", borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.15s" }} onMouseEnter={e => { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = RED; }} onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = "#888"; }}>↺ RE-ANALYZE</button>
+          {hasAnalysis && (
+            <button onClick={exportHTML}
+              style={{ background: "none", border: `1px solid #333`, color: "#888", borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.15s" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "#22c55e"; e.currentTarget.style.color = "#22c55e"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#888"; }}
+            >↓ EXPORT</button>
+          )}
+          <button onClick={onRedo}
+            style={{ background: "none", border: `1px solid #333`, color: "#888", borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.15s" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = RED; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#888"; }}
+          >↺ RE-ANALYZE</button>
         </div>
       </div>
 
-      <div style={{ flex: 1, padding: "24px 28px 40px", overflowY: "auto" }}>
-        <div style={{ maxWidth: "900px" }}>
-          <div style={{ marginBottom: "24px", paddingBottom: "18px", borderBottom: `1px solid ${BORDER}` }}>
-            <div style={{ fontSize: "26px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em" }}>{deal.prospect}</div>
-            <div style={{ fontSize: "12px", color: "#888", fontFamily: MONO, marginTop: "4px" }}>{deal.role} @ {deal.company}{deal.opportunity ? ` · ${deal.opportunity}` : ""}</div>
+      <div style={{ flex: 1, padding: "40px 48px", overflowY: "auto", maxWidth: "1000px", width: "100%" }}>
+
+        {/* Deal header — matches screenshot large name treatment */}
+        <div style={{ marginBottom: "8px", fontSize: "10px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.18em" }}>◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
+        <div style={{ fontSize: "42px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.04em", lineHeight: 1, marginBottom: "8px" }}>{deal.prospect.toUpperCase()}</div>
+        <div style={{ fontSize: "13px", color: "#888", fontFamily: MONO, marginBottom: "28px" }}>
+          {deal.role}{deal.company ? ` · ${deal.company}` : ""}{deal.opportunity ? ` · ${deal.opportunity}` : ""}
+        </div>
+
+        {!hasAnalysis ? (
+          <div style={{ padding: "60px 0", textAlign: "center" }}>
+            <div style={{ fontSize: "13px", color: "#888", fontFamily: MONO }}>Analysis unavailable. Check your connection and try again.</div>
+            <div style={{ marginTop: "20px" }}><Btn onClick={onRedo}>↺ TRY AGAIN</Btn></div>
           </div>
+        ) : (
+          <div>
 
-          {!hasAnalysis ? (
-            <div style={{ padding: "40px 0", textAlign: "center" }}>
-              <div style={{ fontSize: "13px", color: "#888", fontFamily: MONO }}>Analysis unavailable. Check your API connection and try again.</div>
-              <div style={{ marginTop: "20px" }}><Btn onClick={onRedo}>↺ TRY AGAIN</Btn></div>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+            {/* Matrix Health */}
+            {analysis.matrix_health_note && (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "36px", paddingBottom: "28px", borderBottom: "1px solid #1a1a1a" }}>
+                <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: RED, flexShrink: 0, marginTop: "5px" }} />
+                <div style={{ fontSize: "13px", color: "#ccc", fontFamily: MONO, fontStyle: "italic", lineHeight: "1.75" }}>
+                  {analysis.matrix_health_note}
+                </div>
+              </div>
+            )}
 
-              <ReportCard>
-                <SectionHeader label="INTEL STRIP" />
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
-                  {["role", "reach", "results"].map(dim => (
-                    <div key={dim} style={{ background: "#0d0d0d", border: `1px solid ${BORDER}`, borderRadius: "3px", padding: "12px 14px" }}>
-                      <div style={{ fontSize: "9px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700", marginBottom: "6px" }}>{dim.toUpperCase()}</div>
-                      <div style={{ fontSize: "12px", color: "#ccc", fontFamily: MONO, lineHeight: "1.55" }}>{analysis.intel_strip?.[dim] || "—"}</div>
+            {/* WHAT THE MATRIX IS TELLING YOU */}
+            {(analysis.findings || []).length > 0 && (
+              <div style={{ marginBottom: "36px" }}>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "20px" }}>
+                  <span style={{ color: RED, fontSize: "9px" }}>◆</span>
+                  <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>WHAT THE MATRIX IS TELLING YOU</span>
+                </div>
+                {(analysis.findings || []).map((f, i) => (
+                  <p key={i} style={{ fontSize: "13px", color: "#ccc", fontFamily: MONO, lineHeight: "1.75", marginBottom: "16px" }}>{f}</p>
+                ))}
+              </div>
+            )}
+
+            {/* INTELLIGENCE GAPS + DEFENSE STRATEGY — two column */}
+            {((analysis.gaps || []).length > 0 || (analysis.defense || []).length > 0) && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
+
+                {/* GAPS */}
+                {(analysis.gaps || []).length > 0 && (
+                  <div>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "12px" }}>
+                      <span style={{ color: RED, fontSize: "9px" }}>▣</span>
+                      <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>INTELLIGENCE GAPS</span>
+                    </div>
+                    <div style={{ fontSize: "10px", color: "#555", fontFamily: MONO, marginBottom: "14px" }}>
+                      <span style={{ borderLeft: `2px solid ${RED}`, paddingLeft: "6px", marginRight: "12px" }}>HIGH — critical to close</span>
+                      <span style={{ borderLeft: "2px solid #f59e0b", paddingLeft: "6px" }}>MEDIUM — worth exploring</span>
+                    </div>
+                    {(analysis.gaps || []).map((gap, i) => (
+                      <div key={i} style={{ borderLeft: `3px solid ${gap.severity === "HIGH" ? RED : "#f59e0b"}`, paddingLeft: "14px", marginBottom: "16px" }}>
+                        <div style={{ fontSize: "11px", fontWeight: "700", color: gap.severity === "HIGH" ? RED : "#f59e0b", fontFamily: CONDENSED, letterSpacing: "0.12em", marginBottom: "5px" }}>{gap.cell}</div>
+                        <div style={{ fontSize: "12px", color: "#bbb", fontFamily: MONO, lineHeight: "1.6" }}>{gap.note}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* DEFENSE */}
+                {(analysis.defense || []).length > 0 && (
+                  <div>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "20px" }}>
+                      <span style={{ color: RED, fontSize: "9px" }}>◎</span>
+                      <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>DEFENSE STRATEGY</span>
+                    </div>
+                    {(analysis.defense || []).map((risk, i) => (
+                      <div key={i} style={{ marginBottom: "20px" }}>
+                        <div style={{ fontSize: "11px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.12em", marginBottom: "6px" }}>{risk.title}</div>
+                        <div style={{ fontSize: "12px", color: "#bbb", fontFamily: MONO, lineHeight: "1.65" }}>{risk.body}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* iQ QUESTIONS */}
+            {(analysis.iq_questions || []).length > 0 && (
+              <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "20px" }}>
+                  <span style={{ color: RED, fontSize: "9px" }}>◉</span>
+                  <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>iQ QUESTIONS — USE NEXT CALL</span>
+                </div>
+                {(analysis.iq_questions || []).map((q, i) => (
+                  <div key={i} style={{ marginBottom: "22px", paddingLeft: "16px", borderLeft: "2px solid #222" }}>
+                    <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, fontStyle: "italic", lineHeight: "1.75", marginBottom: "8px" }}>"{q.question}"</div>
+                    <div style={{ fontSize: "11px", color: "#555", fontFamily: MONO }}>{q.timing}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* MOMENTUM + RESISTANCE — two column */}
+            {((analysis.watch_for || []).length > 0 || (analysis.watch_out || []).length > 0) && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
+
+                <div>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "20px" }}>
+                    <span style={{ color: RED, fontSize: "9px" }}>◆</span>
+                    <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>MOMENTUM SIGNALS</span>
+                  </div>
+                  {(analysis.watch_for || []).map((s, i) => (
+                    <div key={i} style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "flex-start" }}>
+                      <div style={{ flexShrink: 0, border: "1px solid #22c55e", borderRadius: "2px", padding: "2px 8px", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", color: "#22c55e", letterSpacing: "0.1em", marginTop: "2px" }}>WATCH FOR</div>
+                      <div style={{ fontSize: "12px", color: "#bbb", fontFamily: MONO, lineHeight: "1.65" }}>{s}</div>
                     </div>
                   ))}
                 </div>
-              </ReportCard>
 
-              {analysis.gaps?.length > 0 && (
-                <ReportCard>
-                  <SectionHeader label="INTELLIGENCE GAPS" />
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    {analysis.gaps.map((gap, i) => (
-                      <div key={i} style={{ borderLeft: `3px solid ${SEVERITY_COLOR[gap.severity] || RED}`, paddingLeft: "14px", paddingTop: "10px", paddingBottom: "10px", background: SEVERITY_BG[gap.severity] || "transparent", borderRadius: "0 3px 3px 0" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" }}>
-                          <div>
-                            <span style={{ fontSize: "10px", fontWeight: "700", color: "#fff", fontFamily: MONO }}>{gap.cell}</span>
-                            {gap.label && <span style={{ fontSize: "10px", color: "#666", fontFamily: MONO, marginLeft: "8px" }}>— {gap.label}</span>}
-                          </div>
-                          <SeverityBar level={gap.severity} />
-                        </div>
-                        <div style={{ fontSize: "12px", color: "#ccc", fontFamily: MONO, lineHeight: "1.55" }}>{gap.note}</div>
-                      </div>
-                    ))}
+                <div>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "20px" }}>
+                    <span style={{ color: RED, fontSize: "9px" }}>◆</span>
+                    <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>RESISTANCE SIGNALS</span>
                   </div>
-                </ReportCard>
-              )}
-
-              {analysis.defense?.risks?.length > 0 && (
-                <ReportCard>
-                  <SectionHeader label="DEFENSE STRATEGY" />
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    {analysis.defense.risks.map((risk, i) => (
-                      <div key={i} style={{ border: `1px solid ${BORDER}`, borderRadius: "3px", padding: "14px 16px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "5px" }}>
-                          <Tag label={`RISK ${i + 1}`} />
-                          <span style={{ fontSize: "12px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em" }}>{risk.title}</span>
-                        </div>
-                        <div style={{ fontSize: "10px", color: "#555", fontFamily: MONO, marginBottom: "7px" }}>{risk.cell}</div>
-                        <div style={{ fontSize: "12px", color: "#ccc", fontFamily: MONO, lineHeight: "1.55" }}>→ {risk.action}</div>
-                      </div>
-                    ))}
-                  </div>
-                </ReportCard>
-              )}
-
-              {analysis.iq_questions?.length > 0 && (
-                <ReportCard>
-                  <SectionHeader label="iQ QUESTIONS" />
-                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                    {analysis.iq_questions.map((q, i) => (
-                      <div key={i} style={{ border: `1px solid ${BORDER}`, borderRadius: "3px", padding: "16px" }}>
-                        <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.7", marginBottom: "10px" }}>"{q.question}"</div>
-                        <div style={{ fontSize: "10px", color: "#555", fontFamily: MONO, fontStyle: "italic" }}>{q.timing}</div>
-                      </div>
-                    ))}
-                  </div>
-                </ReportCard>
-              )}
-
-              {analysis.momentum_signals && (
-                <ReportCard>
-                  <SectionHeader label="MOMENTUM SIGNALS" />
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
-                    <div style={{ background: "#0d0d0d", border: "1px solid #1a3a1a", borderRadius: "3px", padding: "14px 16px" }}>
-                      <div style={{ fontSize: "9px", color: "#22c55e", fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "10px" }}>WATCH FOR — MOMENTUM</div>
-                      {(analysis.momentum_signals.watch_for || []).map((s, i) => (
-                        <div key={i} style={{ fontSize: "11px", color: "#ccc", fontFamily: MONO, padding: "5px 0", borderBottom: "1px solid #1e1e1e", lineHeight: "1.45" }}>{s}</div>
-                      ))}
+                  {(analysis.watch_out || []).map((s, i) => (
+                    <div key={i} style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "flex-start" }}>
+                      <div style={{ flexShrink: 0, border: `1px solid ${RED}`, borderRadius: "2px", padding: "2px 8px", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", color: RED, letterSpacing: "0.1em", marginTop: "2px" }}>WATCH OUT</div>
+                      <div style={{ fontSize: "12px", color: "#bbb", fontFamily: MONO, lineHeight: "1.65" }}>{s}</div>
                     </div>
-                    <div style={{ background: "#0d0d0d", border: "1px solid #3a1a1a", borderRadius: "3px", padding: "14px 16px" }}>
-                      <div style={{ fontSize: "9px", color: "#ff4444", fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "10px" }}>RESISTANCE WATCH</div>
-                      {(analysis.momentum_signals.resistance_watch || []).map((s, i) => (
-                        <div key={i} style={{ fontSize: "11px", color: "#ccc", fontFamily: MONO, padding: "5px 0", borderBottom: "1px solid #1e1e1e", lineHeight: "1.45" }}>{s}</div>
-                      ))}
-                    </div>
-                  </div>
-                </ReportCard>
-              )}
-
-              {analysis.human_read && (
-                <div style={{ background: SURFACE, borderLeft: `3px solid ${RED}`, borderRadius: "0 4px 4px 0", padding: "18px 22px" }}>
-                  <SectionHeader label="HUMAN READ" />
-                  <div style={{ fontSize: "13px", color: "#ccc", fontFamily: MONO, lineHeight: "1.8" }}>{analysis.human_read}</div>
-                </div>
-              )}
-
-              <div style={{ paddingTop: "16px", borderTop: `1px solid ${BORDER}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "10px", color: "#444", fontFamily: MONO }}>SEMPER MIND © 2026 — SEMPERMIND.COM</span>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  {hasAnalysis && <Btn variant="ghost" onClick={exportHTML} style={{ fontSize: "10px", padding: "7px 14px" }}>↓ EXPORT HTML</Btn>}
-                  <Btn variant="ghost" onClick={onRedo} style={{ fontSize: "10px", padding: "7px 14px" }}>↺ RE-ANALYZE</Btn>
+                  ))}
                 </div>
               </div>
+            )}
+
+            {/* RECOMMENDED NEXT ACTIONS */}
+            {(analysis.next_actions || []).length > 0 && (
+              <div style={{ marginBottom: "40px" }}>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "20px" }}>
+                  <span style={{ color: RED, fontSize: "9px" }}>◆</span>
+                  <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>RECOMMENDED NEXT ACTIONS</span>
+                </div>
+                {(analysis.next_actions || []).map((action, i) => (
+                  <div key={i} style={{ display: "flex", gap: "16px", marginBottom: "16px", alignItems: "flex-start" }}>
+                    <div style={{ color: RED, fontSize: "14px", fontWeight: "700", fontFamily: CONDENSED, flexShrink: 0, paddingTop: "1px", minWidth: "16px" }}>{i + 1}.</div>
+                    <div style={{ fontSize: "13px", color: "#ccc", fontFamily: MONO, lineHeight: "1.75" }}>{action}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Footer */}
+            <div style={{ paddingTop: "20px", borderTop: "1px solid #1a1a1a", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "10px", color: "#333", fontFamily: MONO }}>SEMPER MIND © 2026 — SEMPERMIND.COM</span>
+              <div style={{ display: "flex", gap: "8px" }}>
+                {hasAnalysis && <Btn variant="ghost" onClick={exportHTML} style={{ fontSize: "10px", padding: "7px 14px" }}>↓ EXPORT</Btn>}
+                <Btn variant="ghost" onClick={onRedo} style={{ fontSize: "10px", padding: "7px 14px" }}>↺ RE-ANALYZE</Btn>
+              </div>
             </div>
-          )}
-        </div>
+
+          </div>
+        )}
       </div>
     </div>
   );
