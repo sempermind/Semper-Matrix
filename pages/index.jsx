@@ -394,10 +394,10 @@ function DealScreen({ onComplete }) {
   const [errors, setErrors] = useState({});
 
   const fields = [
-    { key: "prospect",    label: "CONTACT NAME",           placeholder: "e.g. Sarah Chen" },
-    { key: "role",        label: "TITLE / ROLE",           placeholder: "e.g. VP of Operations" },
-    { key: "company",     label: "COMPANY",                placeholder: "e.g. Acme Corp" },
-    { key: "opportunity", label: "OPPORTUNITY (optional)", placeholder: "e.g. Q3 training rollout — 40 reps", textarea: true },
+    { key: "prospect",    label: "CONTACT NAME",           placeholder: "" },
+    { key: "role",        label: "TITLE / ROLE",           placeholder: "" },
+    { key: "company",     label: "COMPANY",                placeholder: "" },
+    { key: "opportunity", label: "OPPORTUNITY (optional)", placeholder: "", textarea: true },
   ];
 
   const handleSubmit = () => {
@@ -413,7 +413,7 @@ function DealScreen({ onComplete }) {
         <div style={{ marginBottom: "32px" }}>
           <div style={{ fontSize: "11px", color: RED, fontFamily: MONO, letterSpacing: "0.14em", marginBottom: "8px" }}>SEMPER SELLING®</div>
           <div style={{ fontSize: "36px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em", lineHeight: 1.1 }}>CONNECTION INTELLIGENCE<br />MATRIX</div>
-          <div style={{ fontSize: "12px", color: "#888", fontFamily: MONO, marginTop: "10px", lineHeight: 1.6 }}>Build your intel. Generate your analysis. Walk in prepared.</div>
+          <div style={{ fontSize: "12px", color: "#888", fontFamily: MONO, marginTop: "10px", lineHeight: 1.6 }}>Build your intel. Walk in masterfully prepared.</div>
         </div>
         <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "4px", padding: "28px 24px" }}>
           <div style={{ fontSize: "12px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.14em", marginBottom: "20px" }}>DEAL CONTEXT</div>
@@ -449,6 +449,59 @@ function DealScreen({ onComplete }) {
 }
 
 // ─── SCREEN 2: MATRIX EDITOR ──────────────────
+
+// ─── ANALYSIS LOADER ───────────────────────────
+
+function AnalysisLoader() {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(10,10,10,0.96)",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      zIndex: 500
+    }}>
+      <style>{`
+        @keyframes bar1 {
+          0%, 100% { height: 24px; }
+          50% { height: 56px; }
+        }
+        @keyframes bar2 {
+          0%, 100% { height: 40px; }
+          50% { height: 80px; }
+        }
+        @keyframes bar3 {
+          0%, 100% { height: 56px; }
+          50% { height: 108px; }
+        }
+      `}</style>
+
+      {/* Bar graph */}
+      <div style={{ display: "flex", alignItems: "flex-end", gap: "10px", height: "120px", marginBottom: "32px" }}>
+        <div style={{
+          width: "22px", background: "#CC0000", borderRadius: "2px 2px 0 0",
+          animation: "bar1 1.1s ease-in-out infinite",
+          animationDelay: "0s"
+        }} />
+        <div style={{
+          width: "22px", background: "#CC0000", borderRadius: "2px 2px 0 0",
+          animation: "bar2 1.1s ease-in-out infinite",
+          animationDelay: "0.18s"
+        }} />
+        <div style={{
+          width: "22px", background: "#CC0000", borderRadius: "2px 2px 0 0",
+          animation: "bar3 1.1s ease-in-out infinite",
+          animationDelay: "0.36s"
+        }} />
+      </div>
+
+      <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.22em", marginBottom: "10px" }}>
+        SEMPER SELLING®
+      </div>
+      <div style={{ fontSize: "13px", color: "#888", fontFamily: MONO, letterSpacing: "0.06em" }}>
+        Analyzing your intelligence...
+      </div>
+    </div>
+  );
+}
 
 function MatrixScreen({ deal, onComplete, onBack }) {
   const [cells, setCells] = useState(emptyMatrix());
@@ -497,6 +550,9 @@ function MatrixScreen({ deal, onComplete, onBack }) {
         if (textBlock) {
           const raw = textBlock.text.replace(/```json|```/g, "").trim();
           const parsed = JSON.parse(raw);
+          // Strip any <cite> or XML tags that web search injects into text
+          if (parsed.intel) parsed.intel = parsed.intel.replace(/<[^>]*>/g, "").trim();
+          if (parsed.source_label) parsed.source_label = parsed.source_label.replace(/<[^>]*>/g, "").trim();
           results.push({ key, row, col, existing, result: parsed });
         } else {
           results.push({ key, row, col, existing, result: { found: false } });
@@ -595,6 +651,9 @@ function MatrixScreen({ deal, onComplete, onBack }) {
 
   return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", flexDirection: "column" }}>
+
+      {/* Analysis Loader */}
+      {analyzing && <AnalysisLoader />}
 
       {/* Search Review Modal */}
       {searchResults && (
@@ -753,7 +812,7 @@ function AnalysisScreen({ deal, analysis, aiSources, onBack, onRedo }) {
 
   // ── SECTION BADGE (matches screenshot red outlined pill with diamond icon) ──
   const SectionBadge = ({ icon = "◆", label }) => (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "20px" }}>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
       <span style={{ color: RED, fontSize: "9px" }}>{icon}</span>
       <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>{label}</span>
     </div>
@@ -841,9 +900,9 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
             {/* WHAT THE MATRIX IS TELLING YOU */}
             {(analysis.findings || []).length > 0 && (
               <div style={{ marginBottom: "36px" }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "20px" }}>
-                  <span style={{ color: RED, fontSize: "9px" }}>◆</span>
-                  <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>WHAT THE MATRIX IS TELLING YOU</span>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
+                  <span style={{ color: "#000", fontSize: "9px" }}>◆</span>
+                  <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>WHAT THE MATRIX IS TELLING YOU</span>
                 </div>
                 {(analysis.findings || []).map((f, i) => (
                   <p key={i} style={{ fontSize: "13px", color: "#ccc", fontFamily: MONO, lineHeight: "1.75", marginBottom: "16px" }}>{f}</p>
@@ -858,9 +917,9 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                 {/* GAPS */}
                 {(analysis.gaps || []).length > 0 && (
                   <div>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "12px" }}>
-                      <span style={{ color: RED, fontSize: "9px" }}>▣</span>
-                      <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>INTELLIGENCE GAPS</span>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "12px" }}>
+                      <span style={{ color: "#000", fontSize: "9px" }}>▣</span>
+                      <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>INTELLIGENCE GAPS</span>
                     </div>
                     <div style={{ fontSize: "10px", color: "#555", fontFamily: MONO, marginBottom: "14px" }}>
                       <span style={{ borderLeft: `2px solid ${RED}`, paddingLeft: "6px", marginRight: "12px" }}>HIGH — critical to close</span>
@@ -878,9 +937,9 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                 {/* DEFENSE */}
                 {(analysis.defense || []).length > 0 && (
                   <div>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "20px" }}>
-                      <span style={{ color: RED, fontSize: "9px" }}>◎</span>
-                      <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>DEFENSE STRATEGY</span>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
+                      <span style={{ color: "#000", fontSize: "9px" }}>◎</span>
+                      <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>DEFENSE STRATEGY</span>
                     </div>
                     {(analysis.defense || []).map((risk, i) => (
                       <div key={i} style={{ marginBottom: "20px" }}>
@@ -896,9 +955,9 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
             {/* iQ QUESTIONS */}
             {(analysis.iq_questions || []).length > 0 && (
               <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "20px" }}>
-                  <span style={{ color: RED, fontSize: "9px" }}>◉</span>
-                  <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>iQ QUESTIONS — USE NEXT CALL</span>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
+                  <span style={{ color: "#000", fontSize: "9px" }}>◉</span>
+                  <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>iQ QUESTIONS — USE NEXT CALL</span>
                 </div>
                 {(analysis.iq_questions || []).map((q, i) => (
                   <div key={i} style={{ marginBottom: "22px", paddingLeft: "16px", borderLeft: "2px solid #222" }}>
@@ -914,9 +973,9 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
 
                 <div>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "20px" }}>
-                    <span style={{ color: RED, fontSize: "9px" }}>◆</span>
-                    <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>MOMENTUM SIGNALS</span>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
+                    <span style={{ color: "#000", fontSize: "9px" }}>◆</span>
+                    <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>MOMENTUM SIGNALS</span>
                   </div>
                   {(analysis.watch_for || []).map((s, i) => (
                     <div key={i} style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "flex-start" }}>
@@ -927,9 +986,9 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                 </div>
 
                 <div>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "20px" }}>
-                    <span style={{ color: RED, fontSize: "9px" }}>◆</span>
-                    <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>RESISTANCE SIGNALS</span>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
+                    <span style={{ color: "#000", fontSize: "9px" }}>◆</span>
+                    <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>RESISTANCE SIGNALS</span>
                   </div>
                   {(analysis.watch_out || []).map((s, i) => (
                     <div key={i} style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "flex-start" }}>
@@ -944,9 +1003,9 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
             {/* RECOMMENDED NEXT ACTIONS */}
             {(analysis.next_actions || []).length > 0 && (
               <div style={{ marginBottom: "40px" }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 12px", marginBottom: "20px" }}>
-                  <span style={{ color: RED, fontSize: "9px" }}>◆</span>
-                  <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>RECOMMENDED NEXT ACTIONS</span>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
+                  <span style={{ color: "#000", fontSize: "9px" }}>◆</span>
+                  <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>RECOMMENDED NEXT ACTIONS</span>
                 </div>
                 {(analysis.next_actions || []).map((action, i) => (
                   <div key={i} style={{ display: "flex", gap: "16px", marginBottom: "16px", alignItems: "flex-start" }}>
