@@ -577,11 +577,8 @@ function MatrixScreen({ deal, onComplete, onBack }) {
           .filter(b => b.type === "text")
           .map(b => b.text.replace(/<[^>]*>/g, "").trim())
           .join(" ");
-        return `[SEARCH: ${queries[i].query}]
-${textBlocks}`;
-      }).filter(Boolean).join("
-
-");
+        return `[SEARCH: ${queries[i].query}]\n${textBlocks}`;
+      }).filter(Boolean).join("\n\n");
 
       if (!rawResults.trim()) {
         setSearching(false);
@@ -596,8 +593,7 @@ ${textBlocks}`;
       const existingCells = Object.entries(cells)
         .filter(([, v]) => v.trim())
         .map(([k, v]) => `${k}: ${v}`)
-        .join("
-") || "None";
+        .join("\n") || "None";
 
       const synthResp = await fetch("/api/chat", {
         method: "POST",
