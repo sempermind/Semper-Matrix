@@ -89,22 +89,51 @@ const matrixToText = (cells, deal) => {
   return out;
 };
 
-// ─── SEARCH PROMPT BUILDER ─────────────────────
+// ─── TWO-PHASE SEARCH ──────────────────────────
 
-const SEARCH_SYSTEM_PROMPT = `You are a sales intelligence researcher supporting the Semper Selling® methodology. Your job is to find factual, publicly verifiable information about a specific person and company to help fill a Connection Intelligence Matrix cell.
+// Phase 1 queries — short, targeted, what actually appears on the public internet
+const buildSearchQueries = (name, company, role) => [
+  { query: `${name} ${company} LinkedIn`, cell: "CURRENT STATE|ROLE", label: "Role & Authority" },
+  { query: `${name} ${company}`, cell: "CURRENT STATE|REACH", label: "Profile & Network" },
+  { query: `${company} news 2025`, cell: "CURRENT STATE|RESULTS", label: "Company News" },
+  { query: `${name} interview OR keynote OR podcast`, cell: "FUTURE STATE|RESULTS", label: "Stated Goals" },
+  { query: `${name} ${company} promotion OR appointment OR announcement`, cell: "FUTURE STATE|ROLE", label: "Career Movement" },
+  { query: `${company} strategy OR initiative OR partnership 2024 2025`, cell: "FUTURE STATE|REACH", label: "Strategic Direction" },
+];
 
-STRICT RULES:
-- Only return information you found from a real, citable public source (LinkedIn, company website, press release, news article, earnings call, conference recording, etc.)
-- If you cannot find reliable sourced information for this specific cell, return {"found": false}
-- Keep the intel to 1-2 sentences maximum — sharp and specific, not verbose
-- The source URL must be real and directly relevant to the intel you found
-- Never invent, infer, or extrapolate — only report what you actually found
-- Return ONLY valid JSON, no markdown, no explanation
+const SYNTHESIS_PROMPT = (name, role, company, rawResults, existingCells) => `You are a sales intelligence analyst for the Semper Selling® methodology. You have been given raw web search results about ${name} (${role} at ${company}). Your job is to extract factual, verifiable intel and map it to the correct Connection Intelligence Matrix cells.
 
-Return format:
-{"found": true, "intel": "1-2 sentence factual finding specific to this cell", "source": "https://actual-url.com", "source_label": "Short readable label e.g. LinkedIn · April 2025"}
-OR
-{"found": false}`;
+RAW SEARCH RESULTS:
+${rawResults}
+
+EXISTING CELL CONTENT (do not duplicate):
+${existingCells}
+
+THE NINE MATRIX CELLS:
+- CURRENT STATE|ROLE: Decision Authority — formal position, budget approval, what they can decide independently
+- CURRENT STATE|REACH: Influence Network — who influences them, who they influence, key relationships
+- CURRENT STATE|RESULTS: Performance Pressure — metrics, KPIs, business challenges they face right now
+- FUTURE STATE|ROLE: Career Trajectory — next role, promotion path, expanding responsibilities
+- FUTURE STATE|REACH: Relationship Strategy — new alliances, partnerships, networks being built
+- FUTURE STATE|RESULTS: Public Commitments — stated goals, public promises, strategic targets they've announced
+- NEEDS|ROLE: Capability Gaps — skip unless clearly evidenced in search results
+- NEEDS|REACH: Missing Support — skip unless clearly evidenced in search results
+- NEEDS|RESULTS: Resource Requirements — skip unless clearly evidenced in search results
+
+RULES:
+- Only include intel that is directly evidenced in the search results above — never invent or infer
+- Each finding must have a real source URL from the search results
+- Keep each intel entry to 1-2 sharp sentences
+- If search results contain nothing credible for a cell, omit that cell entirely
+- Strip any XML tags, citation markers, or formatting artifacts from the intel text
+- Return ONLY valid JSON, no markdown, no backticks
+
+{"findings": [
+  {"cell": "CURRENT STATE|ROLE", "intel": "1-2 sentence finding", "source": "https://url.com", "source_label": "Source Name · Date"},
+  {"cell": "FUTURE STATE|RESULTS", "intel": "1-2 sentence finding", "source": "https://url.com", "source_label": "Source Name · Date"}
+]}
+
+If nothing credible was found for any cell, return: {"findings": []}`;
 
 const ANALYSIS_PROMPT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine — a senior sales strategist briefing a field sales professional before a high-stakes call.
 
@@ -520,54 +549,107 @@ function MatrixScreen({ deal, onComplete, onBack }) {
   // ── AI SEARCH ──────────────────────────────
   const handleSearch = async () => {
     setSearching(true);
-    setSearchProgress("Searching public sources across all 9 cells...");
+    setSearchProgress("Searching public sources...");
 
-    const allKeys = [];
-    MATRIX_ROWS.forEach(row => MATRIX_COLS.forEach(col => allKeys.push({ key: `${row}|${col}`, row, col })));
-
-    const results = [];
-    let completed = 0;
-
-    await Promise.all(allKeys.map(async ({ key, row, col }) => {
-      const meta = MATRIX_META[key];
-      const prompt = meta.searchPrompt(deal.prospect, deal.role, deal.company);
-      const existing = cells[key].trim();
-
-      try {
-        const resp = await fetch("/api/chat", {
+    try {
+      // ── PHASE 1: Fire targeted web searches ──
+      const queries = buildSearchQueries(deal.prospect, deal.company, deal.role);
+      const searchPromises = queries.map(q =>
+        fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             model: "claude-sonnet-4-20250514",
-            max_tokens: 500,
+            max_tokens: 800,
             tools: [{ type: "web_search_20250305", name: "web_search" }],
-            system: SEARCH_SYSTEM_PROMPT,
-            messages: [{ role: "user", content: prompt + (existing ? `\n\nThe rep already knows: "${existing}". Only surface new, additive information not already captured above.` : "") }]
+            messages: [{ role: "user", content: `Search for: ${q.query}. Return only the raw factual findings you found — titles, quotes, URLs, dates. Do not format or analyze. Just report what you found.` }]
           })
-        });
-        const data = await resp.json();
-        const textBlock = data.content?.find(b => b.type === "text");
-        if (textBlock) {
-          const raw = textBlock.text.replace(/```json|```/g, "").trim();
-          const parsed = JSON.parse(raw);
-          // Strip any <cite> or XML tags that web search injects into text
-          if (parsed.intel) parsed.intel = parsed.intel.replace(/<[^>]*>/g, "").trim();
-          if (parsed.source_label) parsed.source_label = parsed.source_label.replace(/<[^>]*>/g, "").trim();
-          results.push({ key, row, col, existing, result: parsed });
-        } else {
-          results.push({ key, row, col, existing, result: { found: false } });
-        }
-      } catch {
-        results.push({ key, row, col, existing, result: { found: false } });
+        }).then(r => r.json()).catch(() => null)
+      );
+
+      setSearchProgress("Gathering intelligence...");
+      const searchResponses = await Promise.all(searchPromises);
+
+      // Extract all raw text from search results
+      const rawResults = searchResponses.map((data, i) => {
+        if (!data) return "";
+        const textBlocks = (data.content || [])
+          .filter(b => b.type === "text")
+          .map(b => b.text.replace(/<[^>]*>/g, "").trim())
+          .join(" ");
+        return `[SEARCH: ${queries[i].query}]
+${textBlocks}`;
+      }).filter(Boolean).join("
+
+");
+
+      if (!rawResults.trim()) {
+        setSearching(false);
+        setSearchProgress(null);
+        setSearchResults([]);
+        return;
       }
 
-      completed++;
-      setSearchProgress(`Searching... ${completed} of 9 complete`);
-    }));
+      // ── PHASE 2: Synthesize into Matrix cells ──
+      setSearchProgress("Analyzing findings...");
 
-    setSearching(false);
-    setSearchProgress(null);
-    setSearchResults(results);
+      const existingCells = Object.entries(cells)
+        .filter(([, v]) => v.trim())
+        .map(([k, v]) => `${k}: ${v}`)
+        .join("
+") || "None";
+
+      const synthResp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1500,
+          messages: [{ role: "user", content: SYNTHESIS_PROMPT(deal.prospect, deal.role, deal.company, rawResults, existingCells) }]
+        })
+      });
+
+      const synthData = await synthResp.json();
+      const textBlock = synthData.content?.find(b => b.type === "text");
+
+      if (!textBlock) {
+        setSearching(false);
+        setSearchProgress(null);
+        setSearchResults([]);
+        return;
+      }
+
+      const raw = textBlock.text.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(raw);
+      const findings = parsed.findings || [];
+
+      // Map findings to the review modal format
+      const results = findings.map(f => {
+        const [row, col] = f.cell.split("|");
+        return {
+          key: f.cell,
+          row: row || f.cell,
+          col: col || "",
+          existing: cells[f.cell]?.trim() || "",
+          result: {
+            found: true,
+            intel: f.intel.replace(/<[^>]*>/g, "").trim(),
+            source: f.source,
+            source_label: f.source_label
+          }
+        };
+      });
+
+      setSearching(false);
+      setSearchProgress(null);
+      setSearchResults(results);
+
+    } catch (err) {
+      console.error("Search failed:", err);
+      setSearching(false);
+      setSearchProgress(null);
+      setSearchResults([]);
+    }
   };
 
   // ── ACCEPT SEARCH RESULTS ──────────────────
@@ -595,7 +677,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 1200,
+          max_tokens: 3000,
           messages: [{ role: "user", content: ANALYSIS_PROMPT(matrixText, deal) }]
         })
       });
@@ -656,7 +738,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
       {analyzing && <AnalysisLoader />}
 
       {/* Search Review Modal */}
-      {searchResults && (
+      {searchResults !== null && (
         <SearchReviewModal
           results={searchResults}
           onAccept={handleAcceptResults}
