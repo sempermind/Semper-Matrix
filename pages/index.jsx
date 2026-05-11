@@ -161,8 +161,8 @@ Return ONLY valid JSON. No markdown, no backticks, no explanation.
     {"title": "RISK TITLE IN ALL CAPS", "body": "2 sentences — what happens if this risk materializes and the one specific action that protects against it."}
   ],
   "iq_questions": [
-    {"question": "Built using the iQ Formula: CURRENT REALITY (one specific insight from the CURRENT STATE row) + FUTURE STATE (one specific insight from the FUTURE STATE row) + IMPACT (what is personally at stake for them — drawn from whichever Matrix box carries the sharpest personal or professional consequence right now: could be Public Commitments, Missing Support, Career Trajectory, Resource Requirements, or any other box where the stakes are most personal). Impact must always be personal — career, reputation, a relationship, a public promise they've made — never operational. Use specific numbers, timelines, or details from the Matrix. Frame as a question that makes them stop and think, not a question they've rehearsed an answer to.", "timing": "Use [early/mid/late in conversation] — one sentence on what this question surfaces and why it matters at that moment."},
-    {"question": "Second iQ question using the same formula — CURRENT REALITY + FUTURE STATE + IMPACT — but drawing from different Matrix cells than the first question. The impact box should be whichever creates the most personal tension for this person given everything else in the Matrix.", "timing": "Use [timing] — rationale."}
+    {"question": "Build using the iQ Formula exactly: CURRENT REALITY (open with a specific constraint, number, or situation from the CURRENT STATE row — something they are living with right now) + FUTURE STATE (connect with 'and' or 'as' — a specific ambition or commitment from the FUTURE STATE row) + IMPACT (close with a question that surfaces what the gap has already cost them or what it is doing to something they personally care about — drawn from whichever Matrix box carries the sharpest personal stake: reputation, a public commitment, a relationship, a career move, anything that makes the gap feel personal and urgent). The impact question should make them reflect on tension that already exists, not speculate about a future scenario. Use specific numbers, names, timelines, or language from the Matrix. The full question must flow naturally as a single sentence the rep can say out loud. Example structure: 'Given [current reality]... and [future state]... how has [specific gap] affected your [personal stake]?'", "timing": "Use [early/mid/late in conversation] — one sentence on what this question forces them to confront and why that moment matters."},
+    {"question": "Second iQ question using the same formula but drawing from completely different Matrix cells. Current Reality from a different CURRENT STATE box. Future State from a different FUTURE STATE box. Impact from whichever remaining box creates the most personal tension. Must flow as a natural question the rep can say out loud without it sounding constructed.", "timing": "Use [timing] — one sentence on what this question surfaces."}
   ],
   "watch_for": [
     "Observable behavior — specific to this person and this deal, not a generic buying signal",
@@ -595,7 +595,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 2000,
+          max_tokens: 1200,
           messages: [{ role: "user", content: ANALYSIS_PROMPT(matrixText, deal) }]
         })
       });
@@ -673,10 +673,10 @@ function MatrixScreen({ deal, onComplete, onBack }) {
         <div style={{ marginLeft: "auto", display: "flex", gap: "10px", alignItems: "center" }}>
           <span style={{ fontSize: "10px", color: filled === 9 ? "#22c55e" : "#888", fontFamily: MONO }}>{filled}/9 cells</span>
           <button onClick={() => fileRef.current?.click()} disabled={uploading}
-            style={{ background: "#1a1a1a", border: `1px solid ${BORDER}`, color: uploading ? "#666" : "#fff", borderRadius: "3px", padding: "7px 14px", cursor: uploading ? "not-allowed" : "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.15s" }}
+            style={{ background: uploading ? "rgba(204,0,0,0.08)" : "#1a1a1a", border: `1px solid ${uploading ? RED : BORDER}`, color: uploading ? RED : "#fff", borderRadius: "3px", padding: "7px 14px", cursor: uploading ? "not-allowed" : "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.3s" }}
             onMouseEnter={e => { if (!uploading) { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = RED; } }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = uploading ? "#666" : "#fff"; }}
-          >{uploading ? "READING..." : "↑ UPLOAD MATRIX IMAGE"}</button>
+            onMouseLeave={e => { if (!uploading) { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = "#fff"; } }}
+          >{uploading ? <span style={{ animation: "readingPulse 1s ease-in-out infinite" }}>● READING...</span> : "↑ UPLOAD MATRIX IMAGE"}</button>
           <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageUpload} />
         </div>
       </div>
@@ -1064,6 +1064,7 @@ export default function App() {
         }
         textarea.matrix-cell:focus { outline: none !important; box-shadow: none !important; }
         @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes readingPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: #0d0d0d; }
         ::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 2px; }
