@@ -135,87 +135,123 @@ RULES:
 
 If nothing credible was found for any cell, return: {"findings": []}`;
 
-const ANALYSIS_PROMPT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine — a senior sales strategist briefing a field sales professional before a high-stakes call.
+const ANALYSIS_PROMPT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine — a senior sales strategist who has spent 20 years coaching enterprise reps on complex deals. You are not summarizing data. You are doing the analytical work a rep would never do sitting alone with their notes — finding the tensions, contradictions, and hidden connections between Matrix cells that reveal what is actually happening in this deal beneath the surface.
 
 Deal: ${deal.prospect} (${deal.role} @ ${deal.company})${deal.opportunity ? `\nOpportunity: ${deal.opportunity}` : ""}
 
 Matrix:
 ${matrixText}
 
+═══════════════════════════════
+YOUR ANALYTICAL MISSION
+═══════════════════════════════
+
+Run all 12 patterns below against the Matrix data. For each pattern, you are looking for TENSION — places where two or more cells contradict each other, create an unresolved gap, or reveal something about this person's situation that neither cell reveals on its own. A finding that simply restates what is in one cell is not a finding. A finding that shows what happens when two cells collide is.
+
+PATTERN 1 — DECISION AUTHORITY VS. INFLUENCE (Box 1 + Box 2)
+Look for the gap between formal authority and who actually moves decisions. If Box 1 shows limited approval power but Box 2 shows strong internal relationships, this person is more powerful than their title suggests — underselling is the risk. If Box 1 shows high authority but Box 2 shows a thin network, they can approve but may not be able to mobilize support — a different problem entirely. Surface whichever gap creates the most commercial implication for the rep.
+
+PATTERN 2 — UNENGAGED STAKEHOLDER RISK (Box 2 + Box 5 + Box 8)
+Look for a specific person or function that appears in Box 2 (who influences them) or Box 5 (relationships they are building) but is conspicuously absent from Box 8 (whose support they are missing). This is not a generic "engage more stakeholders" finding — it is a specific relationship gap that will become a late-stage surprise if not addressed now. Only surface this if the data actually names or implies a specific person or function.
+
+PATTERN 3 — PERSONAL MOTIVATION DRIVER (Box 3 + Box 4 + Box 6)
+Look for the intersection point where performance pressure, career trajectory, and public commitments all converge. This intersection — not the stated business problem — is what this person is optimizing for. The more specific the data in these three boxes, the sharper this finding will be. If all three point in the same direction, the motivation is clear. If they point in different directions, the contradiction itself is the finding — they are being pulled in competing directions and the rep who acknowledges that tension will stand out.
+
+PATTERN 4 — CURRENT TO FUTURE STATE GAP (Boxes 1+2+3 vs 4+5+6)
+Look at the full distance between where this person is today and where they are trying to get across all three dimensions — Role, Reach, Results. A large gap across all three means high motivation and genuine urgency to change. A large gap in one dimension but not others reveals where the pressure is concentrated. A small gap everywhere suggests this person is in maintenance mode and not actively motivated to disrupt the status quo — which is a deal risk the rep needs to know.
+
+PATTERN 5 — PRIMARY DEAL VULNERABILITIES (Box 7 + Box 8 + Box 9)
+Look at the Needs row as a complete picture. When capability gaps (Box 7), missing support (Box 8), and resource requirements (Box 9) all point to the same problem area, the deal is fragile from the inside regardless of how well the rep relationship is developing. Identify the specific internal condition that is most likely to kill this deal before the rep gets a no — and name it directly.
+
+PATTERN 6 — BREAKTHROUGH QUESTION INDICATOR (Box 3 + Box 7 + Box 9)
+Look for the sharpest tension point between what this person is being measured on (Box 3), what they are missing capability-wise (Box 7), and what resources they need (Box 9). This tension point is the setup for the iQ question that nobody else will ask — the question that surfaces a connection between their current pressure and their internal gaps that they have probably not articulated out loud yet. This pattern feeds directly into the iQ question construction.
+
+PATTERN 7 — BUYING MOMENTUM ASSESSMENT (Box 6 + Box 7 + Box 9)
+Look at whether the commitments this person has made publicly (Box 6) create enough internal pressure to actually drive a buying decision given what they are missing (Box 7 + Box 9). Public commitments with no capability or resources to back them = someone who needs to act but cannot on their own — high urgency, needs external help. Public commitments with partial capability = someone close to being able to act who needs the right solution. No public commitments and thin needs = low urgency, deal is at risk of stalling.
+
+PATTERN 8 — TIMELINE CREDIBILITY (Box 6 + Box 7 + Box 9)
+Look for a specific deadline or timeline in Box 6 (public commitments) and cross-reference it against the capability and resource gaps in Box 7 and Box 9. If a Q3 deadline exists in Box 6 but Box 7 shows capability gaps and Box 9 shows resource shortfalls, that timeline is aspirational, not executable. This is one of the most valuable findings a rep can have — knowing the stated timeline is fiction before the first call means they can ask the question that restructures the entire conversation.
+
+PATTERN 9 — AUTHORITY CEILING (Box 1 + Box 9)
+Look at whether the scope or investment implied by Box 9 (resource requirements) exceeds what Box 1 says this person can approve. If yes, there is a level above this person who has not been engaged and who will ultimately control the decision. Name the implication directly: the rep is selling to the wrong altitude. If the authority and resource requirement are aligned, the ceiling is not a problem — skip this pattern.
+
+PATTERN 10 — STATED GOALS VS. REAL GOALS (Box 3 + Box 4 + Box 6)
+Look for contradictions between what this person is measured on (Box 3), what they have publicly committed to (Box 6), and where their career is headed (Box 4). When these three align perfectly, the stated goal is the real goal — straightforward. When they conflict — for example, measured on cost reduction but publicly committed to expansion while positioning for a P&L role — the real motivation is hiding in the gap between them. The rep who sells to the stated goal while missing the real one will lose to the rep who sells to the gap.
+
+PATTERN 11 — COALITION RISK (Box 2 + Box 8)
+Look for the specific overlap between who influences this person (Box 2) and whose support they are currently missing (Box 8). The person or function that appears in Box 2 as an influencer but shows up in Box 8 as absent is precisely where internal resistance will come from. This is not a generic political risk — it is a specific relationship gap that the rep needs to address before the internal conversation happens without them in the room.
+
+PATTERN 12 — COMPETITIVE VULNERABILITY WINDOW (Box 4 + Box 5)
+Look at whether this person is simultaneously positioning for a bigger role (Box 4) and actively building new external relationships (Box 5). This combination signals someone who is open — deliberately or instinctively — to new vendors as part of their own professional repositioning. A competitor who shows up with a career-narrative pitch right now could get a meeting the rep has not earned yet. If this pattern fires, the rep needs to know their window may be shorter than the deal timeline suggests.
+
+═══════════════════════════════
+OUTPUT CONSTRUCTION RULES
+═══════════════════════════════
+
+FINDINGS — THE CONTRADICTION-FIRST STANDARD:
+Every finding must identify which two or three specific cells are in tension and explain what that tension reveals that neither cell reveals on its own. If a finding can be traced to a single cell with no cross-cell inference required, delete it — it is a restatement, not an insight. Write 2-4 sentences per finding. Surface only the patterns where genuine tension exists in the data. Do not manufacture findings from thin data.
+
 LANGUAGE RULES — NON-NEGOTIABLE:
-- Write for an experienced field sales professional, not a trainer or consultant
-- Never use the words "actually" or "real" or "really"
+- Write for an experienced field sales professional — direct, commercial, no softness
+- Never use "actually", "real", "really"
 - Never use passive voice
-- No therapy language ("may feel", "could be experiencing")
+- No therapy language
 - Use hedged but direct language: "The data suggests...", "The patterns indicate...", "Based on what's here...", "The Matrix points to...", "This intel suggests...", "If this read is right..."
-- When data is thin: "With limited intel here, the pattern is harder to read, but..."
-- Every sentence must be about THIS specific person with THIS specific intel — no generic sales advice
-- Corporate softness is not permitted: "this person will hedge" not "there may be some hesitation"
+- When data is thin: "With limited intel here, the pattern is harder to read — but..."
+- Every sentence must reference THIS specific person's specific intel — no generic sales advice
+- Name specific numbers, dates, titles, and relationships from the Matrix whenever they exist
 
-TWELVE PATTERNS TO RUN SILENTLY — never name these in output, surface only what they reveal:
-1. Decision Authority vs. Influence: Box 1 + Box 2
-2. Unengaged Stakeholder Risk: Box 2 + Box 5 + Box 8
-3. Personal Motivation Driver: Box 3 + Box 4 + Box 6
-4. Current to Future State Gap: Boxes 1-3 vs 4-6
-5. Primary Deal Vulnerabilities: Box 7 + Box 8 + Box 9
-6. Breakthrough Question Indicator: Box 3 + Box 7 + Box 9
-7. Buying Momentum Assessment: Box 6 + Box 7 + Box 9
-8. Timeline Credibility: Box 6 + Box 7 + Box 9
-9. Authority Ceiling: Box 1 + Box 9
-10. Stated Goals vs. Goals: Box 3 + Box 6 + Box 4
-11. Coalition Risk: Box 2 + Box 8
-12. Competitive Vulnerability Window: Box 4 + Box 5
+MATRIX HEALTH:
+- "STRONG FOUNDATION" — rich intel across all three rows, confident analysis
+- "PARTIAL PICTURE" — meaningful findings possible but specific gaps create blind spots  
+- "FLYING BLIND" — too little intel for reliable analysis; next conversation must be pure discovery
 
-MATRIX HEALTH — choose exactly one based on intel quality and coverage:
-- "STRONG FOUNDATION" — enough intel across all three rows to run a confident analysis
-- "PARTIAL PICTURE" — meaningful findings possible but specific gaps create blind spots
-- "FLYING BLIND" — too little intel for reliable analysis; next conversation must be discovery
-
-Return ONLY valid JSON. No markdown, no backticks, no explanation.
+═══════════════════════════════
+RETURN FORMAT — PURE JSON ONLY
+═══════════════════════════════
 
 {
   "matrix_health": "STRONG FOUNDATION or PARTIAL PICTURE or FLYING BLIND",
-  "matrix_health_note": "One direct sentence — what this Matrix gives the rep and what it doesn't. Written as a briefing statement, not an evaluation.",
+  "matrix_health_note": "One direct sentence — what this Matrix gives the rep and what it is missing. A briefing statement, not a grade.",
   "findings": [
-    "FINDING 1 — Patterns 3+10: 2-4 sentences on who this person is, what drives their decisions, what they are protecting. Hedged language. Specific to this intel.",
-    "FINDING 2 — Patterns 1+2+9+11: 2-4 sentences on where the power sits in this deal — formal authority vs. influence, whether the rep is at the right altitude, who else needs to be in the conversation.",
-    "FINDING 3 — Patterns 4+7+8+12: 2-4 sentences on how motivated this person is to move — whether urgency is genuine, what is driving it, whether a competitor can walk in right now.",
-    "FINDING 4 — Patterns 5+6+8: 2-4 sentences on where this deal can break — the internal conditions that kill deals before the rep gets a no. Include timeline credibility if relevant.",
-    "FINDING 5 — Patterns 3+10: 2-4 sentences on what this person is optimizing for — the gap between their stated goals and what the patterns suggest they care about most."
+    "FINDING 1: Cross-cell tension from Patterns 3+10. 2-4 sentences. What is this person optimizing for — and where do their stated goals, performance pressures, and career ambitions contradict each other? Name the specific gap between what they say and what the patterns suggest. This is what the rep needs to sell to, not around.",
+    "FINDING 2: Cross-cell tension from Patterns 1+9+11. 2-4 sentences. Where does the power in this deal actually sit? Is the rep at the right altitude? Is there a specific person or relationship gap that will surface as a late-stage problem if not addressed now?",
+    "FINDING 3: Cross-cell tension from Patterns 4+7+8+12. 2-4 sentences. How motivated is this person to move — and is urgency genuine or manufactured? Does a competitive window exist right now that could shrink the rep's timeline without warning?",
+    "FINDING 4: Cross-cell tension from Patterns 5+6+8. 2-4 sentences. Where is this deal most likely to break from the inside — before the rep ever gets a no? Name the specific internal condition. If timeline credibility is an issue, surface it here with the specific cells in conflict.",
+    "FINDING 5: Cross-cell tension from Patterns 2+6+7+9. 2-4 sentences. Does the buying momentum in this deal match the public commitments this person has made? Do they have what they need internally to act — or are they dependent on external help to make their own commitments land?"
   ],
   "gaps": [
-    {"cell": "CURRENT STATE / ROLE", "label": "Decision Authority", "severity": "HIGH", "note": "One sentence on why this gap creates a specific blind spot in this deal. HIGH or MEDIUM only. No LOW gaps."}
+    {"cell": "ROW / COLUMN e.g. FUTURE STATE / ROLE", "label": "Cell label name", "severity": "HIGH or MEDIUM only — no LOW", "note": "One sentence — why this specific missing intel creates a blind spot that affects the findings above. If a gap did not affect a finding, do not include it."}
   ],
   "defense": [
-    {"title": "RISK TITLE IN ALL CAPS", "body": "2 sentences — what happens if this risk materializes and the one specific action that protects against it."}
+    {"title": "RISK SCENARIO IN ALL CAPS — specific to this deal, not generic", "body": "Sentence 1: what happens specifically if this risk materializes — name the commercial consequence. Sentence 2: the one specific action the rep takes now to prevent it."}
   ],
   "iq_questions": [
-    {"question": "Build using the iQ Formula exactly: CURRENT REALITY (open with a specific constraint, number, or situation from the CURRENT STATE row — something they are living with right now) + FUTURE STATE (connect with 'and' or 'as' — a specific ambition or commitment from the FUTURE STATE row) + IMPACT (close with a question that surfaces what the gap has already cost them or what it is doing to something they personally care about — drawn from whichever Matrix box carries the sharpest personal stake: reputation, a public commitment, a relationship, a career move, anything that makes the gap feel personal and urgent). The impact question should make them reflect on tension that already exists, not speculate about a future scenario. Use specific numbers, names, timelines, or language from the Matrix. The full question must flow naturally as a single sentence the rep can say out loud. Example structure: 'Given [current reality]... and [future state]... how has [specific gap] affected your [personal stake]?'", "timing": "Use [early/mid/late in conversation] — one sentence on what this question forces them to confront and why that moment matters."},
-    {"question": "Second iQ question using the same formula but drawing from completely different Matrix cells. Current Reality from a different CURRENT STATE box. Future State from a different FUTURE STATE box. Impact from whichever remaining box creates the most personal tension. Must flow as a natural question the rep can say out loud without it sounding constructed.", "timing": "Use [timing] — one sentence on what this question surfaces."}
+    {"question": "iQ Formula: CURRENT REALITY (one specific constraint, pressure, or situation from the CURRENT STATE row — something measurable or named) + FUTURE STATE (connect with 'and' or 'as' — one specific ambition or commitment from the FUTURE STATE row) + IMPACT (a question that surfaces what this tension has already cost them or is doing to something they personally care about — career, reputation, a public promise, a relationship. Draw from whichever Matrix box carries the sharpest personal stake. Never operational. Example structure: Given [specific current reality with number or name]... and [specific future state ambition]... how has [the gap between them] affected your [personal stake]?). The full question must flow as one natural sentence the rep can say out loud.", "timing": "Use [early / mid / late in conversation] — one sentence on what this question forces them to confront and why that moment in the conversation is right for it."},
+    {"question": "Second iQ question using the same formula but drawing from completely different Matrix cells than the first. Must surface a different tension. Must flow as one natural sentence.", "timing": "Use [timing] — one sentence on what this question surfaces."}
   ],
   "watch_for": [
-    "Observable behavior — specific to this person and this deal, not a generic buying signal",
-    "Observable behavior — specific to this person and this deal"
+    "Specific observable behavior from this person in conversation that signals momentum — not a generic buying signal but something tied to what the patterns revealed about their specific motivation or situation",
+    "Second specific observable momentum behavior tied to this person's intel"
   ],
   "watch_out": [
-    "Observable resistance behavior — specific to this deal",
-    "Observable resistance behavior — specific to this deal"
+    "Specific observable behavior that signals this deal is stalling or this person is disengaging — tied to the vulnerabilities identified in the findings",
+    "Second specific resistance behavior tied to this deal's specific risk profile"
   ],
   "next_actions": [
-    "Specific immediately executable action tied to a finding or gap — enough context that the rep knows exactly what to do and why.",
-    "Second action — specific and tied to the intel above.",
-    "Third action — specific and tied to the intel above."
+    "Action 1 — specific, immediately executable, tied to a finding or gap. Name exactly what to do and why it matters for this deal right now.",
+    "Action 2 — specific and tied to the intel above.",
+    "Action 3 — specific and tied to the intel above."
   ]
 }
 
-RULES:
-- findings: EXACTLY 5 strings, in order, no labels or keys — just the paragraph text
-- gaps: HIGH and MEDIUM severity only, only gaps that affected the findings above, maximum 4
-- defense: maximum 3 items, each title in ALL CAPS
-- iq_questions: exactly 2, each must use SPECIFIC intel from Matrix cells
-- watch_for and watch_out: exactly 2 each, observable behaviors not internal states
-- next_actions: exactly 3, specific and immediately executable
-- Return pure JSON only`;
+FINAL QUALITY CHECK BEFORE RETURNING JSON:
+1. Does every finding identify specific cells in tension — not just summarize one cell?
+2. Would a rep reading this learn something they would not have seen sitting alone with their notes?
+3. Does every iQ question use specific intel from the Matrix — numbers, names, timelines — not generic language?
+4. Are the next actions specific enough that a rep knows exactly what to do tomorrow morning?
+5. Is there any sentence that could apply to any deal rather than this specific deal? If yes, delete it.
+Return pure JSON only. No backticks, no markdown, no explanation.`;
 
 
 // ─── SHARED COMPONENTS ─────────────────────────
@@ -354,18 +390,24 @@ function SearchReviewModal({ results, onAccept, onClose }) {
             return (
               <div key={r.key} style={{ border: `1px solid ${isAccepted ? "#383838" : "#1e1e1e"}`, borderRadius: "4px", padding: "14px 16px", opacity: isAccepted ? 1 : 0.45, transition: "all 0.2s" }}>
 
-                {/* Cell label + toggle */}
+                {/* Cell label + accept/reject */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                   <div>
                     <span style={{ fontSize: "9px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700" }}>
                       {r.row} / {r.col}
                     </span>
-                    <span style={{ fontSize: "9px", color: "#666", fontFamily: MONO, marginLeft: "8px" }}>— {meta.label}</span>
+                    <span style={{ fontSize: "9px", color: "#666", fontFamily: MONO, marginLeft: "8px" }}>— {meta && meta.label}</span>
                   </div>
-                  <button
-                    onClick={() => setAccepted(a => ({ ...a, [r.key]: !a[r.key] }))}
-                    style={{ background: isAccepted ? RED : "transparent", border: `1px solid ${isAccepted ? RED : "#444"}`, borderRadius: "3px", padding: "4px 12px", cursor: "pointer", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", color: isAccepted ? "#fff" : "#666", transition: "all 0.15s" }}
-                  >{isAccepted ? "✓ ACCEPTED" : "SKIPPED"}</button>
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    <button
+                      onClick={() => setAccepted(a => ({ ...a, [r.key]: true }))}
+                      style={{ background: isAccepted ? "rgba(34,197,94,0.15)" : "transparent", border: `1px solid ${isAccepted ? "#22c55e" : "#333"}`, borderRadius: "3px", padding: "4px 12px", cursor: "pointer", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", color: isAccepted ? "#22c55e" : "#555", transition: "all 0.15s" }}
+                    >✓ ACCEPT</button>
+                    <button
+                      onClick={() => setAccepted(a => ({ ...a, [r.key]: false }))}
+                      style={{ background: !isAccepted ? "rgba(204,0,0,0.15)" : "transparent", border: `1px solid ${!isAccepted ? RED : "#333"}`, borderRadius: "3px", padding: "4px 12px", cursor: "pointer", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", color: !isAccepted ? RED : "#555", transition: "all 0.15s" }}
+                    >✕ REJECT</button>
+                  </div>
                 </div>
 
                 {/* Existing cell content if any */}
