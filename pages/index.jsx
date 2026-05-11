@@ -210,15 +210,25 @@ MATRIX HEALTH:
 RETURN FORMAT — PURE JSON ONLY
 ═══════════════════════════════
 
+HEADLINE RULES — applied to every finding headline:
+- Written in ALL CAPS
+- Maximum 8 words
+- Written for a sales professional — sharp, commercial, direct
+- Must tell the rep exactly what they are about to read
+- No filler words, no hedging, no corporate language
+- Never use the words "actually", "real", or "really"
+- Must be specific to this deal — not a generic label
+- Examples of strong headlines: "THIS PERSON IS SELLING UPWARD, NOT JUST BUYING", "THE TIMELINE THEY QUOTED DOES NOT ADD UP", "POWER SITS ONE LEVEL ABOVE WHERE YOU ARE SELLING", "SOMEONE IN THEIR NETWORK WILL KILL THIS DEAL"
+- Examples of weak headlines that are NOT acceptable: "KEY INSIGHT ABOUT THIS DEAL", "IMPORTANT FINDING", "WHAT THE MATRIX SHOWS"
+
 {
   "matrix_health": "STRONG FOUNDATION or PARTIAL PICTURE or FLYING BLIND",
   "matrix_health_note": "One direct sentence — what this Matrix gives the rep and what it is missing. A briefing statement, not a grade.",
   "findings": [
-    "FINDING 1: Cross-cell tension from Patterns 3+10. 2-4 sentences. What is this person optimizing for — and where do their stated goals, performance pressures, and career ambitions contradict each other? Name the specific gap between what they say and what the patterns suggest. This is what the rep needs to sell to, not around.",
-    "FINDING 2: Cross-cell tension from Patterns 1+9+11. 2-4 sentences. Where does the power in this deal actually sit? Is the rep at the right altitude? Is there a specific person or relationship gap that will surface as a late-stage problem if not addressed now?",
-    "FINDING 3: Cross-cell tension from Patterns 4+7+8+12. 2-4 sentences. How motivated is this person to move — and is urgency genuine or manufactured? Does a competitive window exist right now that could shrink the rep's timeline without warning?",
-    "FINDING 4: Cross-cell tension from Patterns 5+6+8. 2-4 sentences. Where is this deal most likely to break from the inside — before the rep ever gets a no? Name the specific internal condition. If timeline credibility is an issue, surface it here with the specific cells in conflict.",
-    "FINDING 5: Cross-cell tension from Patterns 2+6+7+9. 2-4 sentences. Does the buying momentum in this deal match the public commitments this person has made? Do they have what they need internally to act — or are they dependent on external help to make their own commitments land?"
+    {
+      "headline": "GENERATED HEADLINE IN ALL CAPS — 8 words max, sharp and specific to this deal",
+      "finding": "2-3 sentences. Cross-cell tension only — identify which cells are in conflict and what that conflict reveals that neither cell reveals alone. Must contain something the rep would not have seen sitting alone with their notes. No generic observations. No sentence that could apply to any deal. Hedged but direct language."
+    }
   ],
   "gaps": [
     {"cell": "ROW / COLUMN e.g. FUTURE STATE / ROLE", "label": "Cell label name", "severity": "HIGH or MEDIUM only — no LOW", "note": "One sentence — why this specific missing intel creates a blind spot that affects the findings above. If a gap did not affect a finding, do not include it."}
@@ -248,9 +258,17 @@ RETURN FORMAT — PURE JSON ONLY
 FINAL QUALITY CHECK BEFORE RETURNING JSON:
 1. Does every finding identify specific cells in tension — not just summarize one cell?
 2. Would a rep reading this learn something they would not have seen sitting alone with their notes?
-3. Does every iQ question use specific intel from the Matrix — numbers, names, timelines — not generic language?
-4. Are the next actions specific enough that a rep knows exactly what to do tomorrow morning?
-5. Is there any sentence that could apply to any deal rather than this specific deal? If yes, delete it.
+3. Does every headline tell the rep exactly what they are about to read in plain sales language — no pattern numbers, no methodology terms, no filler?
+4. Does every iQ question use specific intel from the Matrix — numbers, names, timelines — not generic language?
+5. Are the next actions specific enough that a rep knows exactly what to do tomorrow morning?
+6. Is there any sentence that could apply to any deal rather than this specific deal? If yes, delete it.
+7. Do any findings, headlines, or next actions use the words "actually", "real", or "really"? If yes, replace them.
+- findings: minimum 2, maximum 6 — only surface patterns where genuine cross-cell tension exists in the data. Each finding is an object with "headline" and "finding" keys.
+- gaps: HIGH and MEDIUM severity only, only gaps that affected the findings above, maximum 4
+- defense: maximum 3 items, each title in ALL CAPS
+- iq_questions: exactly 2, each must use SPECIFIC intel from Matrix cells
+- watch_for and watch_out: exactly 2 each, observable behaviors not internal states
+- next_actions: exactly 3, specific and immediately executable
 Return pure JSON only. No backticks, no markdown, no explanation.`;
 
 
@@ -946,7 +964,7 @@ function AnalysisScreen({ deal, analysis, aiSources, onBack, onRedo }) {
 <div style="font-size:38px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.04em;line-height:1;">${deal.prospect.toUpperCase()}</div>
 <div style="font-size:13px;color:#888;font-family:'IBM Plex Mono',monospace;margin-top:6px;margin-bottom:24px;">${deal.role}${deal.company ? ` · ${deal.company}` : ""}${deal.opportunity ? ` · ${deal.opportunity}` : ""}</div>
 ${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;padding:10px 16px;margin-bottom:32px;font-size:13px;color:#ccc;font-style:italic;line-height:1.7;">● ${analysis.matrix_health_note}</div>` : ""}
-${(analysis.findings||[]).length ? `<div style="margin-bottom:32px;"><div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:16px;"><span style="color:#CC0000;font-size:9px;">◆</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">WHAT THE MATRIX IS TELLING YOU</span></div>${(analysis.findings||[]).map(f=>`<p style="font-size:13px;color:#ccc;line-height:1.75;margin-bottom:14px;">${f}</p>`).join("")}</div>` : ""}
+${(analysis.findings||[]).length ? `<div style="margin-bottom:32px;"><div style="display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:20px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">WHAT THE MATRIX IS TELLING YOU</span></div>${(analysis.findings||[]).map(f=>{const headline=typeof f==="object"?f.headline:null;const text=typeof f==="object"?f.finding:f;return `<div style="margin-bottom:20px;">${headline?`<div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.16em;margin-bottom:6px;">${headline}</div>`:""}<p style="font-size:13px;color:#ccc;line-height:1.75;margin:0;">${text}</p></div>`;}).join("")}</div>` : ""}
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px;">
 <div>${(analysis.gaps||[]).length ? `<div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:12px;"><span style="color:#CC0000;font-size:9px;">▣</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">INTELLIGENCE GAPS</span></div><div style="font-size:10px;color:#666;font-family:'IBM Plex Mono',monospace;margin-bottom:12px;">HIGH — critical to close &nbsp;|&nbsp; MEDIUM — worth exploring</div>${(analysis.gaps||[]).map(g=>`<div style="border-left:3px solid ${g.severity==='HIGH'?'#CC0000':'#f59e0b'};padding:8px 14px;margin-bottom:10px;"><div style="font-size:10px;font-weight:700;color:${g.severity==='HIGH'?'#CC0000':'#f59e0b'};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:4px;">${g.cell}</div><div style="font-size:12px;color:#ccc;line-height:1.55;">${g.note}</div></div>`).join("")}` : ""}</div>
 <div>${(analysis.defense||[]).length ? `<div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:12px;"><span style="color:#CC0000;font-size:9px;">◎</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">DEFENSE STRATEGY</span></div>${(analysis.defense||[]).map(r=>`<div style="margin-bottom:14px;"><div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:5px;">${r.title}</div><div style="font-size:12px;color:#ccc;line-height:1.6;">${r.body}</div></div>`).join("")}` : ""}</div>
@@ -1019,13 +1037,22 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
 
             {/* WHAT THE MATRIX IS TELLING YOU */}
             {(analysis.findings || []).length > 0 && (
-              <div style={{ marginBottom: "36px" }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                  <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>WHAT THE MATRIX IS TELLING YOU</span>
+              <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "24px" }}>
+                  <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>WHAT THE MATRIX IS TELLING YOU</span>
                 </div>
-                {(analysis.findings || []).map((f, i) => (
-                  <p key={i} style={{ fontSize: "13px", color: "#ccc", fontFamily: MONO, lineHeight: "1.75", marginBottom: "16px" }}>{f}</p>
-                ))}
+                {(analysis.findings || []).map((f, i) => {
+                  const headline = typeof f === "object" ? f.headline : null;
+                  const text = typeof f === "object" ? f.finding : f;
+                  return (
+                    <div key={i} style={{ marginBottom: "22px" }}>
+                      {headline && (
+                        <div style={{ fontSize: "11px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.16em", marginBottom: "6px" }}>{headline}</div>
+                      )}
+                      <p style={{ fontSize: "13px", color: "#ccc", fontFamily: MONO, lineHeight: "1.75", margin: 0 }}>{text}</p>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
