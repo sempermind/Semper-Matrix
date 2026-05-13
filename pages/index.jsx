@@ -91,24 +91,45 @@ const matrixToText = (cells, deal) => {
 
 // ─── TWO-PHASE SEARCH ──────────────────────────
 
-// Phase 1 queries — person-level AND company-level for the six searchable cells
-const buildSearchQueries = (name, company, role) => [
-  // PERSON-LEVEL
-  { query: `${name} ${company} LinkedIn`, label: "Person: Role & Authority" },
-  { query: `${name} ${company} interview OR keynote OR announcement`, label: "Person: Profile & Commitments" },
-  { query: `${name} ${company} promotion OR appointed OR named OR joins`, label: "Person: Career Movement" },
+const QUERY_BUILDER_PROMPT = (name, role, company, existingMatrix) => `You are a B2B sales intelligence researcher. Your job is to construct the most targeted web search queries possible to find public intel about a specific person and their company for a sales rep preparing for a meeting.
 
-  // COMPANY-LEVEL
-  { query: `${company} news 2024 2025`, label: "Company: News & Pressures" },
-  { query: `${company} strategy OR initiative OR investment OR expansion 2024 2025`, label: "Company: Strategic Direction" },
-  { query: `${company} challenges OR problems OR penalties OR issues OR results`, label: "Company: Performance & Gaps" },
-  { query: `${company} partnership OR vendor OR technology OR platform announcement`, label: "Company: Relationships & Networks" },
-  { query: `${company} goals OR targets OR commitments OR plans 2025`, label: "Company: Future Commitments" },
-];
+Contact: ${name}
+Role: ${role}
+Company: ${company}
+What the rep already knows:
+${existingMatrix}
 
-const SYNTHESIS_PROMPT = (name, role, company, rawResults, existingCells, fullMatrix) => `You are a sales intelligence analyst for the Semper Selling® methodology. You have been given raw web search results about ${name} (${role} at ${company}) — both person-level intel and company-level intel. Your job is to extract factual intel, map it to the correct Connection Intelligence Matrix cells, and infer the Needs row from the complete picture.
+Construct exactly 10 search queries — 4 person-level and 6 company-level. Each query must be:
+- Short and specific (4-8 words max)
+- Designed to find real public sources: LinkedIn profiles, press releases, earnings calls, news articles, conference appearances, job postings, analyst reports, interviews
+- Role-aware — the company queries should target the specific business pressures, metrics, and challenges relevant to someone in the role of ${role}
+- Targeted at finding intel that would fill a Connection Intelligence Matrix: current authority and position, influence and relationships, performance pressures, career trajectory, strategic direction, public commitments, and resource/capability gaps
 
-RAW SEARCH RESULTS:
+PERSON-LEVEL QUERIES (4) — target:
+1. Their LinkedIn profile and professional background
+2. Any public statements, interviews, keynotes, or articles they've authored or been quoted in
+3. Their career history, recent promotions, or role changes
+4. Any awards, board memberships, speaking engagements, or industry recognition
+
+COMPANY-LEVEL QUERIES (6) — target based on the role of ${role}:
+1. Recent company news, performance, or challenges relevant to this person's function
+2. Strategic initiatives, investments, or transformations underway
+3. Public commitments, targets, or goals announced by leadership
+4. Partnerships, vendor relationships, or technology investments relevant to this role
+5. Job postings in this person's functional area (reveals capability gaps and investment priorities)
+6. Industry analyst coverage, competitive pressures, or market challenges specific to this company's situation
+
+Return ONLY valid JSON, no markdown, no backticks:
+{
+  "queries": [
+    {"query": "exact search string", "type": "person", "target": "what this query is hunting for"},
+    {"query": "exact search string", "type": "company", "target": "what this query is hunting for"}
+  ]
+}`;
+
+const SYNTHESIS_PROMPT = (name, role, company, rawResults, existingCells, fullMatrix) => `You are a sales intelligence analyst for the Semper Selling® methodology. You have been given structured web search results about ${name} (${role} at ${company}). Each search block is labeled with TYPE (PERSON or COMPANY), TARGET (what it was hunting for), and QUERY (the exact search used). Use these labels to correctly attribute findings to the right Matrix cells and source types.
+
+RAW SEARCH RESULTS — STRUCTURED BY TYPE AND TARGET:
 ${rawResults}
 
 FULL MATRIX — WHAT THE REP ALREADY KNOWS (use this to infer Needs, do not duplicate in sourced cells):
@@ -629,20 +650,56 @@ function MatrixScreen({ deal, onComplete, onBack }) {
   // ── AI SEARCH ──────────────────────────────
   const handleSearch = async () => {
     setSearching(true);
-    setSearchProgress("Searching public sources...");
+    setSearchProgress("Building search strategy...");
 
     try {
-      // ── PHASE 1: Fire targeted web searches ──
-      const queries = buildSearchQueries(deal.prospect, deal.company, deal.role);
+      // ── PHASE 0: Dynamic query construction ──
+      const existingMatrixSummary = Object.entries(cells)
+        .filter(([, v]) => v.trim())
+        .map(([k, v]) => `${k}: ${v}`)
+        .join("\n") || "Nothing entered yet";
+
+      const queryBuilderResp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 800,
+          messages: [{ role: "user", content: QUERY_BUILDER_PROMPT(deal.prospect, deal.role, deal.company, existingMatrixSummary) }]
+        })
+      });
+
+      const queryBuilderData = await queryBuilderResp.json();
+      const queryText = queryBuilderData.content?.find(b => b.type === "text")?.text || "";
+      const queryRaw = queryText.replace(/```json|```/g, "").trim();
+
+      let queries = [];
+      try {
+        const parsed = JSON.parse(queryRaw);
+        queries = parsed.queries || [];
+      } catch {
+        // Fallback to basic queries if builder fails
+        queries = [
+          { query: `${deal.prospect} ${deal.company} LinkedIn`, type: "person", target: "Profile" },
+          { query: `${deal.prospect} ${deal.company} interview OR keynote`, type: "person", target: "Statements" },
+          { query: `${deal.company} news 2025`, type: "company", target: "Company news" },
+          { query: `${deal.company} strategy initiative 2025`, type: "company", target: "Strategy" },
+          { query: `${deal.company} challenges performance results`, type: "company", target: "Performance" },
+        ];
+      }
+
+      // ── PHASE 1: Fire targeted web searches in parallel ──
+      setSearchProgress(`Searching ${queries.length} targeted sources...`);
+
       const searchPromises = queries.map(q =>
         fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             model: "claude-sonnet-4-20250514",
-            max_tokens: 800,
+            max_tokens: 600,
             tools: [{ type: "web_search_20250305", name: "web_search" }],
-            messages: [{ role: "user", content: `Search for: ${q.query}. Return only the raw factual findings you found — titles, quotes, URLs, dates. Do not format or analyze. Just report what you found.` }]
+            messages: [{ role: "user", content: `Search for: ${q.query}\n\nReturn only factual findings — exact quotes, titles, URLs, dates, numbers. Do not analyze or interpret. Report what you found verbatim.` }]
           })
         }).then(r => r.json()).catch(() => null)
       );
@@ -650,15 +707,29 @@ function MatrixScreen({ deal, onComplete, onBack }) {
       setSearchProgress("Gathering intelligence...");
       const searchResponses = await Promise.all(searchPromises);
 
-      // Extract all raw text from search results
+      // ── Build structured raw results with source labels ──
+      // Label each block with query, type (person/company), and target
+      // This gives synthesis the context to attribute correctly
       const rawResults = searchResponses.map((data, i) => {
         if (!data) return "";
+        const q = queries[i];
         const textBlocks = (data.content || [])
           .filter(b => b.type === "text")
           .map(b => b.text.replace(/<[^>]*>/g, "").trim())
+          .filter(Boolean)
           .join(" ");
-        return `[SEARCH: ${queries[i].query}]\n${textBlocks}`;
-      }).filter(Boolean).join("\n\n");
+
+        // Also extract any URLs from tool_use blocks for better sourcing
+        const toolResults = (data.content || [])
+          .filter(b => b.type === "tool_result" || b.type === "mcp_tool_result")
+          .map(b => b.content?.[0]?.text || "")
+          .join(" ");
+
+        const combined = [textBlocks, toolResults].filter(Boolean).join(" ").trim();
+        if (!combined) return "";
+
+        return `[TYPE: ${q.type?.toUpperCase() || "SEARCH"} | TARGET: ${q.target} | QUERY: "${q.query}"]\n${combined}`;
+      }).filter(Boolean).join("\n\n---\n\n");
 
       if (!rawResults.trim()) {
         setSearching(false);
@@ -670,8 +741,6 @@ function MatrixScreen({ deal, onComplete, onBack }) {
       // ── PHASE 2: Synthesize into Matrix cells ──
       setSearchProgress("Analyzing findings...");
 
-      // Pass full matrix — both what rep entered AND search results
-      // Synthesis needs the complete picture to infer Needs from Current/Future State gaps
       const fullMatrixContent = Object.entries(cells)
         .map(([k, v]) => `${k}: ${v.trim() || "[empty]"}`)
         .join("\n");
@@ -705,7 +774,6 @@ function MatrixScreen({ deal, onComplete, onBack }) {
       const parsed = JSON.parse(raw);
       const findings = parsed.findings || [];
 
-      // Map findings to the review modal format
       const results = findings.map(f => {
         const [row, col] = f.cell.split("|");
         return {
