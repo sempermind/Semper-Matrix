@@ -91,17 +91,22 @@ const matrixToText = (cells, deal) => {
 
 // ─── TWO-PHASE SEARCH ──────────────────────────
 
-// Phase 1 queries — short, targeted, what actually appears on the public internet
+// Phase 1 queries — person-level AND company-level for the six searchable cells
 const buildSearchQueries = (name, company, role) => [
-  { query: `${name} ${company} LinkedIn`, cell: "CURRENT STATE|ROLE", label: "Role & Authority" },
-  { query: `${name} ${company}`, cell: "CURRENT STATE|REACH", label: "Profile & Network" },
-  { query: `${company} news 2025`, cell: "CURRENT STATE|RESULTS", label: "Company News" },
-  { query: `${name} interview OR keynote OR podcast`, cell: "FUTURE STATE|RESULTS", label: "Stated Goals" },
-  { query: `${name} ${company} promotion OR appointment OR announcement`, cell: "FUTURE STATE|ROLE", label: "Career Movement" },
-  { query: `${company} strategy OR initiative OR partnership 2024 2025`, cell: "FUTURE STATE|REACH", label: "Strategic Direction" },
+  // PERSON-LEVEL
+  { query: `${name} ${company} LinkedIn`, label: "Person: Role & Authority" },
+  { query: `${name} ${company} interview OR keynote OR announcement`, label: "Person: Profile & Commitments" },
+  { query: `${name} ${company} promotion OR appointed OR named OR joins`, label: "Person: Career Movement" },
+
+  // COMPANY-LEVEL
+  { query: `${company} news 2024 2025`, label: "Company: News & Pressures" },
+  { query: `${company} strategy OR initiative OR investment OR expansion 2024 2025`, label: "Company: Strategic Direction" },
+  { query: `${company} challenges OR problems OR penalties OR issues OR results`, label: "Company: Performance & Gaps" },
+  { query: `${company} partnership OR vendor OR technology OR platform announcement`, label: "Company: Relationships & Networks" },
+  { query: `${company} goals OR targets OR commitments OR plans 2025`, label: "Company: Future Commitments" },
 ];
 
-const SYNTHESIS_PROMPT = (name, role, company, rawResults, existingCells) => `You are a sales intelligence analyst for the Semper Selling® methodology. You have been given raw web search results about ${name} (${role} at ${company}). Your job is to extract factual, verifiable intel and map it to the correct Connection Intelligence Matrix cells.
+const SYNTHESIS_PROMPT = (name, role, company, rawResults, existingCells) => `You are a sales intelligence analyst for the Semper Selling® methodology. You have been given raw web search results about ${name} (${role} at ${company}) — both person-level intel and company-level intel. Your job is to extract factual intel, map it to the correct Connection Intelligence Matrix cells, and attribute it correctly to its source.
 
 RAW SEARCH RESULTS:
 ${rawResults}
@@ -110,30 +115,36 @@ EXISTING CELL CONTENT (do not duplicate):
 ${existingCells}
 
 THE NINE MATRIX CELLS:
-- CURRENT STATE|ROLE: Decision Authority — formal position, budget approval, what they can decide independently
-- CURRENT STATE|REACH: Influence Network — who influences them, who they influence, key relationships
-- CURRENT STATE|RESULTS: Performance Pressure — metrics, KPIs, business challenges they face right now
-- FUTURE STATE|ROLE: Career Trajectory — next role, promotion path, expanding responsibilities
-- FUTURE STATE|REACH: Relationship Strategy — new alliances, partnerships, networks being built
-- FUTURE STATE|RESULTS: Public Commitments — stated goals, public promises, strategic targets they've announced
-- NEEDS|ROLE: Capability Gaps — skip unless clearly evidenced in search results
-- NEEDS|REACH: Missing Support — skip unless clearly evidenced in search results
-- NEEDS|RESULTS: Resource Requirements — skip unless clearly evidenced in search results
 
-RULES:
-- Only include intel that is directly evidenced in the search results above — never invent or infer
-- Each finding must have a real source URL from the search results
-- Keep each intel entry to 1-2 sharp sentences
-- If search results contain nothing credible for a cell, omit that cell entirely
-- Strip any XML tags, citation markers, or formatting artifacts from the intel text
+ROWS 1-6 — SOURCED INTEL ONLY (person-level or company-level):
+- CURRENT STATE|ROLE: Decision Authority — ${name}'s formal position, budget approval, what they can decide independently. Draw from person-level search results.
+- CURRENT STATE|REACH: Influence Network — who influences ${name}, who they influence, key relationships. Draw from person-level search results.
+- CURRENT STATE|RESULTS: Performance Pressure — what ${company} is being measured on, current business challenges, market pressures, recent performance issues. Draw from company-level search results.
+- FUTURE STATE|ROLE: Career Trajectory — ${name}'s next role, promotion path, expanding responsibilities. Draw from person-level search results.
+- FUTURE STATE|REACH: Relationship Strategy — new alliances, partnerships, networks ${company} is building. Draw from company-level search results.
+- FUTURE STATE|RESULTS: Public Commitments — stated goals, strategic targets, public promises made by ${name} or announced by ${company}. Draw from both person and company results.
+
+ROWS 7-9 — INFERRED FROM THE GAP BETWEEN CURRENT STATE AND FUTURE STATE:
+- NEEDS|ROLE: Capability Gaps — what authority, skills, or organizational capability does ${name} or ${company} need to get from Current State to Future State? Infer from the tension between CURRENT STATE|ROLE and FUTURE STATE|ROLE.
+- NEEDS|REACH: Missing Support — what relationships or stakeholder alignment is missing between their current network and where they are trying to go? Infer from the tension between CURRENT STATE|REACH and FUTURE STATE|REACH.
+- NEEDS|RESULTS: Resource Requirements — what technology, budget, or process change is required to close the gap between current performance pressures and future commitments? Infer from the tension between CURRENT STATE|RESULTS and FUTURE STATE|RESULTS.
+
+SOURCE ATTRIBUTION RULES:
+- Person-level findings: source_label should identify the actual source type e.g. "LinkedIn", "Forbes Interview · 2025", "Company Blog · March 2025"
+- Company-level findings: source_label should identify the source type e.g. "Press Release · 2025", "Annual Report · 2024", "Industry News · 2025"
+- Inferred NEEDS cells: source "inferred", source_label "Inferred from search intel"
+- Only infer a NEEDS cell if you found meaningful content in both the corresponding Current State AND Future State cells
+- Each finding 1-2 sharp sentences maximum
+- Strip all XML tags, citation markers, and formatting artifacts
 - Return ONLY valid JSON, no markdown, no backticks
 
 {"findings": [
-  {"cell": "CURRENT STATE|ROLE", "intel": "1-2 sentence finding", "source": "https://url.com", "source_label": "Source Name · Date"},
-  {"cell": "FUTURE STATE|RESULTS", "intel": "1-2 sentence finding", "source": "https://url.com", "source_label": "Source Name · Date"}
+  {"cell": "CURRENT STATE|ROLE", "intel": "1-2 sentence finding about the person", "source": "https://linkedin.com/...", "source_label": "LinkedIn"},
+  {"cell": "CURRENT STATE|RESULTS", "intel": "1-2 sentence finding about company pressures", "source": "https://news.com/...", "source_label": "Reuters · January 2025"},
+  {"cell": "NEEDS|RESULTS", "intel": "1-2 sentence inferred gap", "source": "inferred", "source_label": "Inferred from search intel"}
 ]}
 
-If nothing credible was found for any cell, return: {"findings": []}`;
+If nothing credible was found, return: {"findings": []}`;
 
 const ANALYSIS_PROMPT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine — a senior sales strategist who has spent 20 years coaching enterprise reps on complex deals. You are not summarizing data. You are doing the analytical work a rep would never do sitting alone with their notes — finding the tensions, contradictions, and hidden connections between Matrix cells that reveal what is actually happening in this deal beneath the surface.
 
@@ -450,11 +461,15 @@ function SearchReviewModal({ results, onAccept, onClose }) {
                 {/* Source */}
                 <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: `1px solid #1e1e1e`, display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ fontSize: "9px", color: "#444", fontFamily: CONDENSED, letterSpacing: "0.1em" }}>SOURCE</span>
-                  <a href={r.result.source} target="_blank" rel="noopener noreferrer"
-                    style={{ fontSize: "10px", color: "#4a9eff", fontFamily: MONO, textDecoration: "none", wordBreak: "break-all" }}
-                    onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
-                    onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
-                  >{r.result.source_label || r.result.source}</a>
+                  {r.result.source === "inferred" ? (
+                    <span style={{ fontSize: "10px", color: "#666", fontFamily: MONO, fontStyle: "italic" }}>Inferred from search intel — no direct source</span>
+                  ) : (
+                    <a href={r.result.source} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: "10px", color: "#4a9eff", fontFamily: MONO, textDecoration: "none", wordBreak: "break-all" }}
+                      onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
+                      onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
+                    >{r.result.source_label || r.result.source}</a>
+                  )}
                 </div>
               </div>
             );
@@ -855,13 +870,16 @@ function MatrixScreen({ deal, onComplete, onBack }) {
                         <div style={{ fontSize: "9px", color: isFocused ? RED : "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", transition: "color 0.2s", textTransform: "uppercase", paddingTop: "2px" }}>
                           {meta.label}
                         </div>
-                        {hasAiSource && (
+                        {hasAiSource && aiSources[key].source !== "inferred" && (
                           <a href={aiSources[key].source} target="_blank" rel="noopener noreferrer"
                             title={`AI source: ${aiSources[key].source_label || aiSources[key].source}`}
                             style={{ fontSize: "8px", color: "#4a9eff", fontFamily: MONO, textDecoration: "none", paddingTop: "2px", whiteSpace: "nowrap" }}
                             onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
                             onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
                           >↗ source</a>
+                        )}
+                        {hasAiSource && aiSources[key].source === "inferred" && (
+                          <span title="Inferred from search intel" style={{ fontSize: "8px", color: "#555", fontFamily: MONO, paddingTop: "2px", whiteSpace: "nowrap", fontStyle: "italic" }}>~ inferred</span>
                         )}
                       </div>
                       <WhatGoesHere description={meta.description} />
