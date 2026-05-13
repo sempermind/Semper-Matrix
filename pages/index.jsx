@@ -99,25 +99,28 @@ Company: ${company}
 What the rep already knows:
 ${existingMatrix}
 
+The current date is May 2026. All queries must target information from 2025 or 2026 only — nothing older. Include "2025" or "2026" in company-level queries where it helps surface recent results.
+
 Construct exactly 10 search queries — 4 person-level and 6 company-level. Each query must be:
 - Short and specific (4-8 words max)
 - Designed to find real public sources: LinkedIn profiles, press releases, earnings calls, news articles, conference appearances, job postings, analyst reports, interviews
 - Role-aware — the company queries should target the specific business pressures, metrics, and challenges relevant to someone in the role of ${role}
 - Targeted at finding intel that would fill a Connection Intelligence Matrix: current authority and position, influence and relationships, performance pressures, career trajectory, strategic direction, public commitments, and resource/capability gaps
+- Recent — prioritize 2025 and 2026 sources. For company queries include the year in the search string where appropriate.
 
 PERSON-LEVEL QUERIES (4) — target:
-1. Their LinkedIn profile and professional background
-2. Any public statements, interviews, keynotes, or articles they've authored or been quoted in
-3. Their career history, recent promotions, or role changes
-4. Any awards, board memberships, speaking engagements, or industry recognition
+1. Their LinkedIn profile and current role
+2. Any public statements, interviews, keynotes, or articles from 2025 or 2026
+3. Any recent career moves, promotions, or new responsibilities announced in 2025 or 2026
+4. Any board memberships, speaking engagements, or industry recognition from 2025 or 2026
 
-COMPANY-LEVEL QUERIES (6) — target based on the role of ${role}:
-1. Recent company news, performance, or challenges relevant to this person's function
-2. Strategic initiatives, investments, or transformations underway
-3. Public commitments, targets, or goals announced by leadership
-4. Partnerships, vendor relationships, or technology investments relevant to this role
-5. Job postings in this person's functional area (reveals capability gaps and investment priorities)
-6. Industry analyst coverage, competitive pressures, or market challenges specific to this company's situation
+COMPANY-LEVEL QUERIES (6) — target based on the role of ${role}, all focused on 2025-2026:
+1. Recent company news, earnings, or performance challenges relevant to this person's function — include "2025" or "2026" in query
+2. Strategic initiatives, investments, or transformations announced in 2025 or 2026
+3. Public commitments, targets, or leadership statements from 2025 or 2026
+4. Recent partnerships, vendor relationships, or technology investments relevant to this role
+5. Current job postings in this person's functional area (reveals what they are hiring for and investing in right now)
+6. Recent analyst coverage, competitive pressures, or market challenges specific to this company in 2025-2026
 
 Return ONLY valid JSON, no markdown, no backticks:
 {
@@ -156,13 +159,19 @@ Use BOTH the rep's manually entered intel AND the search findings above to infer
 - Only infer a NEEDS cell if there is meaningful content in BOTH the corresponding Current State AND Future State cells — from any source (rep entry or search). If either is empty or too thin to infer from, skip that NEEDS cell entirely.
 
 SOURCE ATTRIBUTION RULES:
-- Person-level findings: source_label should identify the actual source type e.g. "LinkedIn", "Forbes Interview · 2025", "Company Blog · March 2025"
-- Company-level findings: source_label should identify the source type e.g. "Press Release · 2025", "Annual Report · 2024", "Industry News · 2025"
+- Person-level findings: source_label should identify the actual source type e.g. "LinkedIn", "Forbes Interview · May 2025", "Company Blog · January 2026"
+- Company-level findings: source_label should identify the source type e.g. "Press Release · 2026", "Earnings Call · Q1 2026", "Industry News · March 2026"
 - Inferred NEEDS cells: source "inferred", source_label "Inferred from search intel"
 - Only infer a NEEDS cell if you found meaningful content in both the corresponding Current State AND Future State cells
 - Each finding 1-2 sharp sentences maximum
 - Strip all XML tags, citation markers, and formatting artifacts
 - Return ONLY valid JSON, no markdown, no backticks
+
+RECENCY RULES — CRITICAL:
+- The current date is May 2026. Only include findings from 2025 or 2026.
+- If a search result is from 2024 or earlier, discard it entirely — do not include it in any cell.
+- If you cannot determine the date of a finding, err on the side of excluding it.
+- If all results for a cell are older than 2025, leave that cell empty rather than surfacing stale intel.
 
 {"findings": [
   {"cell": "CURRENT STATE|ROLE", "intel": "1-2 sentence finding about the person", "source": "https://linkedin.com/...", "source_label": "LinkedIn"},
@@ -542,7 +551,14 @@ function DealScreen({ onComplete }) {
       <div style={{ width: "100%", maxWidth: "560px" }}>
         <div style={{ marginBottom: "32px" }}>
           <div style={{ fontSize: "11px", color: RED, fontFamily: MONO, letterSpacing: "0.14em", marginBottom: "8px" }}>SEMPER SELLING®</div>
-          <div style={{ fontSize: "36px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em", lineHeight: 1.1 }}>CONNECTION INTELLIGENCE<br />MATRIX</div>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+            <div style={{ fontSize: "36px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em", lineHeight: 1.1 }}>CONNECTION INTELLIGENCE<br />MATRIX</div>
+            <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginTop: "2px", opacity: 0.85 }}>
+              {[0,1,2].map(row => [0,1,2].map(col => (
+                <rect key={`${row}-${col}`} x={col * 24 + 2} y={row * 24 + 2} width="20" height="20" rx="2" fill="none" stroke="white" strokeWidth="1.5"/>
+              )))}
+            </svg>
+          </div>
           <div style={{ fontSize: "12px", color: "#888", fontFamily: MONO, marginTop: "10px", lineHeight: 1.6 }}>Build your intel. Walk in masterfully prepared.</div>
         </div>
         <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "4px", padding: "28px 24px" }}>
@@ -707,10 +723,61 @@ function MatrixScreen({ deal, onComplete, onBack }) {
       setSearchProgress("Gathering intelligence...");
       const searchResponses = await Promise.all(searchPromises);
 
+      // ── Extract URLs from search results and fetch the best ones ──
+      // Collect all URLs found, prioritizing person-level results
+      const urlsFound = [];
+      searchResponses.forEach((data, i) => {
+        if (!data) return;
+        const q = queries[i];
+        // Extract URLs from text content
+        const allText = (data.content || [])
+          .filter(b => b.type === "text")
+          .map(b => b.text)
+          .join(" ");
+        const urlMatches = allText.match(/https?:\/\/[^\s"<>]+/g) || [];
+        urlMatches.forEach(url => {
+          // Skip LinkedIn login walls, PDFs, and social media noise
+          if (url.includes("linkedin.com/in/") || url.includes(".pdf") || url.includes("twitter.com") || url.includes("facebook.com") || url.includes("instagram.com")) return;
+          // Prioritize press releases, news, company sites, business publications
+          const priority = (url.includes("prnewswire") || url.includes("businesswire") || url.includes("globenewswire") || url.includes("reuters") || url.includes("bloomberg") || url.includes("wsj.com") || url.includes("ft.com") || url.includes("forbes") || url.includes("linkedin.com/pulse")) ? 1 : 2;
+          urlsFound.push({ url, type: q.type, priority });
+        });
+      });
+
+      // Deduplicate and take top 3 highest-priority URLs
+      const seen = new Set();
+      const topUrls = urlsFound
+        .filter(u => { if (seen.has(u.url)) return false; seen.add(u.url); return true; })
+        .sort((a, b) => a.priority - b.priority)
+        .slice(0, 3);
+
+      // Fetch full content from top URLs
+      let fetchedContent = "";
+      if (topUrls.length > 0) {
+        setSearchProgress("Reading full articles...");
+        const fetchPromises = topUrls.map(u =>
+          fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 400,
+              messages: [{ role: "user", content: `Fetch this URL and return only the key facts, quotes, dates, and numbers relevant to a B2B sales rep researching a stakeholder. URL: ${u.url}\n\nReturn only the most relevant factual content. 3-4 sentences max.` }]
+            })
+          }).then(r => r.json()).catch(() => null)
+        );
+        const fetchResponses = await Promise.all(fetchPromises);
+        fetchedContent = fetchResponses.map((data, i) => {
+          if (!data) return "";
+          const text = (data.content || []).filter(b => b.type === "text").map(b => b.text.replace(/<[^>]*>/g, "").trim()).join(" ");
+          return text ? `[FULL ARTICLE: ${topUrls[i].url}]\n${text}` : "";
+        }).filter(Boolean).join("\n\n---\n\n");
+      }
+
       // ── Build structured raw results with source labels ──
       // Label each block with query, type (person/company), and target
       // This gives synthesis the context to attribute correctly
-      const rawResults = searchResponses.map((data, i) => {
+      const searchRawResults = searchResponses.map((data, i) => {
         if (!data) return "";
         const q = queries[i];
         const textBlocks = (data.content || [])
@@ -730,6 +797,9 @@ function MatrixScreen({ deal, onComplete, onBack }) {
 
         return `[TYPE: ${q.type?.toUpperCase() || "SEARCH"} | TARGET: ${q.target} | QUERY: "${q.query}"]\n${combined}`;
       }).filter(Boolean).join("\n\n---\n\n");
+
+      // Combine search snippets with full article fetches
+      const rawResults = [searchRawResults, fetchedContent].filter(Boolean).join("\n\n═══ FULL ARTICLE CONTENT ═══\n\n");
 
       if (!rawResults.trim()) {
         setSearching(false);
