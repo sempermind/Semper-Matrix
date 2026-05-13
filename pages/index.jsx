@@ -91,42 +91,59 @@ const matrixToText = (cells, deal) => {
 
 // ─── TWO-PHASE SEARCH ──────────────────────────
 
-const QUERY_BUILDER_PROMPT = (name, role, company, existingMatrix) => `You are a B2B sales intelligence researcher. Your job is to construct the most targeted web search queries possible to find public intel about a specific person and their company for a sales rep preparing for a meeting.
+const QUERY_BUILDER_PROMPT = (name, role, company, existingMatrix) => `You are an elite B2B sales intelligence researcher with deep expertise in finding hard-to-surface professional intel. Your job is to construct 10 laser-targeted web search queries that go after the highest-value public sources — not generic web searches but source-targeted queries that hunt specific databases, publications, and platforms known to contain rich stakeholder intelligence.
 
 Contact: ${name}
 Role: ${role}
 Company: ${company}
+Current date: May 2026 — only surface intel from 2025 or 2026
 What the rep already knows:
 ${existingMatrix}
 
-The current date is May 2026. All queries must target information from 2025 or 2026 only — nothing older. Include "2025" or "2026" in company-level queries where it helps surface recent results.
+SOURCE TARGETING STRATEGY:
+You must build queries that target SPECIFIC high-value sources, not generic web searches. Use site: operators, publication names, and source-specific terminology to maximize result quality.
 
-Construct exactly 10 search queries — 4 person-level and 6 company-level. Each query must be:
-- Short and specific (4-8 words max)
-- Designed to find real public sources: LinkedIn profiles, press releases, earnings calls, news articles, conference appearances, job postings, analyst reports, interviews
-- Role-aware — the company queries should target the specific business pressures, metrics, and challenges relevant to someone in the role of ${role}
-- Targeted at finding intel that would fill a Connection Intelligence Matrix: current authority and position, influence and relationships, performance pressures, career trajectory, strategic direction, public commitments, and resource/capability gaps
-- Recent — prioritize 2025 and 2026 sources. For company queries include the year in the search string where appropriate.
+HIGH-VALUE SOURCES BY INTEL TYPE:
+- Press releases & announcements: site:businesswire.com OR site:prnewswire.com OR site:globenewswire.com
+- Financial commitments & targets: "investor relations" OR "earnings call" OR "annual report" OR site:sec.gov (for public companies) OR "investor day"
+- Person interviews & statements: podcast OR interview OR keynote OR "fireside chat" OR "in conversation with" OR "Q&A"
+- LinkedIn profile & posts: site:linkedin.com "${name}" (for profile) — "${name}" linkedin post OR article (for thought leadership)
+- Job postings (reveals capability gaps): site:linkedin.com/jobs OR "we are hiring" OR "job opening" OR careers — use the functional area relevant to ${role}
+- Industry & trade press: use industry publication names relevant to the sector (e.g. for finance: CFO.com OR "CFO Magazine", for supply chain: SupplyChainDive OR "Supply Chain Management Review", for sales: "Sales & Marketing Management" OR "Harvard Business Review")
+- Local business journals: site:bizjournals.com OR "[city] business journal" — especially valuable for private company executives
+- Conference appearances: site:conference OR speaker OR "keynote speaker" OR "panel discussion" — reveals thought leadership and network
+- Company blog & newsroom: site:[company domain] news OR blog OR insights OR leadership
+- Analyst & market coverage: Gartner OR Forrester OR IDC OR "analyst report" combined with company name
 
-PERSON-LEVEL QUERIES (4) — target:
-1. Their LinkedIn profile and current role
-2. Any public statements, interviews, keynotes, or articles from 2025 or 2026
-3. Any recent career moves, promotions, or new responsibilities announced in 2025 or 2026
-4. Any board memberships, speaking engagements, or industry recognition from 2025 or 2026
+CONSTRUCT EXACTLY 10 QUERIES:
 
-COMPANY-LEVEL QUERIES (6) — target based on the role of ${role}, all focused on 2025-2026:
-1. Recent company news, earnings, or performance challenges relevant to this person's function — include "2025" or "2026" in query
-2. Strategic initiatives, investments, or transformations announced in 2025 or 2026
-3. Public commitments, targets, or leadership statements from 2025 or 2026
-4. Recent partnerships, vendor relationships, or technology investments relevant to this role
-5. Current job postings in this person's functional area (reveals what they are hiring for and investing in right now)
-6. Recent analyst coverage, competitive pressures, or market challenges specific to this company in 2025-2026
+PERSON-LEVEL QUERIES (4) — hunt for this specific individual:
+1. LinkedIn profile: use site:linkedin.com with their exact name and company
+2. Public statements: target podcasts, interviews, keynotes, or authored articles from 2025-2026 — use "podcast" OR "interview" OR "keynote" with their name
+3. Career moves & recognition: target press releases announcing their appointment, promotion, or award — use site:businesswire.com OR site:prnewswire.com with their name
+4. Thought leadership: target LinkedIn posts, articles, or conference appearances that reveal their professional priorities — use their name with "speaker" OR "article" OR "post" OR "linkedin"
+
+COMPANY-LEVEL QUERIES (6) — hunt for organizational intel relevant to the ${role} function:
+1. Financial commitments: target earnings calls, investor presentations, or annual reports with specific metrics relevant to ${role}'s function — use "earnings" OR "investor" OR "annual report" with company name and 2025 OR 2026
+2. Strategic announcements: target press releases about initiatives, transformations, or investments relevant to ${role} — use site:businesswire.com OR site:prnewswire.com with company name and relevant strategic terms
+3. Leadership statements: target CEO or senior leadership quotes about priorities relevant to ${role}'s domain — use "CEO" OR "leadership" with company name and relevant domain terms
+4. Partnerships & technology: target partnership announcements, vendor selections, or technology investments relevant to ${role}'s function — use company name with partner names, technology terms, and 2025 OR 2026
+5. Hiring & capability gaps: target current job postings in ${role}'s functional area — this reveals what the company is investing in and where their gaps are — use site:linkedin.com/jobs OR company name with "hiring" OR "job" and relevant function
+6. Competitive & market pressures: target industry analyst coverage, trade press, or market reports about challenges facing companies like ${company} in ${role}'s domain — use relevant industry publication names or "analyst" with specific challenge terms
+
+RULES:
+- Each query must be 4-10 words and immediately searchable
+- Use site: operators wherever they improve precision
+- Include 2025 OR 2026 in queries where recency matters
+- Make every query role-aware — the intel it hunts must be relevant to someone in the role of ${role}
+- If the company appears to be publicly traded, include SEC/investor relations queries
+- If the company appears to be private or mid-market, use bizjournals.com and local press queries instead
 
 Return ONLY valid JSON, no markdown, no backticks:
 {
   "queries": [
-    {"query": "exact search string", "type": "person", "target": "what this query is hunting for"},
-    {"query": "exact search string", "type": "company", "target": "what this query is hunting for"}
+    {"query": "exact search string with site: operators where appropriate", "type": "person", "target": "specific intel this query is hunting for"},
+    {"query": "exact search string", "type": "company", "target": "specific intel this query is hunting for"}
   ]
 }`;
 
