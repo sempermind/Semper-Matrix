@@ -97,7 +97,7 @@ Contact: ${name}
 Role: ${role}
 Company: ${company}
 Current date: May 2026 — only surface intel from 2025 or 2026
-What the rep already knows:
+What you already know:
 ${existingMatrix}
 
 SOURCE TARGETING STRATEGY:
@@ -152,7 +152,7 @@ const SYNTHESIS_PROMPT = (name, role, company, rawResults, existingCells, fullMa
 RAW SEARCH RESULTS — STRUCTURED BY TYPE AND TARGET:
 ${rawResults}
 
-FULL MATRIX — WHAT THE REP ALREADY KNOWS (use this to infer Needs, do not duplicate in sourced cells):
+FULL MATRIX — WHAT YOU ALREADY KNOW (use this to infer Needs, do not duplicate in sourced cells):
 ${fullMatrix}
 
 EXISTING CELL CONTENT TO AVOID DUPLICATING:
@@ -170,7 +170,7 @@ ROWS 1-6 — SOURCED INTEL ONLY (person-level or company-level):
 
 ROWS 7-9 — INFERRED FROM THE COMPLETE MATRIX PICTURE:
 Use BOTH the rep's manually entered intel AND the search findings above to infer the Needs row. Do not limit yourself to only what the search found.
-- NEEDS|ROLE: Capability Gaps — given everything you know about ${name}'s current authority and future career trajectory, what capability, skill, or organizational gap stands between where they are and where they are trying to go? Infer from the tension between CURRENT STATE|ROLE and FUTURE STATE|ROLE across both the rep's intel and search findings. CRITICAL: Write this as inference, not fact. Use language like "The data suggests...", "The patterns indicate...", "Based on what's here...", "The gap between X and Y points to...". Never state inferred Needs as established fact.
+- NEEDS|ROLE: Capability Gaps — given everything you know about ${name}'s current authority and future career trajectory, what capability, skill, or organizational gap stands between where they are and where they are trying to go? Infer from the tension between CURRENT STATE|ROLE and FUTURE STATE|ROLE across both your intel and search findings. CRITICAL: Write this as inference, not fact. Use language like "The data suggests...", "The patterns indicate...", "Based on what's here...", "The gap between X and Y points to...". Never state inferred Needs as established fact.
 - NEEDS|REACH: Missing Support — given their current influence network and the relationships they are building, whose support or what partnership is conspicuously missing? Infer from the tension between CURRENT STATE|REACH and FUTURE STATE|REACH. Write as inference: "The patterns suggest...", "This intel points to...", "Based on the gap between...". Never state as fact.
 - NEEDS|RESULTS: Resource Requirements — given the gap between their current performance pressures and their stated future commitments, what technology, budget, or process change would close that gap? Infer from the tension between CURRENT STATE|RESULTS and FUTURE STATE|RESULTS. Write as inference: "The data suggests...", "If this read is right...", "The gap here points to...". Never state as fact.
 - Only infer a NEEDS cell if there is meaningful content in BOTH the corresponding Current State AND Future State cells — from any source (rep entry or search). If either is empty or too thin to infer from, skip that NEEDS cell entirely.
@@ -212,19 +212,19 @@ YOUR ANALYTICAL MISSION
 Run all 12 patterns below against the Matrix data. For each pattern, you are looking for TENSION — places where two or more cells contradict each other, create an unresolved gap, or reveal something about this person's situation that neither cell reveals on its own. A finding that simply restates what is in one cell is not a finding. A finding that shows what happens when two cells collide is.
 
 PATTERN 1 — DECISION AUTHORITY VS. INFLUENCE (Box 1 + Box 2)
-Look for the gap between formal authority and who actually moves decisions. If Box 1 shows limited approval power but Box 2 shows strong internal relationships, this person is more powerful than their title suggests — underselling is the risk. If Box 1 shows high authority but Box 2 shows a thin network, they can approve but may not be able to mobilize support — a different problem entirely. Surface whichever gap creates the most commercial implication for the rep.
+Look for the gap between formal authority and who actually moves decisions. If Box 1 shows limited approval power but Box 2 shows strong internal relationships, this person is more powerful than their title suggests — underselling is the risk. If Box 1 shows high authority but Box 2 shows a thin network, they can approve but may not be able to mobilize support — a different problem entirely. Surface whichever gap creates the most commercial implication for you.
 
 PATTERN 2 — UNENGAGED STAKEHOLDER RISK (Box 2 + Box 5 + Box 8)
 Look for a specific person or function that appears in Box 2 (who influences them) or Box 5 (relationships they are building) but is conspicuously absent from Box 8 (whose support they are missing). This is not a generic "engage more stakeholders" finding — it is a specific relationship gap that will become a late-stage surprise if not addressed now. Only surface this if the data actually names or implies a specific person or function.
 
 PATTERN 3 — PERSONAL MOTIVATION DRIVER (Box 3 + Box 4 + Box 6)
-Look for the intersection point where performance pressure, career trajectory, and public commitments all converge. This intersection — not the stated business problem — is what this person is optimizing for. The more specific the data in these three boxes, the sharper this finding will be. If all three point in the same direction, the motivation is clear. If they point in different directions, the contradiction itself is the finding — they are being pulled in competing directions and the rep who acknowledges that tension will stand out.
+Look for the intersection point where performance pressure, career trajectory, and public commitments all converge. This intersection — not the stated business problem — is what this person is optimizing for. The more specific the data in these three boxes, the sharper this finding will be. If all three point in the same direction, the motivation is clear. If they point in different directions, the contradiction itself is the finding — they are being pulled in competing directions and you — the rep who acknowledges that tension — will stand out.
 
 PATTERN 4 — CURRENT TO FUTURE STATE GAP (Boxes 1+2+3 vs 4+5+6)
-Look at the full distance between where this person is today and where they are trying to get across all three dimensions — Role, Reach, Results. A large gap across all three means high motivation and genuine urgency to change. A large gap in one dimension but not others reveals where the pressure is concentrated. A small gap everywhere suggests this person is in maintenance mode and not actively motivated to disrupt the status quo — which is a deal risk the rep needs to know.
+Look at the full distance between where this person is today and where they are trying to get across all three dimensions — Role, Reach, Results. A large gap across all three means high motivation and genuine urgency to change. A large gap in one dimension but not others reveals where the pressure is concentrated. A small gap everywhere suggests this person is in maintenance mode and not actively motivated to disrupt the status quo — which is a deal risk you need to know.
 
 PATTERN 5 — PRIMARY DEAL VULNERABILITIES (Box 7 + Box 8 + Box 9)
-Look at the Needs row as a complete picture. When capability gaps (Box 7), missing support (Box 8), and resource requirements (Box 9) all point to the same problem area, the deal is fragile from the inside regardless of how well the rep relationship is developing. Identify the specific internal condition that is most likely to kill this deal before the rep gets a no — and name it directly.
+Look at the Needs row as a complete picture. When capability gaps (Box 7), missing support (Box 8), and resource requirements (Box 9) all point to the same problem area, the deal is fragile from the inside regardless of how well your relationship is developing. Identify the specific internal condition that is most likely to kill this deal before you get a no — and name it directly.
 
 PATTERN 6 — BREAKTHROUGH QUESTION INDICATOR (Box 3 + Box 7 + Box 9)
 Look for the sharpest tension point between what this person is being measured on (Box 3), what they are missing capability-wise (Box 7), and what resources they need (Box 9). This tension point is the setup for the iQ question that nobody else will ask — the question that surfaces a connection between their current pressure and their internal gaps that they have probably not articulated out loud yet. This pattern feeds directly into the iQ question construction.
@@ -236,10 +236,10 @@ PATTERN 8 — TIMELINE CREDIBILITY (Box 6 + Box 7 + Box 9)
 Look for a specific deadline or timeline in Box 6 (public commitments) and cross-reference it against the capability and resource gaps in Box 7 and Box 9. If a Q3 deadline exists in Box 6 but Box 7 shows capability gaps and Box 9 shows resource shortfalls, that timeline is aspirational, not executable. This is one of the most valuable findings a rep can have — knowing the stated timeline is fiction before the first call means they can ask the question that restructures the entire conversation.
 
 PATTERN 9 — AUTHORITY CEILING (Box 1 + Box 9)
-Look at whether the scope or investment implied by Box 9 (resource requirements) exceeds what Box 1 says this person can approve. If yes, there is a level above this person who has not been engaged and who will ultimately control the decision. Name the implication directly: the rep is selling to the wrong altitude. If the authority and resource requirement are aligned, the ceiling is not a problem — skip this pattern.
+Look at whether the scope or investment implied by Box 9 (resource requirements) exceeds what Box 1 says this person can approve. If yes, there is a level above this person who has not been engaged and who will ultimately control the decision. Name the implication directly: you are selling to the wrong altitude. If the authority and resource requirement are aligned, the ceiling is not a problem — skip this pattern.
 
 PATTERN 10 — STATED GOALS VS. REAL GOALS (Box 3 + Box 4 + Box 6)
-Look for contradictions between what this person is measured on (Box 3), what they have publicly committed to (Box 6), and where their career is headed (Box 4). When these three align perfectly, the stated goal is the real goal — straightforward. When they conflict — for example, measured on cost reduction but publicly committed to expansion while positioning for a P&L role — the real motivation is hiding in the gap between them. The rep who sells to the stated goal while missing the real one will lose to the rep who sells to the gap.
+Look for contradictions between what this person is measured on (Box 3), what they have publicly committed to (Box 6), and where their career is headed (Box 4). When these three align perfectly, the stated goal is the real goal — straightforward. When they conflict — for example, measured on cost reduction but publicly committed to expansion while positioning for a P&L role — the real motivation is hiding in the gap between them. If you sell to the stated goal while missing the real one, you will lose to the competitor who sells to the gap.
 
 PATTERN 11 — COALITION RISK (Box 2 + Box 8)
 Look for the specific overlap between who influences this person (Box 2) and whose support they are currently missing (Box 8). The person or function that appears in Box 2 as an influencer but shows up in Box 8 as absent is precisely where internal resistance will come from. This is not a generic political risk — it is a specific relationship gap that the rep needs to address before the internal conversation happens without them in the room.
@@ -255,6 +255,7 @@ FINDINGS — THE CONTRADICTION-FIRST STANDARD:
 Every finding must identify which two or three specific cells are in tension and explain what that tension reveals that neither cell reveals on its own. If a finding can be traced to a single cell with no cross-cell inference required, delete it — it is a restatement, not an insight. Write 2-4 sentences per finding. Surface only the patterns where genuine tension exists in the data. Do not manufacture findings from thin data.
 
 LANGUAGE RULES — NON-NEGOTIABLE:
+- Write in SECOND PERSON throughout — address the sales professional directly as "you" not "the rep". Say "you need to", "your position", "you are selling to the wrong altitude" — never "the rep needs to", "the rep's position", "the rep is selling"
 - Write for an experienced field sales professional — direct, commercial, no softness
 - Never use "actually", "real", "really"
 - Never use passive voice
