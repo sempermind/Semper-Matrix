@@ -255,33 +255,33 @@ Look at whether this person is simultaneously positioning for a bigger role (Box
 OUTPUT CONSTRUCTION RULES
 ═══════════════════════════════
 
-FINDINGS — THE COLLISION STANDARD:
-Every finding must show its work. Name the specific cell values in conflict. State what Cell A says. State what Cell B says. Then state what the collision between them reveals that neither cell reveals on its own. If you cannot name two specific cells with specific values that contradict or create tension with each other, delete the finding — it is a restatement, not an insight. Write 2-3 sentences per finding. Surface only patterns where genuine tension exists. Do not manufacture findings from thin data. Do not write conclusions without showing the reasoning.
+THE BRIEFING — THE OVERALL READ:
+Write one or two paragraphs that read like a senior strategist briefing a sales professional before a high-stakes call. This is not a summary of the Matrix cells. This is an interpretation — who this person is, what is driving them, what the most commercially significant gaps reveal about the conversation the rep is about to have. Use specific numbers, names, timelines, and relationships from the Matrix. Never reference box numbers, pattern numbers, or methodology terms. Never use the word "tension" — use "gap", "disconnect", "exposure", or "pressure point" instead. Write in second person. If the Competitive Vulnerability Window pattern fired — this person is simultaneously repositioning AND building new external relationships — the second paragraph must address that urgency specifically. One paragraph if the Matrix is thin. Two paragraphs if it is rich. Never more than two.
 
-FINDINGS ORDER — Pattern 12 first if it fires:
-If the Competitive Vulnerability Window pattern fires — this person is simultaneously repositioning AND building new external relationships — that finding must appear FIRST. A shrinking window is the most commercially urgent signal in the report. Every other finding follows in order of deal impact.
+THE FINDINGS — THE THREE SHARPEST GAPS:
+After the briefing, surface the two or three sharpest specific gaps as individually labeled findings. Each finding has a headline and a body. The headline is a sharp commercial label — what the rep is about to read, in plain sales language, in ALL CAPS. The body shows the specific gap: name what the first cell says, name what the second cell says, then state what the gap between them reveals that neither cell reveals alone. 2-3 sentences. Specific to this deal. No pattern numbers. No box references. No generic observations. No sentence that could apply to any deal. Order findings by commercial impact — most urgent first.
 
 DEFENSE STRATEGY — THE PREVENTION STANDARD:
-Each defense risk must answer one specific question: what is the one thing that could happen between now and close that you have not yet done anything to prevent? Not a general risk category. Not a theoretical concern. A specific scenario tied to a specific gap or pattern in this Matrix, with a specific protective move that addresses it before it becomes a problem. If a risk cannot be prevented by a specific action the rep can take in the next 5 business days, it is not a defense risk — it is a worry. Worries do not belong in the report.
+Each defense risk must answer one specific question: what is the one thing that could happen between now and close that you have not yet done anything to prevent? A specific scenario tied to a specific gap in this Matrix, with a specific protective action the rep can take in the next 5 business days. If it cannot be prevented by a specific action in 5 business days, it is not a defense risk — it is a worry. Worries do not belong in the report.
 
 NEXT ACTIONS — THE CONSEQUENCE STANDARD:
-Each next action must be tied explicitly to a specific finding or gap, name exactly what to do, and state the commercial consequence of not doing it. "Prepare discovery questions" is not a next action. "Surface the timeline credibility gap with [specific question] before [specific event] — if you wait until after [that event], you lose the framing advantage and get positioned as a vendor responding to a brief rather than a strategic partner who saw the problem coming" is a next action. The rep reads it and knows exactly what to do, when to do it, and what they lose if they don't.
+Each next action must name exactly what to do, to whom, by when, and state the commercial consequence of not doing it. "If you wait until after [specific event], you lose [specific advantage]" is the required format. "Prepare discovery questions" is not a next action.
 
 MOMENTUM AND RESISTANCE SIGNALS — THE OBSERVABLE STANDARD:
-Every signal must describe a specific, observable behavior — something the rep can see or hear in a conversation — not an internal state. "They seem more engaged" is an internal state. "They reference your previous conversation unprompted at the start of the next call" is an observable behavior. "They go quiet after you introduce pricing" is an observable behavior. "They bring a new stakeholder into the conversation without explaining why" is an observable behavior. Each signal must be tied to something specific in this person's Matrix — their motivation, their political situation, their stated commitments — not a generic buying or stalling signal.
+Every signal must describe a specific observable behavior — something the rep can see or hear in a conversation — not an internal state. "They seem more engaged" is an internal state. "They reference your previous conversation unprompted at the start of the next call" is an observable behavior. Each signal must be tied to something specific in this person's Matrix.
 
 iQ QUESTIONS — THE HIGHEST STAKES STANDARD:
-Do not just find a valid combination of Current Reality + Future State + Impact. Find the combination with the highest personal stakes. Look across all nine boxes for the tension where the gap between where they are and where they are trying to get is most personally consequential — where their career, their reputation, a public commitment, or a key relationship is most directly on the line. Build the question around that tension. A question about a missed timeline is good. A question about what happens to their credibility with their board, their boss, or their peers if that timeline slips is sharper. The best iQ question makes them stop and think about something they have not yet said out loud to anyone.
+Find the gap with the highest personal stakes across all nine boxes — where their career, reputation, a public commitment, or a key relationship is most directly on the line. Build the question around that gap. The best iQ question makes them stop and think about something they have not yet said out loud to anyone. Never reference gap numbers or pattern names. Must flow as one natural sentence the rep can say out loud.
 
 LANGUAGE RULES — NON-NEGOTIABLE:
-- Write in SECOND PERSON throughout — address the sales professional directly as "you" not "the rep"
+- Write in SECOND PERSON throughout — "you" not "the rep"
 - Write for an experienced field sales professional — direct, commercial, no softness
-- Never use "actually", "real", "really"
+- Never use "actually", "real", "really", "tension", "pattern", or "box number"
 - Never use passive voice
 - No therapy language
-- Use hedged but direct language: "The data suggests...", "The patterns indicate...", "Based on what's here...", "The Matrix points to...", "This intel suggests...", "If this read is right..."
-- When data is thin: "With limited intel here, the pattern is harder to read — but..."
-- Every sentence must reference THIS specific person's specific intel — no generic sales advice
+- Hedged but direct: "The data suggests...", "The patterns indicate...", "Based on what's here...", "The Matrix points to...", "If this read is right..."
+- When data is thin: "With limited intel here, the picture is harder to read — but..."
+- Every sentence must reference THIS specific person's specific intel
 - Name specific numbers, dates, titles, and relationships from the Matrix whenever they exist
 
 MATRIX HEALTH:
@@ -294,64 +294,68 @@ RETURN FORMAT — PURE JSON ONLY
 ═══════════════════════════════
 
 HEADLINE RULES — applied to every finding headline:
-- Written in ALL CAPS
-- Maximum 8 words
-- Written for a sales professional — sharp, commercial, direct
-- Must tell the rep exactly what they are about to read
-- No filler words, no hedging, no corporate language
-- Never use the words "actually", "real", or "really"
-- Must be specific to this deal — not a generic label
-- Examples of strong headlines: "THIS PERSON IS SELLING UPWARD NOT JUST BUYING", "THE TIMELINE THEY QUOTED DOES NOT ADD UP", "POWER SITS ONE LEVEL ABOVE WHERE YOU ARE SELLING", "SOMEONE IN THEIR NETWORK WILL KILL THIS DEAL", "YOUR WINDOW IS CLOSING FASTER THAN THE DEAL TIMELINE"
-- Examples of weak headlines NOT acceptable: "KEY INSIGHT ABOUT THIS DEAL", "IMPORTANT FINDING", "WHAT THE MATRIX SHOWS"
+- Written in ALL CAPS, maximum 8 words
+- Sharp, commercial, specific to this deal
+- Tells the rep exactly what the finding is about before they read it
+- No filler, no hedging, no corporate language, no methodology terms
+- Never use "actually", "real", "really", "tension", or "pattern"
+- Strong examples: "HIS BUDGET AUTHORITY DOES NOT MATCH THIS PROBLEM", "THE TIMELINE HE COMMITTED TO IS NOT EXECUTABLE", "THE PERSON WHO CAN KILL THIS DEAL IS UNENGAGED", "YOUR WINDOW IS CLOSING FASTER THAN THE DEAL TIMELINE"
+- Weak examples NOT acceptable: "KEY INSIGHT", "IMPORTANT FINDING", "WHAT THE MATRIX SHOWS", "PATTERN 9 IS FIRING"
 
 {
   "matrix_health": "STRONG FOUNDATION or PARTIAL PICTURE or FLYING BLIND",
   "matrix_health_note": "One direct sentence — what this Matrix gives you and what it is missing. A briefing statement, not a grade.",
+  "briefing": [
+    "Paragraph 1 — the overall read: who this person is, what is driving them, what the most significant gap reveals about the conversation ahead. Specific numbers, names, timelines from the Matrix. No box references. No pattern numbers. No methodology terms. No 'tension' — use gap, disconnect, exposure, pressure point. Written as a senior strategist briefing a rep before a high-stakes call.",
+    "Paragraph 2 — urgency layer: only include if the Matrix is rich enough to warrant a second paragraph OR if the Competitive Vulnerability Window fired. If the window is open, this paragraph must address it directly — what it means, why it is time-sensitive, what the rep needs to do about it now. If nothing urgent warrants a second paragraph, omit this entirely and return only one string in the array."
+  ],
   "findings": [
     {
-      "headline": "GENERATED HEADLINE IN ALL CAPS — 8 words max, sharp and specific to this deal",
-      "finding": "Show your work: name what Cell X says, name what Cell Y says, then state what the collision between them reveals. 2-3 sentences. Must contain something you would not have seen looking at either cell alone. No generic observations. No sentence that could apply to any deal. If Pattern 12 fired, this finding appears first."
+      "headline": "SHARP COMMERCIAL LABEL IN ALL CAPS — 8 words max — what this finding is about",
+      "finding": "Name what the first data point says. Name what the second data point says. State what the gap between them reveals that neither reveals alone. 2-3 sentences. Specific to this deal. No box references. No pattern numbers. No generic observations."
     }
   ],
   "gaps": [
-    {"cell": "ROW / COLUMN e.g. FUTURE STATE / ROLE", "label": "Cell label name", "severity": "HIGH or MEDIUM only — no LOW", "note": "One sentence — why this specific missing intel creates a blind spot that affected the findings above. If a gap did not affect a finding, do not include it. For any empty NEEDS cell, name the specific question to ask in the next conversation to fill it — tied directly to what was found in the corresponding Current State and Future State cells."}
+    {"cell": "ROW / COLUMN e.g. FUTURE STATE / ROLE", "label": "Cell label name", "severity": "HIGH or MEDIUM only — no LOW", "note": "One sentence — why this missing intel creates a blind spot in this deal. For any empty NEEDS cell, name the specific question to ask in the next conversation to fill it — tied to what was found in the corresponding Current and Future State cells."}
   ],
   "defense": [
-    {"title": "SPECIFIC RISK SCENARIO IN ALL CAPS — name the exact thing that could go wrong", "body": "Sentence 1: the specific scenario — what happens, when it happens, what the commercial consequence is. Sentence 2: the one specific protective action you can take in the next 5 business days to prevent it — name exactly what to do and to whom."}
+    {"title": "SPECIFIC RISK IN ALL CAPS — the exact thing that could go wrong", "body": "Sentence 1: the specific scenario — what happens, when, the commercial consequence. Sentence 2: the one specific protective action you can take in the next 5 business days — name exactly what to do and to whom."}
   ],
   "iq_questions": [
-    {"question": "iQ Formula built around the HIGHEST PERSONAL STAKES tension in the Matrix: CURRENT REALITY (one specific named constraint, pressure, or number from the CURRENT STATE row) + FUTURE STATE (connect with 'and' or 'as' — one specific named ambition, commitment, or deadline from the FUTURE STATE row) + IMPACT (the question that surfaces what the gap between those two has already cost them or is doing to their career, reputation, a public promise, or a key relationship — the most personally consequential tension you can find. Never operational. Must flow as one natural sentence the rep can say out loud without it sounding constructed.)", "timing": "Use [early / mid / late in conversation] — one sentence on what this question forces them to confront out loud for the first time and why that moment in the conversation is the right moment."},
-    {"question": "Second iQ question built around the SECOND HIGHEST PERSONAL STAKES tension — completely different Matrix cells than the first, different tension, must flow naturally.", "timing": "Use [timing] — one sentence on what this surfaces."}
+    {"question": "iQ Formula targeting the HIGHEST PERSONAL STAKES gap: CURRENT REALITY (one specific named constraint or pressure from Current State row) + and/as + FUTURE STATE (one specific named ambition or commitment) + IMPACT (what the gap between them has already cost them or is doing to their career, reputation, a public commitment, or a key relationship — the most personally consequential gap you can find. Never operational. One natural sentence the rep can say out loud.)", "timing": "Use [early/mid/late in conversation] — one sentence on what this forces them to confront out loud for the first time."},
+    {"question": "Second iQ question — completely different data points than the first, second highest personal stakes gap, one natural sentence.", "timing": "Use [timing] — one sentence on what this surfaces."}
   ],
   "watch_for": [
-    "Specific observable behavior — something you can see or hear in a conversation — tied to this person's specific motivation or political situation from the Matrix. Not an internal state. Example of the standard: 'They reference your previous conversation unprompted at the start of the call' or 'They bring their [specific role] into the conversation without explaining why'",
-    "Second specific observable momentum behavior — different from the first, tied to a different aspect of this person's intel"
+    "Specific observable behavior — something you can see or hear — tied to this person's specific motivation or political situation. Not an internal state.",
+    "Second specific observable momentum behavior — different data point from the first."
   ],
   "watch_out": [
-    "Specific observable resistance behavior — something you can see or hear — tied to the specific vulnerabilities or gaps identified in the findings. Not 'they seem disengaged'. Example of the standard: 'They introduce a new stakeholder without context after you discuss pricing' or 'They stop referencing the timeline they previously committed to'",
-    "Second specific resistance behavior — different from the first, tied to a different vulnerability in this deal"
+    "Specific observable resistance behavior — something you can see or hear — tied to a specific vulnerability in this deal. Not an internal state.",
+    "Second specific resistance behavior — different vulnerability from the first."
   ],
   "next_actions": [
-    "Action tied to a specific finding or gap — name exactly what to do, to whom, by when — and state the commercial consequence of not doing it: 'If you wait until after [specific event], you lose [specific advantage]'",
-    "Second action — different finding or gap, same standard — what, to whom, by when, consequence of inaction.",
+    "Exactly what to do, to whom, by when — and the commercial consequence of not doing it: 'If you wait until after [specific event], you lose [specific advantage]'.",
+    "Second action — same standard.",
     "Third action — same standard."
   ]
 }
 
 FINAL QUALITY CHECK BEFORE RETURNING JSON:
-1. Does every finding name the specific cell values in conflict and show what their collision reveals?
-2. If Pattern 12 fired, is that finding first?
-3. Would you read this report and learn something you would not have seen sitting alone with your notes?
-4. Does every headline tell you exactly what you are about to read in plain sales language?
-5. Does every iQ question target the highest personal stakes tension — not just any valid combination?
-6. Does every signal describe something observable — a behavior you can see or hear — not an internal state?
-7. Does every next action name what to do, to whom, by when, and what you lose if you don't?
-8. Does any sentence apply to any deal rather than this specific deal? If yes, delete it.
-9. Do any findings, headlines, or actions use "actually", "real", or "really"? If yes, replace them.
-- findings: minimum 2, maximum 6 — only surface patterns where genuine cross-cell tension exists. Each finding is an object with "headline" and "finding" keys.
-- gaps: HIGH and MEDIUM only, only gaps that affected findings above, maximum 4
-- defense: maximum 3 items, each title ALL CAPS, each preventable by a specific action in 5 business days
-- iq_questions: exactly 2, highest personal stakes tensions, specific Matrix intel
+1. Does the briefing read like a senior strategist talking to a rep before a call — not a summary of cells?
+2. Does any sentence in the briefing or findings reference a box number, pattern number, or methodology term? If yes, rewrite it.
+3. Does any sentence use the word "tension"? Replace with gap, disconnect, exposure, or pressure point.
+4. Does every finding name two specific data points and show what their gap reveals?
+5. If the Competitive Vulnerability Window fired, is it addressed in the briefing's second paragraph?
+6. Does every iQ question target the highest personal stakes gap — not just any valid combination?
+7. Does every signal describe something observable — a behavior you can see or hear?
+8. Does every next action name what to do, to whom, by when, and what you lose if you don't?
+9. Does any sentence apply to any deal rather than this specific deal? If yes, delete it.
+10. Do any outputs use "actually", "real", "really", "tension", "pattern", or box numbers? If yes, replace them.
+- briefing: 1-2 paragraphs, array of strings, never more than 2
+- findings: minimum 2, maximum 3 — sharpest gaps only, each with "headline" and "finding" keys
+- gaps: HIGH and MEDIUM only, maximum 4, only gaps that affected briefing or findings
+- defense: maximum 3, each preventable in 5 business days
+- iq_questions: exactly 2, highest personal stakes gaps
 - watch_for and watch_out: exactly 2 each, observable behaviors only
 - next_actions: exactly 3, each with consequence of inaction
 Return pure JSON only. No backticks, no markdown, no explanation.`;
@@ -1166,7 +1170,7 @@ function AnalysisScreen({ deal, analysis, aiSources, onBack, onRedo }) {
 <div style="font-size:38px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.04em;line-height:1;">${deal.prospect.toUpperCase()}</div>
 <div style="font-size:13px;color:#fff;font-family:'IBM Plex Mono',monospace;margin-top:6px;margin-bottom:24px;">${deal.role}${deal.company ? ` · ${deal.company}` : ""}${deal.opportunity ? ` · ${deal.opportunity}` : ""}</div>
 ${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;padding:10px 16px;margin-bottom:32px;font-size:13px;color:#ccc;font-style:italic;line-height:1.7;">● ${analysis.matrix_health_note}</div>` : ""}
-${(analysis.findings||[]).length ? `<div style="margin-bottom:32px;"><div style="display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:20px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">WHAT THE MATRIX IS TELLING YOU</span></div>${(analysis.findings||[]).map(f=>{const headline=typeof f==="object"?f.headline:null;const text=typeof f==="object"?f.finding:f;return `<div style="margin-bottom:20px;">${headline?`<div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.16em;margin-bottom:6px;">${headline}</div>`:""}<p style="font-size:13px;color:#ccc;line-height:1.75;margin:0;">${text}</p></div>`;}).join("")}</div>` : ""}
+${((analysis.briefing||[]).length||(analysis.findings||[]).length) ? `<div style="margin-bottom:32px;"><div style="display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:20px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">WHAT THE MATRIX IS TELLING YOU</span></div>${(analysis.briefing||[]).map(p=>`<p style="font-size:13px;color:#ccc;line-height:1.85;margin:0 0 18px 0;font-style:italic;">${p}</p>`).join("")}${(analysis.findings||[]).length?`<div style="margin-top:${(analysis.briefing||[]).length?'24px':'0'};padding-top:${(analysis.briefing||[]).length?'20px':'0'};border-top:${(analysis.briefing||[]).length?'1px solid #1e1e1e':'none'};">${(analysis.findings||[]).map(f=>{const headline=typeof f==="object"?f.headline:null;const text=typeof f==="object"?f.finding:f;return `<div style="margin-bottom:20px;">${headline?`<div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.16em;margin-bottom:7px;">${headline}</div>`:""}<p style="font-size:13px;color:#ccc;line-height:1.75;margin:0;">${text}</p></div>`;}).join("")}</div>`:""}</div>` : ""}
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px;">
 <div>${(analysis.gaps||[]).length ? `<div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:12px;"><span style="color:#CC0000;font-size:9px;">▣</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">INTELLIGENCE GAPS</span></div><div style="font-size:10px;color:#666;font-family:'IBM Plex Mono',monospace;margin-bottom:12px;">HIGH — critical to close &nbsp;|&nbsp; MEDIUM — worth exploring</div>${(analysis.gaps||[]).map(g=>`<div style="border-left:3px solid ${g.severity==='HIGH'?'#CC0000':'#f59e0b'};padding:8px 14px;margin-bottom:10px;"><div style="font-size:10px;font-weight:700;color:${g.severity==='HIGH'?'#CC0000':'#f59e0b'};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:4px;">${g.cell}</div><div style="font-size:12px;color:#ccc;line-height:1.55;">${g.note}</div></div>`).join("")}` : ""}</div>
 <div>${(analysis.defense||[]).length ? `<div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:12px;"><span style="color:#CC0000;font-size:9px;">◎</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">DEFENSE STRATEGY</span></div>${(analysis.defense||[]).map(r=>`<div style="margin-bottom:14px;"><div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:5px;">${r.title}</div><div style="font-size:12px;color:#ccc;line-height:1.6;">${r.body}</div></div>`).join("")}` : ""}</div>
@@ -1237,24 +1241,35 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
               </div>
             )}
 
-            {/* WHAT THE MATRIX IS TELLING YOU */}
-            {(analysis.findings || []).length > 0 && (
+            {/* WHAT THE MATRIX IS TELLING YOU — briefing + labeled findings */}
+            {((analysis.briefing || []).length > 0 || (analysis.findings || []).length > 0) && (
               <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "24px" }}>
                   <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>WHAT THE MATRIX IS TELLING YOU</span>
                 </div>
-                {(analysis.findings || []).map((f, i) => {
-                  const headline = typeof f === "object" ? f.headline : null;
-                  const text = typeof f === "object" ? f.finding : f;
-                  return (
-                    <div key={i} style={{ marginBottom: "22px" }}>
-                      {headline && (
-                        <div style={{ fontSize: "11px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.16em", marginBottom: "6px" }}>{headline}</div>
-                      )}
-                      <p style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.75", margin: 0 }}>{text}</p>
-                    </div>
-                  );
-                })}
+
+                {/* Briefing paragraphs — continuous read */}
+                {(analysis.briefing || []).map((para, i) => (
+                  <p key={i} style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.85", margin: 0, marginBottom: "18px", fontStyle: "italic" }}>{para}</p>
+                ))}
+
+                {/* Labeled findings — sharpest specific gaps */}
+                {(analysis.findings || []).length > 0 && (
+                  <div style={{ marginTop: (analysis.briefing || []).length > 0 ? "28px" : "0", paddingTop: (analysis.briefing || []).length > 0 ? "24px" : "0", borderTop: (analysis.briefing || []).length > 0 ? "1px solid #1e1e1e" : "none" }}>
+                    {(analysis.findings || []).map((f, i) => {
+                      const headline = typeof f === "object" ? f.headline : null;
+                      const text = typeof f === "object" ? f.finding : f;
+                      return (
+                        <div key={i} style={{ marginBottom: "22px" }}>
+                          {headline && (
+                            <div style={{ fontSize: "11px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.16em", marginBottom: "7px" }}>{headline}</div>
+                          )}
+                          <p style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.75", margin: 0 }}>{text}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
