@@ -397,13 +397,13 @@ function WhatGoesHere({ description }) {
         onMouseEnter={e => { e.currentTarget.style.opacity = "0.7"; }}
         onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
       >
-        <span style={{ fontSize: "8px", color: open ? RED : "#aaa", fontFamily: MONO, letterSpacing: "0.08em", whiteSpace: "nowrap", fontWeight: "700" }}>WHAT GOES HERE</span>
-        <span style={{ fontSize: "7px", color: open ? RED : "#aaa", fontFamily: MONO }}>{open ? "▲" : "▼"}</span>
+        <span style={{ fontSize: "8px", color: open ? RED : "#fff", fontFamily: MONO, letterSpacing: "0.08em", whiteSpace: "nowrap", fontWeight: "700" }}>WHAT GOES HERE</span>
+        <span style={{ fontSize: "7px", color: open ? RED : "#fff", fontFamily: MONO }}>{open ? "▲" : "▼"}</span>
       </button>
       {open && (
         <div style={{ position: "absolute", top: "calc(100% + 5px)", right: 0, width: "244px", background: "#1c1c1c", border: `1px solid ${BORDER}`, borderTop: `2px solid ${RED}`, borderRadius: "0 0 4px 4px", padding: "12px 14px", zIndex: 200, boxShadow: "0 8px 28px rgba(0,0,0,0.8)", animation: "fadeSlideIn 0.15s ease" }}>
           <div style={{ fontSize: "9px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700", marginBottom: "8px" }}>WHAT GOES HERE</div>
-          <div style={{ fontSize: "11px", color: "#bbb", fontFamily: MONO, lineHeight: "1.7" }}>{description}</div>
+          <div style={{ fontSize: "11px", color: "#fff", fontFamily: MONO, lineHeight: "1.7" }}>{description}</div>
         </div>
       )}
     </div>
@@ -429,7 +429,7 @@ function SearchReviewModal({ results, onAccept, onClose }) {
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
         <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "6px", padding: "32px", maxWidth: "480px", width: "100%", textAlign: "center" }}>
-          <div style={{ fontSize: "11px", color: "#888", fontFamily: MONO, lineHeight: "1.7", marginBottom: "20px" }}>
+          <div style={{ fontSize: "11px", color: "#fff", fontFamily: MONO, lineHeight: "1.7", marginBottom: "20px" }}>
             No verifiable public intel found for this contact. All cells need a source URL to be added — nothing without evidence gets in.
           </div>
           <Btn onClick={onClose} variant="ghost" style={{ width: "100%" }}>CLOSE</Btn>
@@ -458,7 +458,7 @@ function SearchReviewModal({ results, onAccept, onClose }) {
           <div style={{ fontSize: "20px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em" }}>
             {found.length} {found.length === 1 ? "finding" : "findings"} with verified sources
           </div>
-          <div style={{ fontSize: "11px", color: "#888", fontFamily: MONO, marginTop: "4px" }}>
+          <div style={{ fontSize: "11px", color: "#fff", fontFamily: MONO, marginTop: "4px" }}>
             Review each finding. Accept what's useful, skip what isn't. Only accepted intel gets added to your Matrix.
           </div>
         </div>
@@ -477,7 +477,7 @@ function SearchReviewModal({ results, onAccept, onClose }) {
                     <span style={{ fontSize: "9px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700" }}>
                       {r.row} / {r.col}
                     </span>
-                    <span style={{ fontSize: "9px", color: "#666", fontFamily: MONO, marginLeft: "8px" }}>— {meta && meta.label}</span>
+                    <span style={{ fontSize: "9px", color: "#fff", fontFamily: MONO, marginLeft: "8px" }}>— {meta && meta.label}</span>
                   </div>
                   <div style={{ display: "flex", gap: "6px" }}>
                     <button
@@ -514,7 +514,7 @@ function SearchReviewModal({ results, onAccept, onClose }) {
                 <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: `1px solid #1e1e1e`, display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ fontSize: "9px", color: "#444", fontFamily: CONDENSED, letterSpacing: "0.1em" }}>SOURCE</span>
                   {r.result.source === "inferred" ? (
-                    <span style={{ fontSize: "10px", color: "#666", fontFamily: MONO, fontStyle: "italic" }}>Inferred from search intel — no direct source</span>
+                    <span style={{ fontSize: "10px", color: "#aaa", fontFamily: MONO, fontStyle: "italic" }}>Inferred from search intel — no direct source</span>
                   ) : (
                     <a href={r.result.source} target="_blank" rel="noopener noreferrer"
                       style={{ fontSize: "10px", color: "#4a9eff", fontFamily: MONO, textDecoration: "none", wordBreak: "break-all" }}
@@ -534,7 +534,7 @@ function SearchReviewModal({ results, onAccept, onClose }) {
             ADD {acceptedCount} {acceptedCount === 1 ? "FINDING" : "FINDINGS"} TO MATRIX →
           </Btn>
           <Btn variant="ghost" onClick={onClose} style={{ padding: "12px 20px" }}>SKIP ALL</Btn>
-          <span style={{ fontSize: "10px", color: "#555", fontFamily: MONO, marginLeft: "4px" }}>
+          <span style={{ fontSize: "10px", color: "#fff", fontFamily: MONO, marginLeft: "4px" }}>
             {acceptedCount} of {found.length} accepted
           </span>
         </div>
@@ -576,14 +576,14 @@ function DealScreen({ onComplete }) {
               )))}
             </svg>
           </div>
-          <div style={{ fontSize: "12px", color: "#888", fontFamily: MONO, marginTop: "10px", lineHeight: 1.6 }}>Build your intel. Walk in masterfully prepared.</div>
+          <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, marginTop: "10px", lineHeight: 1.6 }}>Build your intel. Walk in masterfully prepared.</div>
         </div>
         <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "4px", padding: "28px 24px" }}>
-          <div style={{ fontSize: "12px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.14em", marginBottom: "20px" }}>DEAL CONTEXT</div>
+          <div style={{ fontSize: "14px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.14em", marginBottom: "20px" }}>DEAL CONTEXT</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {fields.map(f => (
               <div key={f.key}>
-                <label style={{ display: "block", fontSize: "9px", color: errors[f.key] ? "#ff6666" : "#888", fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700", marginBottom: "5px" }}>
+                <label style={{ display: "block", fontSize: "14px", color: errors[f.key] ? "#ff6666" : "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", marginBottom: "6px" }}>
                   {f.label}{errors[f.key] && " — REQUIRED"}
                 </label>
                 {f.textarea ? (
@@ -659,7 +659,7 @@ function AnalysisLoader() {
       <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.22em", marginBottom: "10px" }}>
         SEMPER SELLING®
       </div>
-      <div style={{ fontSize: "13px", color: "#888", fontFamily: MONO, letterSpacing: "0.06em" }}>
+      <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, letterSpacing: "0.06em" }}>
         Analyzing your intelligence...
       </div>
     </div>
@@ -988,9 +988,9 @@ function MatrixScreen({ deal, onComplete, onBack }) {
         <Btn variant="ghost" onClick={onBack} style={{ padding: "6px 12px", fontSize: "11px" }}>← BACK</Btn>
         <div style={{ width: "1px", height: "24px", background: "#333" }} />
         <span style={{ color: RED, fontSize: "15px", fontWeight: "700", fontFamily: CONDENSED, letterSpacing: "0.1em" }}>CONNECTION INTELLIGENCE MATRIX</span>
-        <span style={{ color: "#888", fontSize: "11px", fontFamily: MONO }}>{deal.prospect} · {deal.company}</span>
+        <span style={{ color: "#fff", fontSize: "11px", fontFamily: MONO }}>{deal.prospect} · {deal.company}</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: "10px", alignItems: "center" }}>
-          <span style={{ fontSize: "10px", color: filled === 9 ? "#22c55e" : "#888", fontFamily: MONO }}>{filled}/9 cells</span>
+          <span style={{ fontSize: "10px", color: filled === 9 ? "#22c55e" : "#fff", fontFamily: MONO }}>{filled}/9 cells</span>
           <button onClick={() => fileRef.current?.click()} disabled={uploading}
             style={{ background: uploading ? "rgba(204,0,0,0.08)" : "#1a1a1a", border: `1px solid ${uploading ? RED : BORDER}`, color: uploading ? RED : "#fff", borderRadius: "3px", padding: "7px 14px", cursor: uploading ? "not-allowed" : "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.3s" }}
             onMouseEnter={e => { if (!uploading) { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = RED; } }}
@@ -1045,7 +1045,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
                           >↗ source</a>
                         )}
                         {hasAiSource && aiSources[key].source === "inferred" && (
-                          <span title="Inferred from search intel" style={{ fontSize: "8px", color: "#555", fontFamily: MONO, paddingTop: "2px", whiteSpace: "nowrap", fontStyle: "italic" }}>~ inferred</span>
+                          <span title="Inferred from search intel" style={{ fontSize: "8px", color: "#aaa", fontFamily: MONO, paddingTop: "2px", whiteSpace: "nowrap", fontStyle: "italic" }}>~ inferred</span>
                         )}
                       </div>
                       <WhatGoesHere description={meta.description} />
@@ -1072,7 +1072,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px", padding: "14px 16px", background: "#0f0f0f", border: `1px solid #1e1e1e`, borderRadius: "4px" }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: "11px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", marginBottom: "2px" }}>AI INTELLIGENCE SEARCH</div>
-                <div style={{ fontSize: "10px", color: "#666", fontFamily: MONO }}>
+                <div style={{ fontSize: "10px", color: "#fff", fontFamily: MONO }}>
                   Searches public sources for {deal.prospect} at {deal.company} — adds only verified, sourced intel
                 </div>
               </div>
@@ -1148,7 +1148,7 @@ function AnalysisScreen({ deal, analysis, aiSources, onBack, onRedo }) {
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Matrix Analysis — ${deal.prospect}</title><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:'IBM Plex Mono',monospace;padding:40px 48px;max-width:1000px;margin:0 auto;line-height:1.6}@media print{body{background:#fff;color:#000}}</style></head><body>
 <div style="margin-bottom:8px;font-size:10px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.18em;">◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
 <div style="font-size:38px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.04em;line-height:1;">${deal.prospect.toUpperCase()}</div>
-<div style="font-size:13px;color:#888;font-family:'IBM Plex Mono',monospace;margin-top:6px;margin-bottom:24px;">${deal.role}${deal.company ? ` · ${deal.company}` : ""}${deal.opportunity ? ` · ${deal.opportunity}` : ""}</div>
+<div style="font-size:13px;color:#fff;font-family:'IBM Plex Mono',monospace;margin-top:6px;margin-bottom:24px;">${deal.role}${deal.company ? ` · ${deal.company}` : ""}${deal.opportunity ? ` · ${deal.opportunity}` : ""}</div>
 ${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;padding:10px 16px;margin-bottom:32px;font-size:13px;color:#ccc;font-style:italic;line-height:1.7;">● ${analysis.matrix_health_note}</div>` : ""}
 ${(analysis.findings||[]).length ? `<div style="margin-bottom:32px;"><div style="display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:20px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">WHAT THE MATRIX IS TELLING YOU</span></div>${(analysis.findings||[]).map(f=>{const headline=typeof f==="object"?f.headline:null;const text=typeof f==="object"?f.finding:f;return `<div style="margin-bottom:20px;">${headline?`<div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.16em;margin-bottom:6px;">${headline}</div>`:""}<p style="font-size:13px;color:#ccc;line-height:1.75;margin:0;">${text}</p></div>`;}).join("")}</div>` : ""}
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px;">
@@ -1199,13 +1199,13 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
         {/* Deal header — matches screenshot large name treatment */}
         <div style={{ marginBottom: "8px", fontSize: "10px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.18em" }}>◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
         <div style={{ fontSize: "42px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.04em", lineHeight: 1, marginBottom: "8px" }}>{deal.prospect.toUpperCase()}</div>
-        <div style={{ fontSize: "13px", color: "#888", fontFamily: MONO, marginBottom: "28px" }}>
+        <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, marginBottom: "28px" }}>
           {deal.role}{deal.company ? ` · ${deal.company}` : ""}{deal.opportunity ? ` · ${deal.opportunity}` : ""}
         </div>
 
         {!hasAnalysis ? (
           <div style={{ padding: "60px 0", textAlign: "center" }}>
-            <div style={{ fontSize: "13px", color: "#888", fontFamily: MONO }}>Analysis unavailable. Check your connection and try again.</div>
+            <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO }}>Analysis unavailable. Check your connection and try again.</div>
             <div style={{ marginTop: "20px" }}><Btn onClick={onRedo}>↺ TRY AGAIN</Btn></div>
           </div>
         ) : (
@@ -1215,7 +1215,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
             {analysis.matrix_health_note && (
               <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "36px", paddingBottom: "28px", borderBottom: "1px solid #1a1a1a" }}>
                 <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: RED, flexShrink: 0, marginTop: "5px" }} />
-                <div style={{ fontSize: "13px", color: "#ccc", fontFamily: MONO, fontStyle: "italic", lineHeight: "1.75" }}>
+                <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, fontStyle: "italic", lineHeight: "1.75" }}>
                   {analysis.matrix_health_note}
                 </div>
               </div>
@@ -1235,7 +1235,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                       {headline && (
                         <div style={{ fontSize: "11px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.16em", marginBottom: "6px" }}>{headline}</div>
                       )}
-                      <p style={{ fontSize: "13px", color: "#ccc", fontFamily: MONO, lineHeight: "1.75", margin: 0 }}>{text}</p>
+                      <p style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.75", margin: 0 }}>{text}</p>
                     </div>
                   );
                 })}
@@ -1252,14 +1252,14 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                     <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "12px" }}>
                       <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>INTELLIGENCE GAPS</span>
                     </div>
-                    <div style={{ fontSize: "10px", color: "#555", fontFamily: MONO, marginBottom: "14px" }}>
+                    <div style={{ fontSize: "10px", color: "#fff", fontFamily: MONO, marginBottom: "14px" }}>
                       <span style={{ borderLeft: `2px solid ${RED}`, paddingLeft: "6px", marginRight: "12px" }}>HIGH — critical to close</span>
                       <span style={{ borderLeft: "2px solid #f59e0b", paddingLeft: "6px" }}>MEDIUM — worth exploring</span>
                     </div>
                     {(analysis.gaps || []).map((gap, i) => (
                       <div key={i} style={{ borderLeft: `3px solid ${gap.severity === "HIGH" ? RED : "#f59e0b"}`, paddingLeft: "14px", marginBottom: "16px" }}>
                         <div style={{ fontSize: "11px", fontWeight: "700", color: gap.severity === "HIGH" ? RED : "#f59e0b", fontFamily: CONDENSED, letterSpacing: "0.12em", marginBottom: "5px" }}>{gap.cell}</div>
-                        <div style={{ fontSize: "12px", color: "#bbb", fontFamily: MONO, lineHeight: "1.6" }}>{gap.note}</div>
+                        <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.6" }}>{gap.note}</div>
                       </div>
                     ))}
                   </div>
@@ -1274,7 +1274,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                     {(analysis.defense || []).map((risk, i) => (
                       <div key={i} style={{ marginBottom: "20px" }}>
                         <div style={{ fontSize: "11px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.12em", marginBottom: "6px" }}>{risk.title}</div>
-                        <div style={{ fontSize: "12px", color: "#bbb", fontFamily: MONO, lineHeight: "1.65" }}>{risk.body}</div>
+                        <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.65" }}>{risk.body}</div>
                       </div>
                     ))}
                   </div>
@@ -1291,7 +1291,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                 {(analysis.iq_questions || []).map((q, i) => (
                   <div key={i} style={{ marginBottom: "22px", paddingLeft: "16px", borderLeft: "2px solid #222" }}>
                     <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, fontStyle: "italic", lineHeight: "1.75", marginBottom: "8px" }}>"{q.question}"</div>
-                    <div style={{ fontSize: "11px", color: "#555", fontFamily: MONO }}>{q.timing}</div>
+                    <div style={{ fontSize: "11px", color: "#aaa", fontFamily: MONO }}>{q.timing}</div>
                   </div>
                 ))}
               </div>
@@ -1308,7 +1308,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                   {(analysis.watch_for || []).map((s, i) => (
                     <div key={i} style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "flex-start" }}>
                       <div style={{ flexShrink: 0, border: "1px solid #22c55e", borderRadius: "2px", padding: "2px 8px", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", color: "#22c55e", letterSpacing: "0.1em", marginTop: "2px" }}>WATCH FOR</div>
-                      <div style={{ fontSize: "12px", color: "#bbb", fontFamily: MONO, lineHeight: "1.65" }}>{s}</div>
+                      <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.65" }}>{s}</div>
                     </div>
                   ))}
                 </div>
@@ -1320,7 +1320,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                   {(analysis.watch_out || []).map((s, i) => (
                     <div key={i} style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "flex-start" }}>
                       <div style={{ flexShrink: 0, border: `1px solid ${RED}`, borderRadius: "2px", padding: "2px 8px", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", color: RED, letterSpacing: "0.1em", marginTop: "2px" }}>WATCH OUT</div>
-                      <div style={{ fontSize: "12px", color: "#bbb", fontFamily: MONO, lineHeight: "1.65" }}>{s}</div>
+                      <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.65" }}>{s}</div>
                     </div>
                   ))}
                 </div>
@@ -1336,7 +1336,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                 {(analysis.next_actions || []).map((action, i) => (
                   <div key={i} style={{ display: "flex", gap: "16px", marginBottom: "16px", alignItems: "flex-start" }}>
                     <div style={{ color: RED, fontSize: "14px", fontWeight: "700", fontFamily: CONDENSED, flexShrink: 0, paddingTop: "1px", minWidth: "16px" }}>{i + 1}.</div>
-                    <div style={{ fontSize: "13px", color: "#ccc", fontFamily: MONO, lineHeight: "1.75" }}>{action}</div>
+                    <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.75" }}>{action}</div>
                   </div>
                 ))}
               </div>
