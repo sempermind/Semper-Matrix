@@ -129,9 +129,9 @@ ROWS 1-6 — SOURCED INTEL ONLY (person-level or company-level):
 
 ROWS 7-9 — INFERRED FROM THE COMPLETE MATRIX PICTURE:
 Use BOTH the rep's manually entered intel AND the search findings above to infer the Needs row. Do not limit yourself to only what the search found.
-- NEEDS|ROLE: Capability Gaps — given everything you know about ${name}'s current authority and future career trajectory, what capability, skill, or organizational gap stands between where they are and where they are trying to go? Infer from the tension between CURRENT STATE|ROLE and FUTURE STATE|ROLE across both the rep's intel and search findings.
-- NEEDS|REACH: Missing Support — given their current influence network and the relationships they are building, whose support or what partnership is conspicuously missing? Infer from the tension between CURRENT STATE|REACH and FUTURE STATE|REACH.
-- NEEDS|RESULTS: Resource Requirements — given the gap between their current performance pressures and their stated future commitments, what technology, budget, or process change would close that gap? Infer from the tension between CURRENT STATE|RESULTS and FUTURE STATE|RESULTS.
+- NEEDS|ROLE: Capability Gaps — given everything you know about ${name}'s current authority and future career trajectory, what capability, skill, or organizational gap stands between where they are and where they are trying to go? Infer from the tension between CURRENT STATE|ROLE and FUTURE STATE|ROLE across both the rep's intel and search findings. CRITICAL: Write this as inference, not fact. Use language like "The data suggests...", "The patterns indicate...", "Based on what's here...", "The gap between X and Y points to...". Never state inferred Needs as established fact.
+- NEEDS|REACH: Missing Support — given their current influence network and the relationships they are building, whose support or what partnership is conspicuously missing? Infer from the tension between CURRENT STATE|REACH and FUTURE STATE|REACH. Write as inference: "The patterns suggest...", "This intel points to...", "Based on the gap between...". Never state as fact.
+- NEEDS|RESULTS: Resource Requirements — given the gap between their current performance pressures and their stated future commitments, what technology, budget, or process change would close that gap? Infer from the tension between CURRENT STATE|RESULTS and FUTURE STATE|RESULTS. Write as inference: "The data suggests...", "If this read is right...", "The gap here points to...". Never state as fact.
 - Only infer a NEEDS cell if there is meaningful content in BOTH the corresponding Current State AND Future State cells — from any source (rep entry or search). If either is empty or too thin to infer from, skip that NEEDS cell entirely.
 
 SOURCE ATTRIBUTION RULES:
@@ -924,11 +924,13 @@ function MatrixScreen({ deal, onComplete, onBack }) {
               <button
                 onClick={handleSearch}
                 disabled={searching}
-                style={{ background: searching ? "#1a1a1a" : "#1a1a1a", border: `1px solid ${searching ? "#333" : "#4a9eff"}`, color: searching ? "#555" : "#4a9eff", borderRadius: "3px", padding: "9px 18px", cursor: searching ? "not-allowed" : "pointer", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", whiteSpace: "nowrap", transition: "all 0.15s", minWidth: "160px" }}
+                style={{ background: searching ? "rgba(74,158,255,0.08)" : "#1a1a1a", border: `1px solid ${searching ? "#4a9eff" : "#4a9eff"}`, color: "#4a9eff", borderRadius: "3px", padding: "9px 18px", cursor: searching ? "not-allowed" : "pointer", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", whiteSpace: "nowrap", transition: "all 0.3s", minWidth: "200px" }}
                 onMouseEnter={e => { if (!searching) { e.currentTarget.style.background = "rgba(74,158,255,0.1)"; } }}
-                onMouseLeave={e => { e.currentTarget.style.background = "#1a1a1a"; }}
+                onMouseLeave={e => { if (!searching) e.currentTarget.style.background = "#1a1a1a"; }}
               >
-                {searching ? searchProgress || "SEARCHING..." : "◈ SEARCH THE WEB"}
+                {searching
+                  ? <span style={{ animation: "readingPulse 1s ease-in-out infinite", display: "inline-block" }}>● {searchProgress || "SEARCHING..."}</span>
+                  : "◈ SEARCH THE WEB"}
               </button>
             </div>
 
