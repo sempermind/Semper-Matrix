@@ -169,10 +169,14 @@ ROWS 1-6 — SOURCED INTEL ONLY (person-level or company-level):
 - FUTURE STATE|RESULTS: Public Commitments — stated goals, strategic targets, public promises made by ${name} or announced by ${company}. Draw from both person and company results.
 
 ROWS 7-9 — INFERRED FROM THE COMPLETE MATRIX PICTURE:
-Use BOTH the rep's manually entered intel AND the search findings above to infer the Needs row. Do not limit yourself to only what the search found.
-- NEEDS|ROLE: Capability Gaps — given everything you know about ${name}'s current authority and future career trajectory, what capability, skill, or organizational gap stands between where they are and where they are trying to go? Infer from the tension between CURRENT STATE|ROLE and FUTURE STATE|ROLE across both your intel and search findings. CRITICAL: Write this as inference, not fact. Use language like "The data suggests...", "The patterns indicate...", "Based on what's here...", "The gap between X and Y points to...". Never state inferred Needs as established fact.
-- NEEDS|REACH: Missing Support — given their current influence network and the relationships they are building, whose support or what partnership is conspicuously missing? Infer from the tension between CURRENT STATE|REACH and FUTURE STATE|REACH. Write as inference: "The patterns suggest...", "This intel points to...", "Based on the gap between...". Never state as fact.
-- NEEDS|RESULTS: Resource Requirements — given the gap between their current performance pressures and their stated future commitments, what technology, budget, or process change would close that gap? Infer from the tension between CURRENT STATE|RESULTS and FUTURE STATE|RESULTS. Write as inference: "The data suggests...", "If this read is right...", "The gap here points to...". Never state as fact.
+Use BOTH the rep's manually entered intel AND the search findings above to infer the Needs row. Do not limit yourself to only what the search found. Your job is to surface what this person or organization requires to close the gap — described in terms of the TYPE of capability, expertise, speed, or partnership needed, not a generic observation. Write with commercial precision. A rep reading this should immediately understand what kind of solution, capability, or partner closes the gap — without you naming any specific vendor or product.
+
+- NEEDS|ROLE: Capability Gaps — given everything you know about ${name}'s current authority and future trajectory, what specific type of capability, organizational competency, or decision-making authority is missing between where they are and where they are trying to go? Be precise about the nature of the gap: is it technical expertise, execution capacity, organizational credibility, cross-functional authority, or something else? Infer from the tension between CURRENT STATE|ROLE and FUTURE STATE|ROLE. Frame as inference: "The data suggests they need...", "The patterns point to a requirement for...", "Based on the gap between X and Y, the missing capability appears to be...". Never state as fact. Never name a specific vendor or product.
+
+- NEEDS|REACH: Missing Support — given their current influence network and the relationships they are building, what specific type of partnership, alliance, or stakeholder alignment is conspicuously absent? Be precise: is it executive sponsorship at a specific level, a technical credibility validator, a peer reference in their industry, internal cross-functional alignment, or an external ecosystem relationship? Infer from the tension between CURRENT STATE|REACH and FUTURE STATE|REACH. Frame as inference: "The patterns suggest...", "This intel points to a need for...", "The gap here indicates...". Never state as fact. Never name a specific vendor or product.
+
+- NEEDS|RESULTS: Resource Requirements — given the gap between their current performance pressures and their stated future commitments, what specific type of resource, investment, technology capability, or process change would close that gap? Be precise about the nature of what's required: is it speed of deployment, depth of technical expertise, proven performance in comparable situations, budget justification support, or ongoing responsiveness after implementation? Infer from the tension between CURRENT STATE|RESULTS and FUTURE STATE|RESULTS. Frame as inference: "The data suggests...", "If this read is right, they require...", "The gap here points to a need for...". Never state as fact. Never name a specific vendor or product.
+
 - Only infer a NEEDS cell if there is meaningful content in BOTH the corresponding Current State AND Future State cells — from any source (rep entry or search). If either is empty or too thin to infer from, skip that NEEDS cell entirely.
 
 SOURCE ATTRIBUTION RULES:
@@ -245,17 +249,32 @@ PATTERN 11 — COALITION RISK (Box 2 + Box 8)
 Look for the specific overlap between who influences this person (Box 2) and whose support they are currently missing (Box 8). The person or function that appears in Box 2 as an influencer but shows up in Box 8 as absent is precisely where internal resistance will come from. This is not a generic political risk — it is a specific relationship gap that the rep needs to address before the internal conversation happens without them in the room.
 
 PATTERN 12 — COMPETITIVE VULNERABILITY WINDOW (Box 4 + Box 5)
-Look at whether this person is simultaneously positioning for a bigger role (Box 4) and actively building new external relationships (Box 5). This combination signals someone who is open — deliberately or instinctively — to new vendors as part of their own professional repositioning. A competitor who shows up with a career-narrative pitch right now could get a meeting the rep has not earned yet. If this pattern fires, the rep needs to know their window may be shorter than the deal timeline suggests.
+Look at whether this person is simultaneously positioning for a bigger role (Box 4) AND actively building new external relationships (Box 5). This combination is the most commercially urgent signal in the entire Matrix — it means someone who is open to new vendors as part of their own professional repositioning, right now. A competitor with a career-narrative pitch could get a meeting you have not earned yet. If both boxes show active movement, this pattern fires and must be treated as front-line urgency, not background risk. The finding goes first in the report. The question is not whether a competitor can walk in — it is whether you have already positioned yourself as the partner for where this person is going, not just where they are.
 
 ═══════════════════════════════
 OUTPUT CONSTRUCTION RULES
 ═══════════════════════════════
 
-FINDINGS — THE CONTRADICTION-FIRST STANDARD:
-Every finding must identify which two or three specific cells are in tension and explain what that tension reveals that neither cell reveals on its own. If a finding can be traced to a single cell with no cross-cell inference required, delete it — it is a restatement, not an insight. Write 2-4 sentences per finding. Surface only the patterns where genuine tension exists in the data. Do not manufacture findings from thin data.
+FINDINGS — THE COLLISION STANDARD:
+Every finding must show its work. Name the specific cell values in conflict. State what Cell A says. State what Cell B says. Then state what the collision between them reveals that neither cell reveals on its own. If you cannot name two specific cells with specific values that contradict or create tension with each other, delete the finding — it is a restatement, not an insight. Write 2-3 sentences per finding. Surface only patterns where genuine tension exists. Do not manufacture findings from thin data. Do not write conclusions without showing the reasoning.
+
+FINDINGS ORDER — Pattern 12 first if it fires:
+If the Competitive Vulnerability Window pattern fires — this person is simultaneously repositioning AND building new external relationships — that finding must appear FIRST. A shrinking window is the most commercially urgent signal in the report. Every other finding follows in order of deal impact.
+
+DEFENSE STRATEGY — THE PREVENTION STANDARD:
+Each defense risk must answer one specific question: what is the one thing that could happen between now and close that you have not yet done anything to prevent? Not a general risk category. Not a theoretical concern. A specific scenario tied to a specific gap or pattern in this Matrix, with a specific protective move that addresses it before it becomes a problem. If a risk cannot be prevented by a specific action the rep can take in the next 5 business days, it is not a defense risk — it is a worry. Worries do not belong in the report.
+
+NEXT ACTIONS — THE CONSEQUENCE STANDARD:
+Each next action must be tied explicitly to a specific finding or gap, name exactly what to do, and state the commercial consequence of not doing it. "Prepare discovery questions" is not a next action. "Surface the timeline credibility gap with [specific question] before [specific event] — if you wait until after [that event], you lose the framing advantage and get positioned as a vendor responding to a brief rather than a strategic partner who saw the problem coming" is a next action. The rep reads it and knows exactly what to do, when to do it, and what they lose if they don't.
+
+MOMENTUM AND RESISTANCE SIGNALS — THE OBSERVABLE STANDARD:
+Every signal must describe a specific, observable behavior — something the rep can see or hear in a conversation — not an internal state. "They seem more engaged" is an internal state. "They reference your previous conversation unprompted at the start of the next call" is an observable behavior. "They go quiet after you introduce pricing" is an observable behavior. "They bring a new stakeholder into the conversation without explaining why" is an observable behavior. Each signal must be tied to something specific in this person's Matrix — their motivation, their political situation, their stated commitments — not a generic buying or stalling signal.
+
+iQ QUESTIONS — THE HIGHEST STAKES STANDARD:
+Do not just find a valid combination of Current Reality + Future State + Impact. Find the combination with the highest personal stakes. Look across all nine boxes for the tension where the gap between where they are and where they are trying to get is most personally consequential — where their career, their reputation, a public commitment, or a key relationship is most directly on the line. Build the question around that tension. A question about a missed timeline is good. A question about what happens to their credibility with their board, their boss, or their peers if that timeline slips is sharper. The best iQ question makes them stop and think about something they have not yet said out loud to anyone.
 
 LANGUAGE RULES — NON-NEGOTIABLE:
-- Write in SECOND PERSON throughout — address the sales professional directly as "you" not "the rep". Say "you need to", "your position", "you are selling to the wrong altitude" — never "the rep needs to", "the rep's position", "the rep is selling"
+- Write in SECOND PERSON throughout — address the sales professional directly as "you" not "the rep"
 - Write for an experienced field sales professional — direct, commercial, no softness
 - Never use "actually", "real", "really"
 - Never use passive voice
@@ -267,7 +286,7 @@ LANGUAGE RULES — NON-NEGOTIABLE:
 
 MATRIX HEALTH:
 - "STRONG FOUNDATION" — rich intel across all three rows, confident analysis
-- "PARTIAL PICTURE" — meaningful findings possible but specific gaps create blind spots  
+- "PARTIAL PICTURE" — meaningful findings possible but specific gaps create blind spots
 - "FLYING BLIND" — too little intel for reliable analysis; next conversation must be pure discovery
 
 ═══════════════════════════════
@@ -282,57 +301,59 @@ HEADLINE RULES — applied to every finding headline:
 - No filler words, no hedging, no corporate language
 - Never use the words "actually", "real", or "really"
 - Must be specific to this deal — not a generic label
-- Examples of strong headlines: "THIS PERSON IS SELLING UPWARD, NOT JUST BUYING", "THE TIMELINE THEY QUOTED DOES NOT ADD UP", "POWER SITS ONE LEVEL ABOVE WHERE YOU ARE SELLING", "SOMEONE IN THEIR NETWORK WILL KILL THIS DEAL"
-- Examples of weak headlines that are NOT acceptable: "KEY INSIGHT ABOUT THIS DEAL", "IMPORTANT FINDING", "WHAT THE MATRIX SHOWS"
+- Examples of strong headlines: "THIS PERSON IS SELLING UPWARD NOT JUST BUYING", "THE TIMELINE THEY QUOTED DOES NOT ADD UP", "POWER SITS ONE LEVEL ABOVE WHERE YOU ARE SELLING", "SOMEONE IN THEIR NETWORK WILL KILL THIS DEAL", "YOUR WINDOW IS CLOSING FASTER THAN THE DEAL TIMELINE"
+- Examples of weak headlines NOT acceptable: "KEY INSIGHT ABOUT THIS DEAL", "IMPORTANT FINDING", "WHAT THE MATRIX SHOWS"
 
 {
   "matrix_health": "STRONG FOUNDATION or PARTIAL PICTURE or FLYING BLIND",
-  "matrix_health_note": "One direct sentence — what this Matrix gives the rep and what it is missing. A briefing statement, not a grade.",
+  "matrix_health_note": "One direct sentence — what this Matrix gives you and what it is missing. A briefing statement, not a grade.",
   "findings": [
     {
       "headline": "GENERATED HEADLINE IN ALL CAPS — 8 words max, sharp and specific to this deal",
-      "finding": "2-3 sentences. Cross-cell tension only — identify which cells are in conflict and what that conflict reveals that neither cell reveals alone. Must contain something the rep would not have seen sitting alone with their notes. No generic observations. No sentence that could apply to any deal. Hedged but direct language."
+      "finding": "Show your work: name what Cell X says, name what Cell Y says, then state what the collision between them reveals. 2-3 sentences. Must contain something you would not have seen looking at either cell alone. No generic observations. No sentence that could apply to any deal. If Pattern 12 fired, this finding appears first."
     }
   ],
   "gaps": [
-    {"cell": "ROW / COLUMN e.g. FUTURE STATE / ROLE", "label": "Cell label name", "severity": "HIGH or MEDIUM only — no LOW", "note": "One sentence — why this specific missing intel creates a blind spot that affects the findings above. If a gap did not affect a finding, do not include it. IMPORTANT: For any NEEDS row cell that is empty (NEEDS/ROLE, NEEDS/REACH, or NEEDS/RESULTS), always include it as a HIGH severity gap with a note that names the specific discovery question the rep should ask in their next conversation to fill it — not a generic observation but a targeted question tied to what was found in the corresponding Current State and Future State cells."}
+    {"cell": "ROW / COLUMN e.g. FUTURE STATE / ROLE", "label": "Cell label name", "severity": "HIGH or MEDIUM only — no LOW", "note": "One sentence — why this specific missing intel creates a blind spot that affected the findings above. If a gap did not affect a finding, do not include it. For any empty NEEDS cell, name the specific question to ask in the next conversation to fill it — tied directly to what was found in the corresponding Current State and Future State cells."}
   ],
   "defense": [
-    {"title": "RISK SCENARIO IN ALL CAPS — specific to this deal, not generic", "body": "Sentence 1: what happens specifically if this risk materializes — name the commercial consequence. Sentence 2: the one specific action the rep takes now to prevent it."}
+    {"title": "SPECIFIC RISK SCENARIO IN ALL CAPS — name the exact thing that could go wrong", "body": "Sentence 1: the specific scenario — what happens, when it happens, what the commercial consequence is. Sentence 2: the one specific protective action you can take in the next 5 business days to prevent it — name exactly what to do and to whom."}
   ],
   "iq_questions": [
-    {"question": "iQ Formula: CURRENT REALITY (one specific constraint, pressure, or situation from the CURRENT STATE row — something measurable or named) + FUTURE STATE (connect with 'and' or 'as' — one specific ambition or commitment from the FUTURE STATE row) + IMPACT (a question that surfaces what this tension has already cost them or is doing to something they personally care about — career, reputation, a public promise, a relationship. Draw from whichever Matrix box carries the sharpest personal stake. Never operational. Example structure: Given [specific current reality with number or name]... and [specific future state ambition]... how has [the gap between them] affected your [personal stake]?). The full question must flow as one natural sentence the rep can say out loud.", "timing": "Use [early / mid / late in conversation] — one sentence on what this question forces them to confront and why that moment in the conversation is right for it."},
-    {"question": "Second iQ question using the same formula but drawing from completely different Matrix cells than the first. Must surface a different tension. Must flow as one natural sentence.", "timing": "Use [timing] — one sentence on what this question surfaces."}
+    {"question": "iQ Formula built around the HIGHEST PERSONAL STAKES tension in the Matrix: CURRENT REALITY (one specific named constraint, pressure, or number from the CURRENT STATE row) + FUTURE STATE (connect with 'and' or 'as' — one specific named ambition, commitment, or deadline from the FUTURE STATE row) + IMPACT (the question that surfaces what the gap between those two has already cost them or is doing to their career, reputation, a public promise, or a key relationship — the most personally consequential tension you can find. Never operational. Must flow as one natural sentence the rep can say out loud without it sounding constructed.)", "timing": "Use [early / mid / late in conversation] — one sentence on what this question forces them to confront out loud for the first time and why that moment in the conversation is the right moment."},
+    {"question": "Second iQ question built around the SECOND HIGHEST PERSONAL STAKES tension — completely different Matrix cells than the first, different tension, must flow naturally.", "timing": "Use [timing] — one sentence on what this surfaces."}
   ],
   "watch_for": [
-    "Specific observable behavior from this person in conversation that signals momentum — not a generic buying signal but something tied to what the patterns revealed about their specific motivation or situation",
-    "Second specific observable momentum behavior tied to this person's intel"
+    "Specific observable behavior — something you can see or hear in a conversation — tied to this person's specific motivation or political situation from the Matrix. Not an internal state. Example of the standard: 'They reference your previous conversation unprompted at the start of the call' or 'They bring their [specific role] into the conversation without explaining why'",
+    "Second specific observable momentum behavior — different from the first, tied to a different aspect of this person's intel"
   ],
   "watch_out": [
-    "Specific observable behavior that signals this deal is stalling or this person is disengaging — tied to the vulnerabilities identified in the findings",
-    "Second specific resistance behavior tied to this deal's specific risk profile"
+    "Specific observable resistance behavior — something you can see or hear — tied to the specific vulnerabilities or gaps identified in the findings. Not 'they seem disengaged'. Example of the standard: 'They introduce a new stakeholder without context after you discuss pricing' or 'They stop referencing the timeline they previously committed to'",
+    "Second specific resistance behavior — different from the first, tied to a different vulnerability in this deal"
   ],
   "next_actions": [
-    "Action 1 — specific, immediately executable, tied to a finding or gap. Name exactly what to do and why it matters for this deal right now.",
-    "Action 2 — specific and tied to the intel above.",
-    "Action 3 — specific and tied to the intel above."
+    "Action tied to a specific finding or gap — name exactly what to do, to whom, by when — and state the commercial consequence of not doing it: 'If you wait until after [specific event], you lose [specific advantage]'",
+    "Second action — different finding or gap, same standard — what, to whom, by when, consequence of inaction.",
+    "Third action — same standard."
   ]
 }
 
 FINAL QUALITY CHECK BEFORE RETURNING JSON:
-1. Does every finding identify specific cells in tension — not just summarize one cell?
-2. Would a rep reading this learn something they would not have seen sitting alone with their notes?
-3. Does every headline tell the rep exactly what they are about to read in plain sales language — no pattern numbers, no methodology terms, no filler?
-4. Does every iQ question use specific intel from the Matrix — numbers, names, timelines — not generic language?
-5. Are the next actions specific enough that a rep knows exactly what to do tomorrow morning?
-6. Is there any sentence that could apply to any deal rather than this specific deal? If yes, delete it.
-7. Do any findings, headlines, or next actions use the words "actually", "real", or "really"? If yes, replace them.
-- findings: minimum 2, maximum 6 — only surface patterns where genuine cross-cell tension exists in the data. Each finding is an object with "headline" and "finding" keys.
-- gaps: HIGH and MEDIUM severity only, only gaps that affected the findings above, maximum 4
-- defense: maximum 3 items, each title in ALL CAPS
-- iq_questions: exactly 2, each must use SPECIFIC intel from Matrix cells
-- watch_for and watch_out: exactly 2 each, observable behaviors not internal states
-- next_actions: exactly 3, specific and immediately executable
+1. Does every finding name the specific cell values in conflict and show what their collision reveals?
+2. If Pattern 12 fired, is that finding first?
+3. Would you read this report and learn something you would not have seen sitting alone with your notes?
+4. Does every headline tell you exactly what you are about to read in plain sales language?
+5. Does every iQ question target the highest personal stakes tension — not just any valid combination?
+6. Does every signal describe something observable — a behavior you can see or hear — not an internal state?
+7. Does every next action name what to do, to whom, by when, and what you lose if you don't?
+8. Does any sentence apply to any deal rather than this specific deal? If yes, delete it.
+9. Do any findings, headlines, or actions use "actually", "real", or "really"? If yes, replace them.
+- findings: minimum 2, maximum 6 — only surface patterns where genuine cross-cell tension exists. Each finding is an object with "headline" and "finding" keys.
+- gaps: HIGH and MEDIUM only, only gaps that affected findings above, maximum 4
+- defense: maximum 3 items, each title ALL CAPS, each preventable by a specific action in 5 business days
+- iq_questions: exactly 2, highest personal stakes tensions, specific Matrix intel
+- watch_for and watch_out: exactly 2 each, observable behaviors only
+- next_actions: exactly 3, each with consequence of inaction
 Return pure JSON only. No backticks, no markdown, no explanation.`;
 
 
@@ -568,15 +589,9 @@ function DealScreen({ onComplete }) {
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
       <div style={{ width: "100%", maxWidth: "560px" }}>
         <div style={{ marginBottom: "32px" }}>
+          
           <div style={{ fontSize: "11px", color: RED, fontFamily: MONO, letterSpacing: "0.14em", marginBottom: "8px" }}>SEMPER SELLING®</div>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-            <div style={{ fontSize: "36px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em", lineHeight: 1.1 }}>CONNECTION INTELLIGENCE<br />MATRIX</div>
-            <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginTop: "2px", opacity: 0.85 }}>
-              {[0,1,2].map(row => [0,1,2].map(col => (
-                <rect key={`${row}-${col}`} x={col * 24 + 2} y={row * 24 + 2} width="20" height="20" rx="2" fill="none" stroke="white" strokeWidth="1.5"/>
-              )))}
-            </svg>
-          </div>
+          <div style={{ fontSize: "36px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em", lineHeight: 1.1 }}>CONNECTION INTELLIGENCE<br />MATRIX</div>
           <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, marginTop: "10px", lineHeight: 1.6 }}>Build your intel. Walk in masterfully prepared.</div>
         </div>
         <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "4px", padding: "28px 24px" }}>
