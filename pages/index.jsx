@@ -612,10 +612,17 @@ function DealScreen({ onComplete }) {
         <div style={{ marginBottom: "32px" }}>
           
           <div style={{ fontSize: "11px", color: RED, fontFamily: MONO, letterSpacing: "0.14em", marginBottom: "8px" }}>SEMPER SELLING®</div>
-          <div style={{ fontSize: "36px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em", lineHeight: 1.1 }}>CONNECTION INTELLIGENCE<br />MATRIX</div>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+            <div style={{ fontSize: "36px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em", lineHeight: 1.1 }}>CONNECTION INTELLIGENCE<br />MATRIX</div>
+            <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginTop: "2px", opacity: 0.9 }}>
+              {[0,1,2].map(row => [0,1,2].map(col => (
+                <rect key={`${row}-${col}`} x={col * 24 + 2} y={row * 24 + 2} width="20" height="20" rx="2" fill="none" stroke="white" strokeWidth="1.5"/>
+              )))}
+            </svg>
+          </div>
           <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, marginTop: "10px", lineHeight: 1.6 }}>Build your intel. Walk in masterfully prepared.</div>
         </div>
-        <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "4px", padding: "28px 24px" }}>
+        <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "4px", padding: "32px 28px" }}>
           <div style={{ fontSize: "14px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.14em", marginBottom: "20px" }}>DEAL CONTEXT</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {fields.map(f => (
@@ -625,15 +632,15 @@ function DealScreen({ onComplete }) {
                 </label>
                 {f.textarea ? (
                   <textarea value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} rows={2}
-                    style={{ width: "100%", background: "#0d0d0d", border: `1px solid ${BORDER}`, borderRadius: "3px", color: "#fff", padding: "10px 12px", fontSize: "12px", fontFamily: MONO, resize: "none", outline: "none", transition: "border-color 0.2s" }}
-                    onFocus={e => e.target.style.borderColor = RED} onBlur={e => e.target.style.borderColor = BORDER}
+                    style={{ width: "100%", background: "#0d0d0d", border: `1px solid ${BORDER}`, borderLeft: `3px solid ${BORDER}`, borderRadius: "3px", color: "#fff", padding: "10px 12px", fontSize: "12px", fontFamily: MONO, resize: "none", outline: "none", transition: "all 0.2s" }}
+                    onFocus={e => { e.target.style.borderColor = RED; e.target.style.borderLeftColor = RED; }} onBlur={e => { e.target.style.borderColor = BORDER; e.target.style.borderLeftColor = BORDER; }}
                   />
                 ) : (
                   <input value={form[f.key]}
                     onChange={e => { setForm(p => ({ ...p, [f.key]: e.target.value })); setErrors(p => ({ ...p, [f.key]: false })); }}
                     placeholder={f.placeholder} onKeyDown={e => e.key === "Enter" && handleSubmit()}
-                    style={{ width: "100%", background: "#0d0d0d", border: `1px solid ${errors[f.key] ? "#ff6666" : BORDER}`, borderRadius: "3px", color: "#fff", padding: "10px 12px", fontSize: "12px", fontFamily: MONO, outline: "none", transition: "border-color 0.2s" }}
-                    onFocus={e => e.target.style.borderColor = RED} onBlur={e => e.target.style.borderColor = errors[f.key] ? "#ff6666" : BORDER}
+                    style={{ width: "100%", background: "#0d0d0d", border: `1px solid ${errors[f.key] ? "#ff6666" : BORDER}`, borderLeft: `3px solid ${errors[f.key] ? "#ff6666" : BORDER}`, borderRadius: "3px", color: "#fff", padding: "10px 12px", fontSize: "12px", fontFamily: MONO, outline: "none", transition: "all 0.2s" }}
+                    onFocus={e => { e.target.style.borderColor = RED; e.target.style.borderLeftColor = RED; }} onBlur={e => { e.target.style.borderColor = errors[f.key] ? "#ff6666" : BORDER; e.target.style.borderLeftColor = errors[f.key] ? "#ff6666" : BORDER; }}
                   />
                 )}
               </div>
@@ -677,17 +684,17 @@ function AnalysisLoader() {
       {/* Bar graph */}
       <div style={{ display: "flex", alignItems: "flex-end", gap: "10px", height: "120px", marginBottom: "32px" }}>
         <div style={{
-          width: "22px", background: "#CC0000", borderRadius: "2px 2px 0 0",
+          width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0",
           animation: "bar1 1.1s ease-in-out infinite",
           animationDelay: "0s"
         }} />
         <div style={{
-          width: "22px", background: "#CC0000", borderRadius: "2px 2px 0 0",
+          width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0",
           animation: "bar2 1.1s ease-in-out infinite",
           animationDelay: "0.18s"
         }} />
         <div style={{
-          width: "22px", background: "#CC0000", borderRadius: "2px 2px 0 0",
+          width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0",
           animation: "bar3 1.1s ease-in-out infinite",
           animationDelay: "0.36s"
         }} />
@@ -1066,7 +1073,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
                 const hasValue = !!cells[key].trim();
                 const hasAiSource = !!aiSources[key];
                 return (
-                  <div key={key} style={{ background: SURFACE, border: `1px solid ${isFocused ? RED : hasValue ? "#383838" : "#1e1e1e"}`, borderRadius: "3px", padding: "10px 12px", transition: "border-color 0.2s", display: "flex", flexDirection: "column", gap: "6px", minHeight: "120px" }}>
+                  <div key={key} style={{ background: SURFACE, border: `1px solid ${isFocused ? RED : hasValue ? "#383838" : "#1e1e1e"}`, borderRadius: "3px", padding: "14px 14px 12px 14px", transition: "border-color 0.2s", display: "flex", flexDirection: "column", gap: "6px", minHeight: "130px" }}>
 
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "6px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
@@ -1242,9 +1249,12 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
 
         {/* Deal header — matches screenshot large name treatment */}
         <div style={{ marginBottom: "8px", fontSize: "10px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.18em" }}>◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
-        <div style={{ fontSize: "42px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.04em", lineHeight: 1, marginBottom: "8px" }}>{deal.prospect.toUpperCase()}</div>
-        <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, marginBottom: "28px" }}>
-          {deal.role}{deal.company ? ` · ${deal.company}` : ""}{deal.opportunity ? ` · ${deal.opportunity}` : ""}
+        <div style={{ fontSize: "42px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.04em", lineHeight: 1, marginBottom: "10px" }}>{deal.prospect.toUpperCase()}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
+          <div style={{ width: "3px", height: "16px", background: RED, borderRadius: "1px", flexShrink: 0 }} />
+          <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO }}>
+            {deal.role}{deal.company ? ` · ${deal.company}` : ""}{deal.opportunity ? ` · ${deal.opportunity}` : ""}
+          </div>
         </div>
 
         {!hasAnalysis ? (
@@ -1305,7 +1315,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                 {(analysis.gaps || []).length > 0 && (
                   <div>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "12px" }}>
-                      <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>INTELLIGENCE GAPS</span>
+                      <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>INTELLIGENCE GAPS</span>
                     </div>
                     <div style={{ fontSize: "10px", color: "#fff", fontFamily: MONO, marginBottom: "14px" }}>
                       <span style={{ borderLeft: `2px solid ${RED}`, paddingLeft: "6px", marginRight: "12px" }}>HIGH — critical to close</span>
@@ -1324,7 +1334,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                 {(analysis.defense || []).length > 0 && (
                   <div>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                      <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>DEFENSE STRATEGY</span>
+                      <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>DEFENSE STRATEGY</span>
                     </div>
                     {(analysis.defense || []).map((risk, i) => (
                       <div key={i} style={{ marginBottom: "20px" }}>
@@ -1341,7 +1351,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
             {(analysis.iq_questions || []).length > 0 && (
               <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                  <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>iQ QUESTIONS — USE NEXT CALL</span>
+                  <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>iQ QUESTIONS — USE NEXT CALL</span>
                 </div>
                 {(analysis.iq_questions || []).map((q, i) => (
                   <div key={i} style={{ marginBottom: "22px", paddingLeft: "16px", borderLeft: "2px solid #222" }}>
@@ -1358,7 +1368,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
 
                 <div>
                   <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                    <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>MOMENTUM SIGNALS</span>
+                    <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>MOMENTUM SIGNALS</span>
                   </div>
                   {(analysis.watch_for || []).map((s, i) => (
                     <div key={i} style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "flex-start" }}>
@@ -1370,7 +1380,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
 
                 <div>
                   <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                    <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>RESISTANCE SIGNALS</span>
+                    <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>RESISTANCE SIGNALS</span>
                   </div>
                   {(analysis.watch_out || []).map((s, i) => (
                     <div key={i} style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "flex-start" }}>
