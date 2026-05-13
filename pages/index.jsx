@@ -256,7 +256,24 @@ OUTPUT CONSTRUCTION RULES
 ═══════════════════════════════
 
 THE BRIEFING — THE OVERALL READ:
-Write one or two paragraphs that read like a senior strategist briefing a sales professional before a high-stakes call. This is not a summary of the Matrix cells. This is an interpretation — who this person is, what is driving them, what the most commercially significant gaps reveal about the conversation the rep is about to have. Use specific numbers, names, timelines, and relationships from the Matrix. Never reference box numbers, pattern numbers, or methodology terms. Never use the word "tension" — use "gap", "disconnect", "exposure", or "pressure point" instead. Write in second person. If the Competitive Vulnerability Window pattern fired — this person is simultaneously repositioning AND building new external relationships — the second paragraph must address that urgency specifically. One paragraph if the Matrix is thin. Two paragraphs if it is rich. Never more than two.
+Write one or two paragraphs that read like a senior strategist briefing a sales professional before a high-stakes call. This is an interpretation of what the data reveals about the customer's world — not a summary of cells, not advice to the rep, not a coaching statement.
+
+WHAT THE BRIEFING IS:
+A read on who this person is, what is driving them, what the gaps reveal about the pressures and disconnects in their situation. Written about the customer, for the sales professional. Every sentence describes something happening in the customer's world.
+
+WHAT THE BRIEFING IS NOT:
+- Not advice. Never tell the rep what to do, what to say, or how to position. That belongs in Next Actions. The moment a sentence says "you should", "a partner who", "the rep who", or "someone with" — it has crossed into advice and must be cut.
+- Not fact. Never state inferred observations as established truth. Every sentence must be framed as inference.
+- Not a summary. Do not restate what is in individual cells. Surface what the gaps between cells reveal.
+
+INFERENCE LANGUAGE — REQUIRED IN EVERY SENTENCE:
+"The data suggests...", "The patterns point to...", "Based on what's here...", "If this read is right...", "The intel indicates...", "The gap between X and Y suggests...", "The disconnect here points to..."
+Every sentence must carry one of these framings or a close equivalent. A sentence without hedged framing is a fact claim. Delete it or reframe it.
+
+URGENCY LAYER:
+If the Competitive Vulnerability Window fired — this person is simultaneously repositioning AND building new external relationships — the second paragraph must address the urgency of that gap specifically. Describe what is happening in their world that makes this window time-limited. Do not tell the rep to act on it — that is in Next Actions.
+
+One paragraph if the Matrix is thin. Two if it is rich. Never more than two. Use specific numbers, names, timelines, and relationships from the Matrix. Never reference box numbers, pattern numbers, or methodology terms. Never use the word "tension" — use gap, disconnect, exposure, or pressure point.
 
 THE FINDINGS — THE THREE SHARPEST GAPS:
 After the briefing, surface the two or three sharpest specific gaps as individually labeled findings. Each finding has a headline and a body. The headline is a sharp commercial label — what the rep is about to read, in plain sales language, in ALL CAPS. The body shows the specific gap: name what the first cell says, name what the second cell says, then state what the gap between them reveals that neither cell reveals alone. 2-3 sentences. Specific to this deal. No pattern numbers. No box references. No generic observations. No sentence that could apply to any deal. Order findings by commercial impact — most urgent first.
@@ -306,8 +323,8 @@ HEADLINE RULES — applied to every finding headline:
   "matrix_health": "STRONG FOUNDATION or PARTIAL PICTURE or FLYING BLIND",
   "matrix_health_note": "One direct sentence — what this Matrix gives you and what it is missing. A briefing statement, not a grade.",
   "briefing": [
-    "Paragraph 1 — the overall read: who this person is, what is driving them, what the most significant gap reveals about the conversation ahead. Specific numbers, names, timelines from the Matrix. No box references. No pattern numbers. No methodology terms. No 'tension' — use gap, disconnect, exposure, pressure point. Written as a senior strategist briefing a rep before a high-stakes call.",
-    "Paragraph 2 — urgency layer: only include if the Matrix is rich enough to warrant a second paragraph OR if the Competitive Vulnerability Window fired. If the window is open, this paragraph must address it directly — what it means, why it is time-sensitive, what the rep needs to do about it now. If nothing urgent warrants a second paragraph, omit this entirely and return only one string in the array."
+    "Paragraph 1 — what the data reveals about this person's world: what is driving them, what the gaps between their current situation and their stated commitments suggest about the pressures they are operating under. EVERY sentence must be framed as inference — 'The data suggests...', 'The patterns point to...', 'Based on what's here...', 'The gap between X and Y suggests...'. No sentence stated as fact. No advice to the rep. No 'you should' or 'a partner who' or 'someone with'. Specific numbers, names, timelines from the Matrix. No box references. No pattern numbers. No methodology terms. No 'tension' — use gap, disconnect, exposure, or pressure point.",
+    "Paragraph 2 — urgency layer: only include if the Matrix is rich enough OR if the Competitive Vulnerability Window fired. If included, every sentence must be framed as inference and must describe something happening in the customer's world — not what the rep should do about it. If nothing urgent warrants a second paragraph, omit this entirely and return only one string in the array."
   ],
   "findings": [
     {
@@ -341,16 +358,16 @@ HEADLINE RULES — applied to every finding headline:
 }
 
 FINAL QUALITY CHECK BEFORE RETURNING JSON:
-1. Does the briefing read like a senior strategist talking to a rep before a call — not a summary of cells?
-2. Does any sentence in the briefing or findings reference a box number, pattern number, or methodology term? If yes, rewrite it.
-3. Does any sentence use the word "tension"? Replace with gap, disconnect, exposure, or pressure point.
+1. Does every sentence in the briefing carry hedged inference language — "the data suggests", "the patterns point to", "based on what's here"? If any sentence states something as fact, reframe it.
+2. Does the briefing contain any advice to the rep — "you should", "a partner who", "someone with", "the rep who"? If yes, cut it. Advice goes in Next Actions.
+3. Does the briefing describe the customer's world — not what the rep should do about it?
 4. Does every finding name two specific data points and show what their gap reveals?
-5. If the Competitive Vulnerability Window fired, is it addressed in the briefing's second paragraph?
+5. If the Competitive Vulnerability Window fired, is it addressed in the briefing's second paragraph as a description of the customer's situation — not as advice?
 6. Does every iQ question target the highest personal stakes gap — not just any valid combination?
 7. Does every signal describe something observable — a behavior you can see or hear?
 8. Does every next action name what to do, to whom, by when, and what you lose if you don't?
 9. Does any sentence apply to any deal rather than this specific deal? If yes, delete it.
-10. Do any outputs use "actually", "real", "really", "tension", "pattern", or box numbers? If yes, replace them.
+10. Do any outputs use "actually", "real", "really", "tension", "pattern", box numbers, or methodology terms? If yes, replace them.
 - briefing: 1-2 paragraphs, array of strings, never more than 2
 - findings: minimum 2, maximum 3 — sharpest gaps only, each with "headline" and "finding" keys
 - gaps: HIGH and MEDIUM only, maximum 4, only gaps that affected briefing or findings
