@@ -419,7 +419,7 @@ function WhatGoesHere({ description }) {
   return (
     <div ref={ref} style={{ position: "relative", flexShrink: 0 }}>
       <button onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
-        style={{ background: "transparent", border: "none", padding: "0", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", transition: "opacity 0.15s", lineHeight: 1 }}
+        style={{ background: open ? "rgba(204,0,0,0.08)" : "transparent", border: `1px solid ${open ? RED : RED}`, borderRadius: "2px", padding: "2px 7px", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", transition: "all 0.15s", lineHeight: 1 }}
         onMouseEnter={e => { e.currentTarget.style.opacity = "0.7"; }}
         onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
       >
@@ -1206,6 +1206,13 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
               onMouseLeave={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#888"; }}
             >↓ EXPORT</button>
           )}
+          {hasAnalysis && (
+            <button onClick={() => window.print()}
+              style={{ background: "none", border: `1px solid #333`, color: "#888", borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.15s" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = RED; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#888"; }}
+            >↓ SAVE PDF</button>
+          )}
           <button onClick={onRedo}
             style={{ background: "none", border: `1px solid #333`, color: "#888", borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.15s" }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = RED; }}
@@ -1429,6 +1436,11 @@ export default function App() {
         textarea.matrix-cell:focus { outline: none !important; box-shadow: none !important; }
         @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes readingPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        @media print {
+          body { background: #fff !important; color: #000 !important; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          button, [data-noprint] { display: none !important; }
+        }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: #0d0d0d; }
         ::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 2px; }
