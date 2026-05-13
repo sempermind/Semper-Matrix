@@ -106,12 +106,15 @@ const buildSearchQueries = (name, company, role) => [
   { query: `${company} goals OR targets OR commitments OR plans 2025`, label: "Company: Future Commitments" },
 ];
 
-const SYNTHESIS_PROMPT = (name, role, company, rawResults, existingCells) => `You are a sales intelligence analyst for the Semper Selling® methodology. You have been given raw web search results about ${name} (${role} at ${company}) — both person-level intel and company-level intel. Your job is to extract factual intel, map it to the correct Connection Intelligence Matrix cells, and attribute it correctly to its source.
+const SYNTHESIS_PROMPT = (name, role, company, rawResults, existingCells, fullMatrix) => `You are a sales intelligence analyst for the Semper Selling® methodology. You have been given raw web search results about ${name} (${role} at ${company}) — both person-level intel and company-level intel. Your job is to extract factual intel, map it to the correct Connection Intelligence Matrix cells, and infer the Needs row from the complete picture.
 
 RAW SEARCH RESULTS:
 ${rawResults}
 
-EXISTING CELL CONTENT (do not duplicate):
+FULL MATRIX — WHAT THE REP ALREADY KNOWS (use this to infer Needs, do not duplicate in sourced cells):
+${fullMatrix}
+
+EXISTING CELL CONTENT TO AVOID DUPLICATING:
 ${existingCells}
 
 THE NINE MATRIX CELLS:
@@ -124,10 +127,12 @@ ROWS 1-6 — SOURCED INTEL ONLY (person-level or company-level):
 - FUTURE STATE|REACH: Relationship Strategy — new alliances, partnerships, networks ${company} is building. Draw from company-level search results.
 - FUTURE STATE|RESULTS: Public Commitments — stated goals, strategic targets, public promises made by ${name} or announced by ${company}. Draw from both person and company results.
 
-ROWS 7-9 — INFERRED FROM THE GAP BETWEEN CURRENT STATE AND FUTURE STATE:
-- NEEDS|ROLE: Capability Gaps — what authority, skills, or organizational capability does ${name} or ${company} need to get from Current State to Future State? Infer from the tension between CURRENT STATE|ROLE and FUTURE STATE|ROLE.
-- NEEDS|REACH: Missing Support — what relationships or stakeholder alignment is missing between their current network and where they are trying to go? Infer from the tension between CURRENT STATE|REACH and FUTURE STATE|REACH.
-- NEEDS|RESULTS: Resource Requirements — what technology, budget, or process change is required to close the gap between current performance pressures and future commitments? Infer from the tension between CURRENT STATE|RESULTS and FUTURE STATE|RESULTS.
+ROWS 7-9 — INFERRED FROM THE COMPLETE MATRIX PICTURE:
+Use BOTH the rep's manually entered intel AND the search findings above to infer the Needs row. Do not limit yourself to only what the search found.
+- NEEDS|ROLE: Capability Gaps — given everything you know about ${name}'s current authority and future career trajectory, what capability, skill, or organizational gap stands between where they are and where they are trying to go? Infer from the tension between CURRENT STATE|ROLE and FUTURE STATE|ROLE across both the rep's intel and search findings.
+- NEEDS|REACH: Missing Support — given their current influence network and the relationships they are building, whose support or what partnership is conspicuously missing? Infer from the tension between CURRENT STATE|REACH and FUTURE STATE|REACH.
+- NEEDS|RESULTS: Resource Requirements — given the gap between their current performance pressures and their stated future commitments, what technology, budget, or process change would close that gap? Infer from the tension between CURRENT STATE|RESULTS and FUTURE STATE|RESULTS.
+- Only infer a NEEDS cell if there is meaningful content in BOTH the corresponding Current State AND Future State cells — from any source (rep entry or search). If either is empty or too thin to infer from, skip that NEEDS cell entirely.
 
 SOURCE ATTRIBUTION RULES:
 - Person-level findings: source_label should identify the actual source type e.g. "LinkedIn", "Forbes Interview · 2025", "Company Blog · March 2025"
@@ -242,7 +247,7 @@ HEADLINE RULES — applied to every finding headline:
     }
   ],
   "gaps": [
-    {"cell": "ROW / COLUMN e.g. FUTURE STATE / ROLE", "label": "Cell label name", "severity": "HIGH or MEDIUM only — no LOW", "note": "One sentence — why this specific missing intel creates a blind spot that affects the findings above. If a gap did not affect a finding, do not include it."}
+    {"cell": "ROW / COLUMN e.g. FUTURE STATE / ROLE", "label": "Cell label name", "severity": "HIGH or MEDIUM only — no LOW", "note": "One sentence — why this specific missing intel creates a blind spot that affects the findings above. If a gap did not affect a finding, do not include it. IMPORTANT: For any NEEDS row cell that is empty (NEEDS/ROLE, NEEDS/REACH, or NEEDS/RESULTS), always include it as a HIGH severity gap with a note that names the specific discovery question the rep should ask in their next conversation to fill it — not a generic observation but a targeted question tied to what was found in the corresponding Current State and Future State cells."}
   ],
   "defense": [
     {"title": "RISK SCENARIO IN ALL CAPS — specific to this deal, not generic", "body": "Sentence 1: what happens specifically if this risk materializes — name the commercial consequence. Sentence 2: the one specific action the rep takes now to prevent it."}
@@ -665,6 +670,12 @@ function MatrixScreen({ deal, onComplete, onBack }) {
       // ── PHASE 2: Synthesize into Matrix cells ──
       setSearchProgress("Analyzing findings...");
 
+      // Pass full matrix — both what rep entered AND search results
+      // Synthesis needs the complete picture to infer Needs from Current/Future State gaps
+      const fullMatrixContent = Object.entries(cells)
+        .map(([k, v]) => `${k}: ${v.trim() || "[empty]"}`)
+        .join("\n");
+
       const existingCells = Object.entries(cells)
         .filter(([, v]) => v.trim())
         .map(([k, v]) => `${k}: ${v}`)
@@ -676,7 +687,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1500,
-          messages: [{ role: "user", content: SYNTHESIS_PROMPT(deal.prospect, deal.role, deal.company, rawResults, existingCells) }]
+          messages: [{ role: "user", content: SYNTHESIS_PROMPT(deal.prospect, deal.role, deal.company, rawResults, existingCells, fullMatrixContent) }]
         })
       });
 
