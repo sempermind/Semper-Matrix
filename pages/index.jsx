@@ -213,43 +213,49 @@ ${matrixText}
 YOUR ANALYTICAL MISSION
 ═══════════════════════════════
 
-Run all 12 patterns below against the Matrix data. For each pattern, you are looking for TENSION — places where two or more cells contradict each other, create an unresolved gap, or reveal something about this person's situation that neither cell reveals on its own. A finding that simply restates what is in one cell is not a finding. A finding that shows what happens when two cells collide is.
+Run all 14 patterns below. For each, look for gaps where two or more cells reveal something together that neither reveals alone. A finding that restates one cell is not a finding. Surface only patterns where genuine cross-cell gaps exist in the data. Skip patterns where the relevant boxes are empty or too thin to analyze.
 
 PATTERN 1 — DECISION AUTHORITY VS. INFLUENCE (Box 1 + Box 2)
-Look for the gap between formal authority and who actually moves decisions. If Box 1 shows limited approval power but Box 2 shows strong internal relationships, this person is more powerful than their title suggests — underselling is the risk. If Box 1 shows high authority but Box 2 shows a thin network, they can approve but may not be able to mobilize support — a different problem entirely. Surface whichever gap creates the most commercial implication for you.
+Gap between formal authority and who actually moves decisions. High authority + thin network = can approve but can't mobilize support. Limited authority + strong network = more powerful than their title suggests. Name the commercial implication of whichever gap is present.
 
 PATTERN 2 — UNENGAGED STAKEHOLDER RISK (Box 2 + Box 5 + Box 8)
-Look for a specific person or function that appears in Box 2 (who influences them) or Box 5 (relationships they are building) but is conspicuously absent from Box 8 (whose support they are missing). This is not a generic "engage more stakeholders" finding — it is a specific relationship gap that will become a late-stage surprise if not addressed now. Only surface this if the data actually names or implies a specific person or function.
+Find the specific person or function present in Box 2 or Box 5 but absent from Box 8. That specific gap will surface as a late-stage surprise. Only fire if data names or implies a specific person or function — not a generic stakeholder risk.
 
-PATTERN 3 — PERSONAL MOTIVATION DRIVER (Box 3 + Box 4 + Box 6)
-Look for the intersection point where performance pressure, career trajectory, and public commitments all converge. This intersection — not the stated business problem — is what this person is optimizing for. The more specific the data in these three boxes, the sharper this finding will be. If all three point in the same direction, the motivation is clear. If they point in different directions, the contradiction itself is the finding — they are being pulled in competing directions and you — the rep who acknowledges that tension — will stand out.
+PATTERN 3 — PERSONAL MOTIVATION DRIVER (Box 3 + Box 4 + Box 6) — fires on ALIGNMENT ONLY
+Run only when Box 3, Box 4, and Box 6 point in the same direction. The intersection is what this person is optimizing for — name it precisely. This is what they are selling to their own organization. Note: P3 and P9 are mutually exclusive — run only the one that matches the data.
 
 PATTERN 4 — CURRENT TO FUTURE STATE GAP (Boxes 1+2+3 vs 4+5+6)
-Look at the full distance between where this person is today and where they are trying to get across all three dimensions — Role, Reach, Results. A large gap across all three means high motivation and genuine urgency to change. A large gap in one dimension but not others reveals where the pressure is concentrated. A small gap everywhere suggests this person is in maintenance mode and not actively motivated to disrupt the status quo — which is a deal risk you need to know.
+Read the full distance across all three dimensions. Large gap everywhere = high urgency. Gap concentrated in one dimension = where the pressure is. Small gap everywhere = maintenance mode, low urgency — flag as a deal risk.
 
 PATTERN 5 — PRIMARY DEAL VULNERABILITIES (Box 7 + Box 8 + Box 9)
-Look at the Needs row as a complete picture. When capability gaps (Box 7), missing support (Box 8), and resource requirements (Box 9) all point to the same problem area, the deal is fragile from the inside regardless of how well your relationship is developing. Identify the specific internal condition that is most likely to kill this deal before you get a no — and name it directly.
+Read the Needs row as a complete picture. When all three point to the same problem area, the deal is fragile from the inside. Name the specific internal condition most likely to kill this deal before you get a no.
 
 PATTERN 6 — BREAKTHROUGH QUESTION INDICATOR (Box 3 + Box 7 + Box 9)
-Look for the sharpest tension point between what this person is being measured on (Box 3), what they are missing capability-wise (Box 7), and what resources they need (Box 9). This tension point is the setup for the iQ question that nobody else will ask — the question that surfaces a connection between their current pressure and their internal gaps that they have probably not articulated out loud yet. This pattern feeds directly into the iQ question construction.
+Find the sharpest gap between current performance pressure, missing capability, and resource needs. This gap is the setup for the iQ question nobody else will ask. Feed directly into iQ question construction.
 
-PATTERN 7 — BUYING MOMENTUM ASSESSMENT (Box 6 + Box 7 + Box 9)
-Look at whether the commitments this person has made publicly (Box 6) create enough internal pressure to actually drive a buying decision given what they are missing (Box 7 + Box 9). Public commitments with no capability or resources to back them = someone who needs to act but cannot on their own — high urgency, needs external help. Public commitments with partial capability = someone close to being able to act who needs the right solution. No public commitments and thin needs = low urgency, deal is at risk of stalling.
+PATTERN 7 — COMMITMENT CREDIBILITY (Box 6 + Box 7 + Box 9)
+Two questions in sequence: Do the public commitments create real urgency to act? Is the timeline actually executable given the capability and resource gaps? If a deadline in Box 6 conflicts with material gaps in Box 7 and Box 9, the timeline is aspirational not executable — name it directly.
 
-PATTERN 8 — TIMELINE CREDIBILITY (Box 6 + Box 7 + Box 9)
-Look for a specific deadline or timeline in Box 6 (public commitments) and cross-reference it against the capability and resource gaps in Box 7 and Box 9. If a Q3 deadline exists in Box 6 but Box 7 shows capability gaps and Box 9 shows resource shortfalls, that timeline is aspirational, not executable. This is one of the most valuable findings a rep can have — knowing the stated timeline is fiction before the first call means they can ask the question that restructures the entire conversation.
+PATTERN 8 — AUTHORITY CEILING (Box 1 + Box 9)
+Does the investment implied by Box 9 exceed what Box 1 says this person can approve? If yes — you are selling to the wrong altitude. If aligned, skip this pattern.
 
-PATTERN 9 — AUTHORITY CEILING (Box 1 + Box 9)
-Look at whether the scope or investment implied by Box 9 (resource requirements) exceeds what Box 1 says this person can approve. If yes, there is a level above this person who has not been engaged and who will ultimately control the decision. Name the implication directly: you are selling to the wrong altitude. If the authority and resource requirement are aligned, the ceiling is not a problem — skip this pattern.
+PATTERN 9 — STATED GOALS VS. REAL GOALS (Box 3 + Box 4 + Box 6) — fires on CONTRADICTION ONLY
+Run only when Box 3, Box 4, and Box 6 conflict with each other. The real motivation is hiding in the gap between them — name precisely what they say versus what the data suggests they are actually optimizing for. Note: mutually exclusive with P3.
 
-PATTERN 10 — STATED GOALS VS. REAL GOALS (Box 3 + Box 4 + Box 6)
-Look for contradictions between what this person is measured on (Box 3), what they have publicly committed to (Box 6), and where their career is headed (Box 4). When these three align perfectly, the stated goal is the real goal — straightforward. When they conflict — for example, measured on cost reduction but publicly committed to expansion while positioning for a P&L role — the real motivation is hiding in the gap between them. If you sell to the stated goal while missing the real one, you will lose to the competitor who sells to the gap.
+PATTERN 10 — COALITION RISK (Box 2 + Box 8)
+Find the specific person or function that appears in Box 2 as an influencer but is absent in Box 8. That is precisely where internal resistance will come from. Name the specific relationship gap — not a generic political risk.
 
-PATTERN 11 — COALITION RISK (Box 2 + Box 8)
-Look for the specific overlap between who influences this person (Box 2) and whose support they are currently missing (Box 8). The person or function that appears in Box 2 as an influencer but shows up in Box 8 as absent is precisely where internal resistance will come from. This is not a generic political risk — it is a specific relationship gap that the rep needs to address before the internal conversation happens without them in the room.
+PATTERN 11 — COMPETITIVE VULNERABILITY WINDOW (Box 4 + Box 5)
+Is this person simultaneously positioning for a bigger role AND actively building new external relationships? If yes, this is the most commercially urgent pattern — they are open to new partners as part of their own repositioning right now. This finding goes FIRST in the report. A competitor with a career-narrative pitch could get a meeting you have not earned yet.
 
-PATTERN 12 — COMPETITIVE VULNERABILITY WINDOW (Box 4 + Box 5)
-Look at whether this person is simultaneously positioning for a bigger role (Box 4) AND actively building new external relationships (Box 5). This combination is the most commercially urgent signal in the entire Matrix — it means someone who is open to new vendors as part of their own professional repositioning, right now. A competitor with a career-narrative pitch could get a meeting you have not earned yet. If both boxes show active movement, this pattern fires and must be treated as front-line urgency, not background risk. The finding goes first in the report. The question is not whether a competitor can walk in — it is whether you have already positioned yourself as the partner for where this person is going, not just where they are.
+PATTERN 12 — EXECUTION CREDIBILITY (Box 1 + Box 4 + Box 7)
+Read the full ROLE column: current authority + career trajectory + capability gaps. Does this person have what it takes to deliver on their own ambition? Limited authority + ambitious trajectory + missing capability = someone who needs a win on this program more than they are letting on. The most personally precise read in the Matrix.
+
+PATTERN 13 — CURRENT STATE ENTRENCHMENT (Box 1 + Box 2 + Box 3)
+Read the full CURRENT STATE row together. High authority + strong network + strong performance = comfortable, low urgency to change. Low authority + thin network + performance pressure = someone who needs a win now. This sets the context for how every other pattern should be weighted — a comfortable person requires a fundamentally different approach than a pressured one.
+
+PATTERN 14 — RESULTS COMMERCIAL STORY (Box 3 + Box 6 + Box 9)
+Read the full RESULTS column: what they are measured on today + what they have publicly committed to achieving + what resources are required to close that gap. When all three are populated this is the clearest commercial picture in the deal — current pressure to future commitment to cost of execution in one read.
 
 ═══════════════════════════════
 OUTPUT CONSTRUCTION RULES
