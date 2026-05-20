@@ -884,6 +884,8 @@ function MatrixScreen({ deal, onComplete, onBack }) {
   };
 
   // ── GENERATE ANALYSIS ─────────────────────
+  const filled = Object.values(cells).filter(v => v.trim().length > 0).length;
+
   const handleGenerate = async () => {
     if (filled === 0 || analyzing) return;
     setAnalyzing(true);
