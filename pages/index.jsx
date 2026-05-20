@@ -900,7 +900,12 @@ function MatrixScreen({ deal, onComplete, onBack }) {
       });
       const data = await resp.json();
       const raw = (data.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim();
-      const analysis = JSON.parse(raw);
+      let analysis = {};
+      try {
+        analysis = JSON.parse(raw);
+      } catch {
+        analysis = null;
+      }
       onComplete(cells, matrixText, analysis, aiSources);
     } catch {
       onComplete(cells, matrixToText(cells, deal), null, aiSources);
@@ -1214,14 +1219,14 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
             )}
 
             {/* WHAT THE MATRIX IS TELLING YOU — briefing + labeled findings */}
-            {((analysis.briefing || []).length > 0 || (analysis.findings || []).length > 0) && (
+            {((Array.isArray(analysis.briefing) ? analysis.briefing.length > 0 : !!analysis.briefing) || (analysis.findings || []).length > 0) && (
               <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "24px" }}>
                   <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>WHAT THE MATRIX IS TELLING YOU</span>
                 </div>
 
                 {/* Briefing paragraphs — continuous read */}
-                {(analysis.briefing || []).map((para, i) => (
+                {(Array.isArray(analysis.briefing) ? analysis.briefing : analysis.briefing ? [analysis.briefing] : []).map((para, i) => (
                   <p key={i} style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.85", margin: 0, marginBottom: "18px", fontStyle: "italic" }}>{para}</p>
                 ))}
 
