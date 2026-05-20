@@ -258,129 +258,61 @@ PATTERN 14 — RESULTS COMMERCIAL STORY (Box 3 + Box 6 + Box 9)
 Read the full RESULTS column: what they are measured on today + what they have publicly committed to achieving + what resources are required to close that gap. When all three are populated this is the clearest commercial picture in the deal — current pressure to future commitment to cost of execution in one read.
 
 ═══════════════════════════════
-OUTPUT CONSTRUCTION RULES
+OUTPUT RULES
 ═══════════════════════════════
 
-THE BRIEFING — THE OVERALL READ:
-Write one or two paragraphs that read like a senior strategist briefing a sales professional before a high-stakes call. This is an interpretation of what the data reveals about the customer's world — not a summary of cells, not advice to the rep, not a coaching statement.
+BRIEFING (1-2 paragraphs):
+Read like a senior strategist briefing a sales professional before a high-stakes call. Interpret what the data reveals about the customer's world — not a cell summary, not rep advice. Every sentence framed as inference: "The data suggests...", "The patterns point to...", "Based on what's here...", "The gap between X and Y suggests..." — never stated as fact. Never say "you should", "a partner who", "the rep who" — that's advice, it goes in Next Actions. Never reference box numbers, pattern numbers, or methodology terms. Never use "tension" — use gap, disconnect, exposure, pressure point. Specific numbers, names, timelines from the Matrix. One paragraph if thin, two if rich. If Pattern 11 fired, second paragraph addresses that urgency — describing what's happening in their world, not telling the rep what to do.
 
-WHAT THE BRIEFING IS:
-A read on who this person is, what is driving them, what the gaps reveal about the pressures and disconnects in their situation. Written about the customer, for the sales professional. Every sentence describes something happening in the customer's world.
+FINDINGS (2-3 sharpest gaps):
+Each has a headline and body. Headline: ALL CAPS, max 8 words, sharp commercial label, specific to this deal — never "KEY INSIGHT" or "IMPORTANT FINDING". Body: name the first data point, name the second, state what their gap reveals that neither reveals alone. 2-3 sentences, no box references, no pattern numbers, no generic observations. Most urgent first.
 
-WHAT THE BRIEFING IS NOT:
-- Not advice. Never tell the rep what to do, what to say, or how to position. That belongs in Next Actions. The moment a sentence says "you should", "a partner who", "the rep who", or "someone with" — it has crossed into advice and must be cut.
-- Not fact. Never state inferred observations as established truth. Every sentence must be framed as inference.
-- Not a summary. Do not restate what is in individual cells. Surface what the gaps between cells reveal.
+DEFENSE (max 3): Each answers: what could happen before close that you haven't prevented yet? Specific scenario + one protective action executable in 5 business days. Title ALL CAPS.
 
-INFERENCE LANGUAGE — REQUIRED IN EVERY SENTENCE:
-"The data suggests...", "The patterns point to...", "Based on what's here...", "If this read is right...", "The intel indicates...", "The gap between X and Y suggests...", "The disconnect here points to..."
-Every sentence must carry one of these framings or a close equivalent. A sentence without hedged framing is a fact claim. Delete it or reframe it.
+NEXT ACTIONS (exactly 3): What to do, to whom, by when + commercial consequence of not doing it. Never "prepare questions" — always a specific executable move with a specific cost of inaction.
 
-URGENCY LAYER:
-If the Competitive Vulnerability Window fired — this person is simultaneously repositioning AND building new external relationships — the second paragraph must address the urgency of that gap specifically. Describe what is happening in their world that makes this window time-limited. Do not tell the rep to act on it — that is in Next Actions.
+SIGNALS (2 each): Observable behaviors only — something you can see or hear. Never internal states. Tied to this person's specific intel.
 
-One paragraph if the Matrix is thin. Two if it is rich. Never more than two. Use specific numbers, names, timelines, and relationships from the Matrix. Never reference box numbers, pattern numbers, or methodology terms. Never use the word "tension" — use gap, disconnect, exposure, or pressure point.
+iQ QUESTIONS (exactly 2): Target the highest personal stakes gap. CURRENT REALITY (specific named constraint from Current State) + FUTURE STATE (specific named commitment) + IMPACT (what the gap has already cost them — career, reputation, public promise, key relationship — never operational). One natural sentence the rep can say out loud. Second question uses completely different data points.
 
-THE FINDINGS — THE THREE SHARPEST GAPS:
-After the briefing, surface the two or three sharpest specific gaps as individually labeled findings. Each finding has a headline and a body. The headline is a sharp commercial label — what the rep is about to read, in plain sales language, in ALL CAPS. The body shows the specific gap: name what the first cell says, name what the second cell says, then state what the gap between them reveals that neither cell reveals alone. 2-3 sentences. Specific to this deal. No pattern numbers. No box references. No generic observations. No sentence that could apply to any deal. Order findings by commercial impact — most urgent first.
+LANGUAGE: Second person throughout ("you" not "the rep"). Direct, commercial. Never "actually", "real", "really", "tension", "pattern", box numbers. Every sentence references THIS specific person's specific intel.
 
-DEFENSE STRATEGY — THE PREVENTION STANDARD:
-Each defense risk must answer one specific question: what is the one thing that could happen between now and close that you have not yet done anything to prevent? A specific scenario tied to a specific gap in this Matrix, with a specific protective action the rep can take in the next 5 business days. If it cannot be prevented by a specific action in 5 business days, it is not a defense risk — it is a worry. Worries do not belong in the report.
-
-NEXT ACTIONS — THE CONSEQUENCE STANDARD:
-Each next action must name exactly what to do, to whom, by when, and state the commercial consequence of not doing it. "If you wait until after [specific event], you lose [specific advantage]" is the required format. "Prepare discovery questions" is not a next action.
-
-MOMENTUM AND RESISTANCE SIGNALS — THE OBSERVABLE STANDARD:
-Every signal must describe a specific observable behavior — something the rep can see or hear in a conversation — not an internal state. "They seem more engaged" is an internal state. "They reference your previous conversation unprompted at the start of the next call" is an observable behavior. Each signal must be tied to something specific in this person's Matrix.
-
-iQ QUESTIONS — THE HIGHEST STAKES STANDARD:
-Find the gap with the highest personal stakes across all nine boxes — where their career, reputation, a public commitment, or a key relationship is most directly on the line. Build the question around that gap. The best iQ question makes them stop and think about something they have not yet said out loud to anyone. Never reference gap numbers or pattern names. Must flow as one natural sentence the rep can say out loud.
-
-LANGUAGE RULES — NON-NEGOTIABLE:
-- Write in SECOND PERSON throughout — "you" not "the rep"
-- Write for an experienced field sales professional — direct, commercial, no softness
-- Never use "actually", "real", "really", "tension", "pattern", or "box number"
-- Never use passive voice
-- No therapy language
-- Hedged but direct: "The data suggests...", "The patterns indicate...", "Based on what's here...", "The Matrix points to...", "If this read is right..."
-- When data is thin: "With limited intel here, the picture is harder to read — but..."
-- Every sentence must reference THIS specific person's specific intel
-- Name specific numbers, dates, titles, and relationships from the Matrix whenever they exist
-
-MATRIX HEALTH:
-- "STRONG FOUNDATION" — rich intel across all three rows, confident analysis
-- "PARTIAL PICTURE" — meaningful findings possible but specific gaps create blind spots
-- "FLYING BLIND" — too little intel for reliable analysis; next conversation must be pure discovery
+MATRIX HEALTH: "STRONG FOUNDATION" = rich intel, confident analysis. "PARTIAL PICTURE" = meaningful but gaps create blind spots. "FLYING BLIND" = too thin, next conversation must be discovery.
 
 ═══════════════════════════════
 RETURN FORMAT — PURE JSON ONLY
 ═══════════════════════════════
 
-HEADLINE RULES — applied to every finding headline:
-- Written in ALL CAPS, maximum 8 words
-- Sharp, commercial, specific to this deal
-- Tells the rep exactly what the finding is about before they read it
-- No filler, no hedging, no corporate language, no methodology terms
-- Never use "actually", "real", "really", "tension", or "pattern"
-- Strong examples: "HIS BUDGET AUTHORITY DOES NOT MATCH THIS PROBLEM", "THE TIMELINE HE COMMITTED TO IS NOT EXECUTABLE", "THE PERSON WHO CAN KILL THIS DEAL IS UNENGAGED", "YOUR WINDOW IS CLOSING FASTER THAN THE DEAL TIMELINE"
-- Weak examples NOT acceptable: "KEY INSIGHT", "IMPORTANT FINDING", "WHAT THE MATRIX SHOWS", "PATTERN 9 IS FIRING"
-
 {
   "matrix_health": "STRONG FOUNDATION or PARTIAL PICTURE or FLYING BLIND",
-  "matrix_health_note": "One direct sentence — what this Matrix gives you and what it is missing. A briefing statement, not a grade.",
+  "matrix_health_note": "One direct sentence — what this Matrix gives you and what it is missing.",
   "briefing": [
-    "Paragraph 1 — what the data reveals about this person's world: what is driving them, what the gaps between their current situation and their stated commitments suggest about the pressures they are operating under. EVERY sentence must be framed as inference — 'The data suggests...', 'The patterns point to...', 'Based on what's here...', 'The gap between X and Y suggests...'. No sentence stated as fact. No advice to the rep. No 'you should' or 'a partner who' or 'someone with'. Specific numbers, names, timelines from the Matrix. No box references. No pattern numbers. No methodology terms. No 'tension' — use gap, disconnect, exposure, or pressure point.",
-    "Paragraph 2 — urgency layer: only include if the Matrix is rich enough OR if the Competitive Vulnerability Window fired. If included, every sentence must be framed as inference and must describe something happening in the customer's world — not what the rep should do about it. If nothing urgent warrants a second paragraph, omit this entirely and return only one string in the array."
+    "Paragraph 1 — inference only, customer's world only, specific intel from Matrix, no advice, no box/pattern references, no 'tension'.",
+    "Paragraph 2 — urgency layer only if Matrix is rich or Pattern 11 fired. Omit if not warranted."
   ],
   "findings": [
-    {
-      "headline": "SHARP COMMERCIAL LABEL IN ALL CAPS — 8 words max — what this finding is about",
-      "finding": "Name what the first data point says. Name what the second data point says. State what the gap between them reveals that neither reveals alone. 2-3 sentences. Specific to this deal. No box references. No pattern numbers. No generic observations."
-    }
+    {"headline": "SHARP LABEL IN ALL CAPS — 8 words max", "finding": "First data point. Second data point. What their gap reveals. 2-3 sentences. No box references."}
   ],
   "gaps": [
-    {"cell": "ROW / COLUMN e.g. FUTURE STATE / ROLE", "label": "Cell label name", "severity": "HIGH or MEDIUM only — no LOW", "note": "One sentence — why this missing intel creates a blind spot in this deal. For any empty NEEDS cell, name the specific question to ask in the next conversation to fill it — tied to what was found in the corresponding Current and Future State cells."}
+    {"cell": "ROW / COLUMN", "label": "Cell label", "severity": "HIGH or MEDIUM", "note": "Why this blind spot matters for this deal. For empty NEEDS cells, name the specific discovery question to ask next conversation."}
   ],
   "defense": [
-    {"title": "SPECIFIC RISK IN ALL CAPS — the exact thing that could go wrong", "body": "Sentence 1: the specific scenario — what happens, when, the commercial consequence. Sentence 2: the one specific protective action you can take in the next 5 business days — name exactly what to do and to whom."}
+    {"title": "SPECIFIC RISK IN ALL CAPS", "body": "Specific scenario and commercial consequence. One protective action in next 5 business days."}
   ],
   "iq_questions": [
-    {"question": "iQ Formula targeting the HIGHEST PERSONAL STAKES gap: CURRENT REALITY (one specific named constraint or pressure from Current State row) + and/as + FUTURE STATE (one specific named ambition or commitment) + IMPACT (what the gap between them has already cost them or is doing to their career, reputation, a public commitment, or a key relationship — the most personally consequential gap you can find. Never operational. One natural sentence the rep can say out loud.)", "timing": "Use [early/mid/late in conversation] — one sentence on what this forces them to confront out loud for the first time."},
-    {"question": "Second iQ question — completely different data points than the first, second highest personal stakes gap, one natural sentence.", "timing": "Use [timing] — one sentence on what this surfaces."}
+    {"question": "CURRENT REALITY + FUTURE STATE + IMPACT (highest personal stakes gap, one natural sentence out loud)", "timing": "early/mid/late — what this forces them to confront."},
+    {"question": "Second question, different data points, second highest personal stakes.", "timing": "timing and what it surfaces."}
   ],
-  "watch_for": [
-    "Specific observable behavior — something you can see or hear — tied to this person's specific motivation or political situation. Not an internal state.",
-    "Second specific observable momentum behavior — different data point from the first."
-  ],
-  "watch_out": [
-    "Specific observable resistance behavior — something you can see or hear — tied to a specific vulnerability in this deal. Not an internal state.",
-    "Second specific resistance behavior — different vulnerability from the first."
-  ],
-  "next_actions": [
-    "Exactly what to do, to whom, by when — and the commercial consequence of not doing it: 'If you wait until after [specific event], you lose [specific advantage]'.",
-    "Second action — same standard.",
-    "Third action — same standard."
-  ]
+  "watch_for": ["Observable momentum behavior tied to this person's intel.", "Second observable momentum behavior."],
+  "watch_out": ["Observable resistance behavior tied to this deal's vulnerabilities.", "Second observable resistance behavior."],
+  "next_actions": ["What, to whom, by when — consequence of inaction.", "Second action same standard.", "Third action same standard."]
 }
-
-FINAL QUALITY CHECK BEFORE RETURNING JSON:
-1. Does every sentence in the briefing carry hedged inference language — "the data suggests", "the patterns point to", "based on what's here"? If any sentence states something as fact, reframe it.
-2. Does the briefing contain any advice to the rep — "you should", "a partner who", "someone with", "the rep who"? If yes, cut it. Advice goes in Next Actions.
-3. Does the briefing describe the customer's world — not what the rep should do about it?
-4. Does every finding name two specific data points and show what their gap reveals?
-5. If the Competitive Vulnerability Window fired, is it addressed in the briefing's second paragraph as a description of the customer's situation — not as advice?
-6. Does every iQ question target the highest personal stakes gap — not just any valid combination?
-7. Does every signal describe something observable — a behavior you can see or hear?
-8. Does every next action name what to do, to whom, by when, and what you lose if you don't?
-9. Does any sentence apply to any deal rather than this specific deal? If yes, delete it.
-10. Do any outputs use "actually", "real", "really", "tension", "pattern", box numbers, or methodology terms? If yes, replace them.
-- briefing: 1-2 paragraphs, array of strings, never more than 2
-- findings: minimum 2, maximum 3 — sharpest gaps only, each with "headline" and "finding" keys
-- gaps: HIGH and MEDIUM only, maximum 4, only gaps that affected briefing or findings
-- defense: maximum 3, each preventable in 5 business days
-- iq_questions: exactly 2, highest personal stakes gaps
-- watch_for and watch_out: exactly 2 each, observable behaviors only
-- next_actions: exactly 3, each with consequence of inaction
+- findings: 2-3, headline + finding keys
+- gaps: HIGH/MEDIUM only, max 4, only if they affected briefing or findings
+- defense: max 3
+- iq_questions: exactly 2
+- watch_for/watch_out: exactly 2 each
+- next_actions: exactly 3
 Return pure JSON only. No backticks, no markdown, no explanation.`;
 
 
@@ -726,45 +658,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
   const [aiSources, setAiSources] = useState({});
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState(null);
-  const [preflightWarnings, setPreflightWarnings] = useState(null);
   const fileRef = useRef(null);
-
-  // ── PREFLIGHT CELL DEFINITIONS ──────────────────
-  // Critical cells and why they matter in plain sales language
-  const PREFLIGHT_CELLS = [
-    {
-      key: "CURRENT STATE|ROLE",
-      label: "Their Decision Authority",
-      why: "Without this, the analysis cannot determine whether you are selling at the right altitude or whether the investment you are proposing exceeds what this person can independently approve."
-    },
-    {
-      key: "CURRENT STATE|RESULTS",
-      label: "Their Current Performance Pressure",
-      why: "This tells the analysis what this person is being measured on right now. Without it, the report cannot identify the gap between the pressure they are operating under and where they are trying to get."
-    },
-    {
-      key: "FUTURE STATE|RESULTS",
-      label: "Their Public Commitments",
-      why: "This is where the analysis finds the gap between what they have promised externally and what they can actually deliver — the most commercially pointed question you can ask in the next conversation."
-    },
-    {
-      key: "FUTURE STATE|ROLE",
-      label: "Where They Are Headed Professionally",
-      why: "Without knowing their career trajectory, the analysis cannot assess whether this person needs a visible win on this program — or whether they are positioned to champion a decision internally."
-    },
-    {
-      key: "CURRENT STATE|REACH",
-      label: "Who Influences Them",
-      why: "This is how the analysis identifies the specific person or function most likely to derail this deal from the inside before you ever get a no."
-    },
-    {
-      key: "NEEDS|RESULTS",
-      label: "What Resources or Investment This Requires",
-      why: "Without this, the analysis cannot determine whether the investment required exceeds their approval authority or whether the timeline they have committed to is actually executable."
-    }
-  ];
-
-  const filled = Object.values(cells).filter(v => v.trim()).length;
 
   // ── AI SEARCH ──────────────────────────────
   const handleSearch = async () => {
@@ -990,7 +884,8 @@ function MatrixScreen({ deal, onComplete, onBack }) {
   };
 
   // ── GENERATE ANALYSIS ─────────────────────
-  const handleGenerateCore = async () => {
+  const handleGenerate = async () => {
+    if (filled === 0 || analyzing) return;
     setAnalyzing(true);
     const matrixText = matrixToText(cells, deal);
     try {
@@ -999,7 +894,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 3000,
+          max_tokens: 2000,
           messages: [{ role: "user", content: ANALYSIS_PROMPT(matrixText, deal) }]
         })
       });
@@ -1011,24 +906,6 @@ function MatrixScreen({ deal, onComplete, onBack }) {
       onComplete(cells, matrixToText(cells, deal), null, aiSources);
     }
     setAnalyzing(false);
-  };
-
-  const handleGenerate = async () => {
-    if (filled === 0 || analyzing) return;
-
-    // ── PREFLIGHT CHECK ──────────────────────────
-    const warnings = PREFLIGHT_CELLS.filter(c => {
-      const val = (cells[c.key] || "").trim();
-      return val.length < 15;
-    });
-
-    if (warnings.length > 0 && preflightWarnings === null) {
-      setPreflightWarnings(warnings);
-      return;
-    }
-
-    setPreflightWarnings(null);
-    handleGenerateCore();
   };
 
   // ── IMAGE UPLOAD ──────────────────────────
@@ -1077,47 +954,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
       {/* Analysis Loader */}
       {analyzing && <AnalysisLoader />}
 
-      {/* Preflight Warning Modal */}
-      {preflightWarnings && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 400, padding: "20px" }}>
-          <div style={{ background: "#141414", border: `1px solid #2a2a2a`, borderRadius: "6px", padding: "32px", maxWidth: "520px", width: "100%", animation: "fadeSlideIn 0.2s ease" }}>
 
-            {/* Header */}
-            <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", marginBottom: "8px" }}>BEFORE YOU GENERATE</div>
-            <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.7", marginBottom: "24px" }}>
-              {preflightWarnings.length === 1
-                ? "One cell that would sharpen your analysis is currently empty or thin."
-                : `${preflightWarnings.length} cells that would sharpen your analysis are currently empty or thin.`}
-            </div>
-
-            {/* Warning items */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "28px" }}>
-              {preflightWarnings.map((w, i) => (
-                <div key={i} style={{ borderLeft: `3px solid ${RED}`, paddingLeft: "14px" }}>
-                  <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.12em", marginBottom: "5px" }}>{w.label.toUpperCase()}</div>
-                  <div style={{ fontSize: "12px", color: "#ccc", fontFamily: MONO, lineHeight: "1.65" }}>{w.why}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Actions */}
-            <div style={{ display: "flex", gap: "10px" }}>
-              <Btn
-                onClick={() => setPreflightWarnings(null)}
-                style={{ flex: 1, padding: "12px" }}
-              >← ADD INTEL</Btn>
-              <Btn
-                variant="ghost"
-                onClick={() => {
-                  setPreflightWarnings(null);
-                  handleGenerateCore();
-                }}
-                style={{ flex: 1, padding: "12px" }}
-              >GENERATE ANYWAY →</Btn>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Search Review Modal */}
       {searchResults !== null && (
