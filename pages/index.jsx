@@ -726,7 +726,43 @@ function MatrixScreen({ deal, onComplete, onBack }) {
   const [aiSources, setAiSources] = useState({});
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState(null);
+  const [preflightWarnings, setPreflightWarnings] = useState(null);
   const fileRef = useRef(null);
+
+  // ── PREFLIGHT CELL DEFINITIONS ──────────────────
+  // Critical cells and why they matter in plain sales language
+  const PREFLIGHT_CELLS = [
+    {
+      key: "CURRENT STATE|ROLE",
+      label: "Their Decision Authority",
+      why: "Without this, the analysis cannot determine whether you are selling at the right altitude or whether the investment you are proposing exceeds what this person can independently approve."
+    },
+    {
+      key: "CURRENT STATE|RESULTS",
+      label: "Their Current Performance Pressure",
+      why: "This tells the analysis what this person is being measured on right now. Without it, the report cannot identify the gap between the pressure they are operating under and where they are trying to get."
+    },
+    {
+      key: "FUTURE STATE|RESULTS",
+      label: "Their Public Commitments",
+      why: "This is where the analysis finds the gap between what they have promised externally and what they can actually deliver — the most commercially pointed question you can ask in the next conversation."
+    },
+    {
+      key: "FUTURE STATE|ROLE",
+      label: "Where They Are Headed Professionally",
+      why: "Without knowing their career trajectory, the analysis cannot assess whether this person needs a visible win on this program — or whether they are positioned to champion a decision internally."
+    },
+    {
+      key: "CURRENT STATE|REACH",
+      label: "Who Influences Them",
+      why: "This is how the analysis identifies the specific person or function most likely to derail this deal from the inside before you ever get a no."
+    },
+    {
+      key: "NEEDS|RESULTS",
+      label: "What Resources or Investment This Requires",
+      why: "Without this, the analysis cannot determine whether the investment required exceeds their approval authority or whether the timeline they have committed to is actually executable."
+    }
+  ];
 
   const filled = Object.values(cells).filter(v => v.trim()).length;
 
@@ -954,8 +990,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
   };
 
   // ── GENERATE ANALYSIS ─────────────────────
-  const handleGenerate = async () => {
-    if (filled === 0 || analyzing) return;
+  const handleGenerateCore = async () => {
     setAnalyzing(true);
     const matrixText = matrixToText(cells, deal);
     try {
@@ -976,6 +1011,24 @@ function MatrixScreen({ deal, onComplete, onBack }) {
       onComplete(cells, matrixToText(cells, deal), null, aiSources);
     }
     setAnalyzing(false);
+  };
+
+  const handleGenerate = async () => {
+    if (filled === 0 || analyzing) return;
+
+    // ── PREFLIGHT CHECK ──────────────────────────
+    const warnings = PREFLIGHT_CELLS.filter(c => {
+      const val = (cells[c.key] || "").trim();
+      return val.length < 15;
+    });
+
+    if (warnings.length > 0 && preflightWarnings === null) {
+      setPreflightWarnings(warnings);
+      return;
+    }
+
+    setPreflightWarnings(null);
+    handleGenerateCore();
   };
 
   // ── IMAGE UPLOAD ──────────────────────────
@@ -1023,6 +1076,48 @@ function MatrixScreen({ deal, onComplete, onBack }) {
 
       {/* Analysis Loader */}
       {analyzing && <AnalysisLoader />}
+
+      {/* Preflight Warning Modal */}
+      {preflightWarnings && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 400, padding: "20px" }}>
+          <div style={{ background: "#141414", border: `1px solid #2a2a2a`, borderRadius: "6px", padding: "32px", maxWidth: "520px", width: "100%", animation: "fadeSlideIn 0.2s ease" }}>
+
+            {/* Header */}
+            <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", marginBottom: "8px" }}>BEFORE YOU GENERATE</div>
+            <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.7", marginBottom: "24px" }}>
+              {preflightWarnings.length === 1
+                ? "One cell that would sharpen your analysis is currently empty or thin."
+                : `${preflightWarnings.length} cells that would sharpen your analysis are currently empty or thin.`}
+            </div>
+
+            {/* Warning items */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "28px" }}>
+              {preflightWarnings.map((w, i) => (
+                <div key={i} style={{ borderLeft: `3px solid ${RED}`, paddingLeft: "14px" }}>
+                  <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.12em", marginBottom: "5px" }}>{w.label.toUpperCase()}</div>
+                  <div style={{ fontSize: "12px", color: "#ccc", fontFamily: MONO, lineHeight: "1.65" }}>{w.why}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: "10px" }}>
+              <Btn
+                onClick={() => setPreflightWarnings(null)}
+                style={{ flex: 1, padding: "12px" }}
+              >← ADD INTEL</Btn>
+              <Btn
+                variant="ghost"
+                onClick={() => {
+                  setPreflightWarnings(null);
+                  handleGenerateCore();
+                }}
+                style={{ flex: 1, padding: "12px" }}
+              >GENERATE ANYWAY →</Btn>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search Review Modal */}
       {searchResults !== null && (
