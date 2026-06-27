@@ -742,7 +742,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 800,
+          max_tokens: 1200,
           messages: [{ role: "user", content: QUERY_BUILDER_PROMPT(deal.prospect, deal.role, deal.company, existingMatrixSummary) }]
         })
       });
@@ -865,10 +865,8 @@ function MatrixScreen({ deal, onComplete, onBack }) {
       const rawResults = [searchRawResults, fetchedContent].filter(Boolean).join("\n\n═══ FULL ARTICLE CONTENT ═══\n\n");
 
       if (!rawResults.trim()) {
-        setSearching(false);
-        setSearchProgress(null);
-        setSearchResults([]);
-        return;
+        // Even with no search results, run synthesis for organizational inference
+        setSearchProgress("Building intelligence from role context...");
       }
 
       // ── PHASE 2: Synthesize into Matrix cells ──
@@ -897,14 +895,24 @@ function MatrixScreen({ deal, onComplete, onBack }) {
       const textBlock = synthData.content?.find(b => b.type === "text");
 
       if (!textBlock) {
+        // Synthesis failed entirely - show empty state with helpful message
         setSearching(false);
         setSearchProgress(null);
         setSearchResults([]);
         return;
       }
 
-      const raw = textBlock.text.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(raw);
+      let parsed = { findings: [] };
+      try {
+        const raw = textBlock.text.replace(/```json|```/g, "").trim();
+        parsed = JSON.parse(raw);
+      } catch {
+        // JSON parse failed - still show empty state gracefully
+        setSearching(false);
+        setSearchProgress(null);
+        setSearchResults([]);
+        return;
+      }
       const findings = parsed.findings || [];
 
       const results = findings.map(f => {
