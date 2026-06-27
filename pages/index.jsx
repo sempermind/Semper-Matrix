@@ -18,55 +18,55 @@ const MATRIX_META = {
     label: "Decision Authority",
     hint: "What can they approve or veto today?",
     description: "What formal authority does this person hold right now? What decisions can they make independently — and where do they need sign-off? Note budget thresholds, approval limits, and any constraints on their current decision-making power.",
-    searchPrompt: (name, role, company) => `What is ${name}'s formal decision-making authority as ${role} at ${company}? What decisions can they approve independently, what budget authority do they hold, and what requires sign-off from above them? Look for org chart info, job postings, press releases, LinkedIn.`
+    repPrompt: "What have you personally observed about how they make decisions? Have they mentioned needing approval from above? Referenced a budget limit? Deferred to someone else on a topic?"
   },
   "CURRENT STATE|REACH": {
     label: "Influence Network",
     hint: "Who influences them and who do they influence?",
     description: "Who are the key relationships shaping this person's thinking right now? Who do they go to for advice? Who listens when they speak? Map both directions — who pulls them and who they pull. This is where actual power lives, often separate from the org chart.",
-    searchPrompt: (name, role, company) => `Who does ${name} (${role} at ${company}) publicly interact with, collaborate with, or influence? Look for board memberships, advisory roles, conference panels, co-authored content, quoted relationships, LinkedIn connections of note, or any public mention of key professional relationships.`
+    repPrompt: "Who has come up in your conversations with them? Whose opinion do they reference? Who do they mention when talking about decisions being made? Any names that have come up more than once?"
   },
   "CURRENT STATE|RESULTS": {
     label: "Performance Pressure",
     hint: "What metrics are they measured against right now?",
     description: "What does success look like for this person today? What KPIs, targets, or outcomes is their boss watching? What's the gap between where they are and where they need to be — and how visible is that gap? Numbers and specifics beat vague descriptions every time.",
-    searchPrompt: (name, role, company) => `What business pressures, performance targets, or strategic priorities is ${company} facing right now that would directly affect ${name} as ${role}? Look for earnings calls, press releases, industry news, analyst reports, job postings that reveal pain points, and any public statements about company goals or challenges.`
+    repPrompt: "What have they told you they're being measured on? What pressures have they mentioned? Any specific targets, numbers, or deadlines that came up? What did they sound most concerned about?"
   },
   "FUTURE STATE|ROLE": {
     label: "Career Trajectory",
     hint: "What role are they positioning for next?",
     description: "Where is this person trying to go professionally? Are they building toward a promotion, a lateral move, or a bigger platform? What title or scope represents their ambition? The answer shapes every conversation — people make decisions that serve their future, not just their present.",
-    searchPrompt: (name, role, company) => `What is ${name}'s career trajectory at ${company} or in their industry? Look for recent promotions, expanded responsibilities, new titles, speaking engagements that suggest rising profile, industry awards, board appointments, or any signals of where they are positioning professionally in the next 1-3 years.`
+    repPrompt: "Have they mentioned anything about their career direction? A next step they're working toward? A responsibility they're taking on? Something they want to be known for? Even indirect signals count."
   },
   "FUTURE STATE|REACH": {
     label: "Relationship Strategy",
     hint: "What new alliances are they building?",
     description: "What new relationships is this person actively cultivating? Are they expanding into new functions, new executive levels, or new external networks? Relationship building at this level is intentional — it reveals exactly where they're trying to go and who they need on their side to get there.",
-    searchPrompt: (name, role, company) => `What new professional relationships or networks is ${name} (${role} at ${company}) publicly building? Look for recent conference appearances, new board or advisory roles, industry association involvement, new partnerships announced, or any public activity that suggests deliberate relationship expansion beyond their current role.`
+    repPrompt: "Have they mentioned new initiatives they're involved in, committees they've joined, or people they're working with that are new? Any signals of deliberate relationship building outside their current lane?"
   },
   "FUTURE STATE|RESULTS": {
     label: "Public Commitments",
     hint: "What goals have they staked their reputation on?",
     description: "What has this person said out loud — in a meeting, a presentation, a company communication — that they're committed to delivering? Public commitments are different from private goals. They've staked professional credibility on these outcomes. That makes them personal.",
-    searchPrompt: (name, role, company) => `What public commitments, stated goals, or strategic promises has ${name} (${role} at ${company}) made? Look for quotes in press releases, earnings calls, investor presentations, interviews, conference keynotes, LinkedIn posts, or company announcements where they have personally committed to specific outcomes, metrics, or strategic directions.`
+    repPrompt: "What have they committed to out loud in your presence? What did they say they're trying to achieve this year? Any goals, targets, or timelines they've mentioned directly to you or that you've heard them mention to others?"
   },
   "NEEDS|ROLE": {
     label: "Capability Gaps",
     hint: "What authority, skills, or resources are they missing?",
     description: "What is this person missing to do their job at the level they're being held to — or the level they're trying to reach? Think authority they don't yet have, skills they haven't built, tools they're working around. Gaps between Current State and Future State in the Role column are often your most direct path to relevance.",
-    searchPrompt: (name, role, company) => `What capability, skill, or authority gaps exist for ${company}'s ${role} function right now? Look for job postings that reveal what they're hiring for, technology or process gaps mentioned in industry coverage, any public statements about transformation initiatives, or analyst commentary about where ${company} needs to improve in this area.`
+    repPrompt: "What have they complained about not having? Where do they seem to be working around something — process, tool, authority, headcount? Any frustration they've expressed about what they can't get done?"
   },
   "NEEDS|REACH": {
     label: "Missing Support",
     hint: "Whose support do they need but don't have?",
     description: "What relationships or alliances are conspicuously absent? Who should be in their corner but isn't? What political capital do they need to build? When someone is missing both capability and support in the same area, they're exposed — and they know it, even if they don't say it.",
-    searchPrompt: (name, role, company) => `What organizational or political challenges is ${company} facing that would affect ${name} as ${role}? Look for leadership changes, restructuring announcements, M&A activity, board changes, executive departures, or any public signals of internal tension, strategic pivots, or gaps in executive alignment that would affect this role.`
+    repPrompt: "Have they mentioned anyone they're having trouble getting alignment with? A function that isn't cooperating? A stakeholder they need but can't get time with? Political friction anywhere in the organization?"
   },
   "NEEDS|RESULTS": {
     label: "Resource Requirements",
     hint: "What tools or budget would solve their biggest problems?",
     description: "What would this person need — budget, tools, technology, people, process — to actually hit their targets? Not a wish list. The specific gap between what they have and what they need to deliver on their Public Commitments. This is where your solution either earns its seat at the table or doesn't.",
-    searchPrompt: (name, role, company) => `What resources, technology, budget, or tools does ${company} appear to need in the ${role} function to hit their stated goals? Look for RFPs, technology partnerships announced, hiring patterns, analyst recommendations, industry benchmarks, or any public signals about investment priorities, budget cycles, or strategic initiatives requiring new resources.`
+    repPrompt: "What have they said they don't have enough of? Budget constraints they've mentioned? Technology gaps? Headcount shortfalls? Any specific resource they've pointed to as the thing standing between them and their goal?"
   },
 };
 
@@ -91,116 +91,181 @@ const matrixToText = (cells, deal) => {
 
 // ─── TWO-PHASE SEARCH ──────────────────────────
 
-const QUERY_BUILDER_PROMPT = (name, role, company, existingMatrix) => `You are an elite B2B sales intelligence researcher with deep expertise in finding hard-to-surface professional intel. Your job is to construct 10 laser-targeted web search queries that go after the highest-value public sources — not generic web searches but source-targeted queries that hunt specific databases, publications, and platforms known to contain rich stakeholder intelligence.
+// ─── FOUR-PHASE SEARCH ARCHITECTURE ───────────
+
+const QUERY_BUILDER_PROMPT = (name, role, company, existingMatrix) => `You are an elite B2B sales intelligence researcher. Your mission is to find everything publicly available about a specific individual — ${name}, ${role} at ${company}. Person-level intelligence is the priority. Company intel fills gaps only when person searches come up short.
 
 Contact: ${name}
 Role: ${role}
 Company: ${company}
-Current date: May 2026 — only surface intel from 2025 or 2026
-What you already know:
+Current date: June 2026 — only surface intel from 2025 or 2026
+What the rep already knows:
 ${existingMatrix}
 
-SOURCE TARGETING STRATEGY:
-You must build queries that target SPECIFIC high-value sources, not generic web searches. Use site: operators, publication names, and source-specific terminology to maximize result quality.
+STEP 1 — ASSESS THE PERSON
+Before constructing queries, determine what type of person this is based on their role and company. This determines which sources are most likely to contain meaningful intelligence about them specifically.
 
-HIGH-VALUE SOURCES BY INTEL TYPE:
-- Press releases & announcements: site:businesswire.com OR site:prnewswire.com OR site:globenewswire.com
-- Financial commitments & targets: "investor relations" OR "earnings call" OR "annual report" OR site:sec.gov (for public companies) OR "investor day"
-- Person interviews & statements: podcast OR interview OR keynote OR "fireside chat" OR "in conversation with" OR "Q&A"
-- LinkedIn profile & posts: site:linkedin.com "${name}" (for profile) — "${name}" linkedin post OR article (for thought leadership)
-- Job postings (reveals capability gaps): site:linkedin.com/jobs OR "we are hiring" OR "job opening" OR careers — use the functional area relevant to ${role}
-- Industry & trade press: use industry publication names relevant to the sector (e.g. for finance: CFO.com OR "CFO Magazine", for supply chain: SupplyChainDive OR "Supply Chain Management Review", for sales: "Sales & Marketing Management" OR "Harvard Business Review")
-- Local business journals: site:bizjournals.com OR "[city] business journal" — especially valuable for private company executives
-- Conference appearances: site:conference OR speaker OR "keynote speaker" OR "panel discussion" — reveals thought leadership and network
-- Company blog & newsroom: site:[company domain] news OR blog OR insights OR leadership
-- Analyst & market coverage: Gartner OR Forrester OR IDC OR "analyst report" combined with company name
+ROLE TYPE ROUTING — match the role to the highest-yield person-level sources:
 
-CONSTRUCT EXACTLY 10 QUERIES:
+EXECUTIVE / C-SUITE (CEO, CFO, CRO, COO, CMO, CTO, CHRO, President, EVP, SVP):
+- Earnings calls and investor presentations where they spoke
+- Major business press: Forbes, Fortune, Bloomberg, WSJ, FT, Reuters
+- Conference keynotes: their industry's flagship events
+- Podcast appearances on leadership, business, or industry shows
+- LinkedIn thought leadership posts and articles
+- Board memberships and advisory roles
+- Company press releases announcing their appointments or statements
 
-PERSON-LEVEL QUERIES (4) — hunt for this specific individual:
-1. LinkedIn profile: use site:linkedin.com with their exact name and company
-2. Public statements: target podcasts, interviews, keynotes, or authored articles from 2025-2026 — use "podcast" OR "interview" OR "keynote" with their name
-3. Career moves & recognition: target press releases announcing their appointment, promotion, or award — use site:businesswire.com OR site:prnewswire.com with their name
-4. Thought leadership: target LinkedIn posts, articles, or conference appearances that reveal their professional priorities — use their name with "speaker" OR "article" OR "post" OR "linkedin"
+COMMERCIAL LEADER (VP Sales, VP Marketing, VP Revenue, Director of Sales, Head of Growth):
+- Sales and marketing conference appearances: Salesforce Dreamforce, HubSpot INBOUND, Gartner CSO&SCO, SaaStr
+- Revenue leadership podcast appearances
+- LinkedIn activity — they tend to be active
+- Published articles on sales, revenue, go-to-market topics
+- Awards: Sales leader of the year, top revenue leader lists
+- Company announcements about their go-to-market changes
 
-COMPANY-LEVEL QUERIES (6) — hunt for organizational intel relevant to the ${role} function:
-1. Financial commitments: target earnings calls, investor presentations, or annual reports with specific metrics relevant to ${role}'s function — use "earnings" OR "investor" OR "annual report" with company name and 2025 OR 2026
-2. Strategic announcements: target press releases about initiatives, transformations, or investments relevant to ${role} — use site:businesswire.com OR site:prnewswire.com with company name and relevant strategic terms
-3. Leadership statements: target CEO or senior leadership quotes about priorities relevant to ${role}'s domain — use "CEO" OR "leadership" with company name and relevant domain terms
-4. Partnerships & technology: target partnership announcements, vendor selections, or technology investments relevant to ${role}'s function — use company name with partner names, technology terms, and 2025 OR 2026
-5. Hiring & capability gaps: target current job postings in ${role}'s functional area — this reveals what the company is investing in and where their gaps are — use site:linkedin.com/jobs OR company name with "hiring" OR "job" and relevant function
-6. Competitive & market pressures: target industry analyst coverage, trade press, or market reports about challenges facing companies like ${company} in ${role}'s domain — use relevant industry publication names or "analyst" with specific challenge terms
+TECHNICAL LEADER (CTO, VP Engineering, Chief Architect, Director of Engineering, Head of Technology):
+- GitHub profile and open source contributions
+- Technical conference appearances: re:Invent, KubeCon, QCon, DockerCon, industry-specific tech events
+- Engineering blog posts on company tech blog
+- Stack Overflow, dev.to, Medium technical articles
+- Patents filed under their name: site:patents.google.com
+- Tech podcast appearances
+
+OPERATIONS / SUPPLY CHAIN / PROCUREMENT (COO, VP Operations, VP Supply Chain, CPO, Director of Procurement):
+- Industry association involvement: ASCM, ISM, CSCMP, APICS conference appearances
+- Supply chain and operations trade press: Supply Chain Dive, Logistics Management, DC Velocity
+- Procurement publications: Spend Matters, Procurement Leaders
+- LinkedIn — procurement leaders are often active
+- Company operational announcements they're associated with
+
+FINANCE LEADER (CFO, VP Finance, Controller, Treasurer, Director of FP&A):
+- CFO conference appearances: Gartner CFO & Finance Executive Summit, CFO Leadership Council
+- Finance publications: CFO Magazine, CFO.com, Finance & Commerce
+- Earnings call transcripts where they spoke
+- SEC filings that mention them by name
+- LinkedIn and finance community content
+
+HR / TALENT / L&D (CHRO, VP People, VP HR, CLO, Chief People Officer, Director of Learning):
+- HR conference appearances: SHRM Annual, ATD International, HR Tech
+- HR trade press: HR Executive, People Management, SHRM publications, Training Magazine
+- LinkedIn — HR leaders are frequently active
+- Talent and culture podcast appearances
+- Published articles on people, culture, learning topics
+
+TECHNICAL / RESEARCH PROFESSIONAL (Engineer, Scientist, Researcher, Technical Director, Principal Engineer):
+- Published papers: site:scholar.google.com OR site:researchgate.net OR site:osti.gov OR site:dtic.mil
+- Conference proceedings: IEEE, AIAA, SAE, SPIE, ACM, industry-specific technical conferences
+- Patents: site:patents.google.com
+- University alumni profiles or faculty pages
+- Technical association memberships: IEEE, ASME, AIAA member listings
+- Government contract databases if defense/government adjacent: site:usaspending.gov
+
+HEALTHCARE / CLINICAL (CMO, CNO, VP Clinical, Medical Director, Chief of Staff):
+- Clinical publication databases: PubMed, medical journal articles
+- Healthcare conference appearances: HIMSS, HLTH, MGMA, ACHE Congress
+- Healthcare trade press: Modern Healthcare, Becker's Hospital Review, Health Affairs
+- Hospital or health system press releases mentioning them
+- Medicare/Medicaid quality reporting where relevant
+
+STEP 2 — CONSTRUCT 8 PERSON-LEVEL QUERIES FIRST
+Based on the role type routing above, construct 8 queries specifically targeting this individual using the highest-yield sources for their role type. Every query must include ${name} and hunt for something specific about them personally — not their company generically.
+
+Person query types to cover:
+1. Their professional profile and current role verification
+2. Their public statements, interviews, or authored content
+3. Their conference appearances or speaking engagements
+4. Their career history and any recent moves or promotions
+5. Their published work, patents, or technical contributions (if applicable)
+6. Their industry recognition, awards, or association roles
+7. Their LinkedIn presence and thought leadership
+8. Any press mentions, quotes, or third-party references to them
+
+STEP 3 — CONSTRUCT 2 COMPANY GAP-FILL QUERIES
+Only after the 8 person queries are constructed, add 2 company-level queries that target the specific Matrix cells most likely to still be empty after person searches. Do not add generic company news queries — add targeted queries for what person searches are unlikely to find:
+1. The company's most recent strategic commitments or public goals relevant to ${role}'s function — what has this company publicly promised that creates pressure on someone in this role?
+2. The company's current capability gaps or hiring signals in ${role}'s functional area — what are they missing that someone in this role would be responsible for?
 
 RULES:
-- Each query must be 4-10 words and immediately searchable
+- Each query 4-10 words, immediately searchable
+- Every person query includes ${name} by name
 - Use site: operators wherever they improve precision
-- Include 2025 OR 2026 in queries where recency matters
-- Make every query role-aware — the intel it hunts must be relevant to someone in the role of ${role}
-- If the company appears to be publicly traded, include SEC/investor relations queries
-- If the company appears to be private or mid-market, use bizjournals.com and local press queries instead
+- 2025 OR 2026 in queries where recency matters
+- Company queries fill gaps only — do not duplicate what person queries will find
+- Never construct a generic "company news" query as a company gap-fill
 
 Return ONLY valid JSON, no markdown, no backticks:
 {
+  "role_type": "the role type category you identified from the routing above",
+  "person_sources": "the 2-3 highest-yield source types for this specific person based on their role",
   "queries": [
-    {"query": "exact search string with site: operators where appropriate", "type": "person", "target": "specific intel this query is hunting for"},
-    {"query": "exact search string", "type": "company", "target": "specific intel this query is hunting for"}
+    {"query": "exact search string", "type": "person", "target": "specific intel this query hunts for this individual"},
+    {"query": "exact search string", "type": "company", "target": "specific gap this fills that person searches won't cover"}
   ]
 }`;
 
-const SYNTHESIS_PROMPT = (name, role, company, rawResults, existingCells, fullMatrix) => `You are a sales intelligence analyst for the Semper Selling® methodology. You have been given structured web search results about ${name} (${role} at ${company}). Each search block is labeled with TYPE (PERSON or COMPANY), TARGET (what it was hunting for), and QUERY (the exact search used). Use these labels to correctly attribute findings to the right Matrix cells and source types.
+const SYNTHESIS_PROMPT = (name, role, company, rawResults, existingCells, fullMatrix) => `You are a sales intelligence analyst for the Semper Selling® methodology. You have been given structured web search results about ${name} (${role} at ${company}). Results are labeled PERSON (about the individual specifically) or COMPANY (organizational context). 
 
-RAW SEARCH RESULTS — STRUCTURED BY TYPE AND TARGET:
+CRITICAL PRIORITY ORDER:
+1. Person-level intel populates cells first — always. If a search result is about ${name} specifically, it goes into the Matrix before any company-level result.
+2. Company-level intel fills gaps only — cells that person searches could not populate.
+3. Organizational inference fills anything remaining — clearly labeled as inferred, never as fact.
+
+RAW SEARCH RESULTS:
 ${rawResults}
 
-FULL MATRIX — WHAT YOU ALREADY KNOW (use this to infer Needs, do not duplicate in sourced cells):
-${fullMatrix}
-
-EXISTING CELL CONTENT TO AVOID DUPLICATING:
+WHAT THE REP ALREADY KNOWS (highest priority — never overwrite or contradict):
 ${existingCells}
 
-THE NINE MATRIX CELLS:
+FULL MATRIX CONTEXT:
+${fullMatrix}
 
-ROWS 1-6 — SOURCED INTEL ONLY (person-level or company-level):
-- CURRENT STATE|ROLE: Decision Authority — ${name}'s formal position, budget approval, what they can decide independently. Draw from person-level search results.
-- CURRENT STATE|REACH: Influence Network — who influences ${name}, who they influence, key relationships. Draw from person-level search results.
-- CURRENT STATE|RESULTS: Performance Pressure — what ${company} is being measured on, current business challenges, market pressures, recent performance issues. Draw from company-level search results.
-- FUTURE STATE|ROLE: Career Trajectory — ${name}'s next role, promotion path, expanding responsibilities. Draw from person-level search results.
-- FUTURE STATE|REACH: Relationship Strategy — new alliances, partnerships, networks ${company} is building. Draw from company-level search results.
-- FUTURE STATE|RESULTS: Public Commitments — stated goals, strategic targets, public promises made by ${name} or announced by ${company}. Draw from both person and company results.
+PERSON-FIRST CELL MAPPING:
 
-ROWS 7-9 — INFERRED FROM THE COMPLETE MATRIX PICTURE:
-Use BOTH the rep's manually entered intel AND the search findings above to infer the Needs row. Do not limit yourself to only what the search found. Your job is to surface what this person or organization requires to close the gap — described in terms of the TYPE of capability, expertise, speed, or partnership needed, not a generic observation. Write with commercial precision. A rep reading this should immediately understand what kind of solution, capability, or partner closes the gap — without you naming any specific vendor or product.
+CURRENT STATE|ROLE — Decision Authority
+Draw exclusively from PERSON results. What does ${name} specifically do, decide, approve, or own? What is their formal scope? What can they authorize independently? If no person-level result addresses this, leave sourced field empty and use organizational inference only as last resort.
 
-- NEEDS|ROLE: Capability Gaps — given everything you know about ${name}'s current authority and future trajectory, what specific type of capability, organizational competency, or decision-making authority is missing between where they are and where they are trying to go? Be precise about the nature of the gap: is it technical expertise, execution capacity, organizational credibility, cross-functional authority, or something else? Infer from the tension between CURRENT STATE|ROLE and FUTURE STATE|ROLE. Frame as inference: "The data suggests they need...", "The patterns point to a requirement for...", "Based on the gap between X and Y, the missing capability appears to be...". Never state as fact. Never name a specific vendor or product.
+CURRENT STATE|REACH — Influence Network  
+Draw exclusively from PERSON results. Who has ${name} mentioned, quoted, thanked, or appeared alongside? Who references them? What communities, associations, or networks do they belong to? Who influences their thinking publicly? Company-level results are not a substitute here.
 
-- NEEDS|REACH: Missing Support — given their current influence network and the relationships they are building, what specific type of partnership, alliance, or stakeholder alignment is conspicuously absent? Be precise: is it executive sponsorship at a specific level, a technical credibility validator, a peer reference in their industry, internal cross-functional alignment, or an external ecosystem relationship? Infer from the tension between CURRENT STATE|REACH and FUTURE STATE|REACH. Frame as inference: "The patterns suggest...", "This intel points to a need for...", "The gap here indicates...". Never state as fact. Never name a specific vendor or product.
+CURRENT STATE|RESULTS — Performance Pressure
+Draw from PERSON results first — any statement ${name} has made about their pressures, metrics, or challenges. Then supplement with COMPANY results for organizational context. Never use company-level results to populate this cell if person-level results exist.
 
-- NEEDS|RESULTS: Resource Requirements — given the gap between their current performance pressures and their stated future commitments, what specific type of resource, investment, technology capability, or process change would close that gap? Be precise about the nature of what's required: is it speed of deployment, depth of technical expertise, proven performance in comparable situations, budget justification support, or ongoing responsiveness after implementation? Infer from the tension between CURRENT STATE|RESULTS and FUTURE STATE|RESULTS. Frame as inference: "The data suggests...", "If this read is right, they require...", "The gap here points to a need for...". Never state as fact. Never name a specific vendor or product.
+FUTURE STATE|ROLE — Career Trajectory
+Draw exclusively from PERSON results. What has ${name} said about where they are heading? Any promotion, role expansion, or new responsibilities announced? What does their public content reveal about their professional ambitions? Do not infer career trajectory from company strategy.
 
-- Only infer a NEEDS cell if there is meaningful content in BOTH the corresponding Current State AND Future State cells — from any source (rep entry or search). If either is empty or too thin to infer from, skip that NEEDS cell entirely.
+FUTURE STATE|REACH — Relationship Strategy
+Draw from PERSON results first — new relationships ${name} is building, communities they are joining, people they are connecting with publicly. Supplement with COMPANY results only for organizational partnerships that would directly affect someone in their role.
 
-SOURCE ATTRIBUTION RULES:
-- Person-level findings: source_label should identify the actual source type e.g. "LinkedIn", "Forbes Interview · May 2025", "Company Blog · January 2026"
-- Company-level findings: source_label should identify the source type e.g. "Press Release · 2026", "Earnings Call · Q1 2026", "Industry News · March 2026"
-- Inferred NEEDS cells: source "inferred", source_label "Inferred from search intel"
-- Only infer a NEEDS cell if you found meaningful content in both the corresponding Current State AND Future State cells
-- Each finding 1-2 sharp sentences maximum
-- Strip all XML tags, citation markers, and formatting artifacts
-- Return ONLY valid JSON, no markdown, no backticks
+FUTURE STATE|RESULTS — Public Commitments
+Draw from PERSON results first — specific statements ${name} has made about goals, targets, or commitments. Then company-level announcements that create pressure on someone in their role. Clearly attribute which is personal and which is organizational.
 
-RECENCY RULES — CRITICAL:
-- The current date is May 2026. Only include findings from 2025 or 2026.
-- If a search result is from 2024 or earlier, discard it entirely — do not include it in any cell.
-- If you cannot determine the date of a finding, err on the side of excluding it.
-- If all results for a cell are older than 2025, leave that cell empty rather than surfacing stale intel.
+NEEDS ROW — INFERRED LAST, AFTER ALL SOURCED CELLS ARE POPULATED:
+Only infer Needs cells after mapping everything from person and company searches. Use the gap between Current State and Future State to infer what type of capability, support, or resource is missing. Written as inference always — "The data suggests...", "The patterns point to...", "Based on the gap between X and Y...". Never name a vendor or product. Only infer if both corresponding Current State AND Future State cells have meaningful content.
 
+NEEDS|ROLE — Capability Gaps: what type of authority, expertise, or organizational capacity is missing between their current position and their stated trajectory? Name the type of gap precisely.
+
+NEEDS|REACH — Missing Support: what type of relationship, alliance, or stakeholder alignment is conspicuously absent between their current network and where they are building toward? Name the specific nature of the absence.
+
+NEEDS|RESULTS — Resource Requirements: what type of resource, capability, or investment would close the gap between their current pressures and their stated commitments? Name the nature of what is required with commercial precision.
+
+THIN FOOTPRINT PROTOCOL:
+If person-level results are sparse, do not substitute company intel into person-level cells. Instead use organizational inference — clearly labeled — for the person cells that searches could not populate. "In organizations like ${company}, someone in the role of ${role} typically..." This is more honest and more useful than filling person cells with company content.
+
+SOURCE ATTRIBUTION:
+- Person findings: source_label identifies the specific source — "LinkedIn", "Forbes Interview · 2025", "IEEE Conference Paper · 2026", "Patent Filing"
+- Company findings: source_label identifies — "Press Release · 2025", "Earnings Call · Q1 2026", "Job Posting · June 2026"  
+- Inferred: source "inferred", source_label "Inferred from organizational context" or "Inferred from Current/Future State gap"
+
+RECENCY: Current date is June 2026. Discard anything from 2024 or earlier. If date cannot be determined, exclude it.
+
+Return ONLY valid JSON, no markdown, no backticks:
 {"findings": [
-  {"cell": "CURRENT STATE|ROLE", "intel": "1-2 sentence finding about the person", "source": "https://linkedin.com/...", "source_label": "LinkedIn"},
-  {"cell": "CURRENT STATE|RESULTS", "intel": "1-2 sentence finding about company pressures", "source": "https://news.com/...", "source_label": "Reuters · January 2025"},
-  {"cell": "NEEDS|RESULTS", "intel": "1-2 sentence inferred gap", "source": "inferred", "source_label": "Inferred from search intel"}
+  {"cell": "CURRENT STATE|ROLE", "intel": "1-2 sentences about ${name} specifically", "source": "https://url.com", "source_label": "Source · Date"},
+  {"cell": "NEEDS|ROLE", "intel": "Inferred gap language", "source": "inferred", "source_label": "Inferred from organizational context"}
 ]}
 
-If nothing credible was found, return: {"findings": []}`;
+IMPORTANT: Never return {"findings": []}. If no sourced intel was found, still return inferred findings for as many cells as possible based on the role type and organizational context. Inferred findings are more useful than empty cells — they give the rep hypotheses to test. Use source "inferred" and source_label "Inferred from organizational context" for these.`;
 
 const ANALYSIS_PROMPT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine — a senior sales strategist who has spent 20 years coaching enterprise reps on complex deals. You are not summarizing data. You are doing the analytical work a rep would never do sitting alone with their notes — finding the tensions, contradictions, and hidden connections between Matrix cells that reveal what is actually happening in this deal beneath the surface.
 
@@ -411,7 +476,7 @@ function SearchReviewModal({ results, onAccept, onClose }) {
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
         <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "6px", padding: "32px", maxWidth: "480px", width: "100%", textAlign: "center" }}>
           <div style={{ fontSize: "11px", color: "#fff", fontFamily: MONO, lineHeight: "1.7", marginBottom: "20px" }}>
-            No verifiable public intel found for this contact. All cells need a source URL to be added — nothing without evidence gets in.
+            No public intel found for this contact. This person has a thin online footprint — add what you know from your own conversations and relationship to fill the Matrix before generating your analysis.
           </div>
           <Btn onClick={onClose} variant="ghost" style={{ width: "100%" }}>CLOSE</Btn>
         </div>
@@ -694,10 +759,11 @@ function MatrixScreen({ deal, onComplete, onBack }) {
         // Fallback to basic queries if builder fails
         queries = [
           { query: `${deal.prospect} ${deal.company} LinkedIn`, type: "person", target: "Profile" },
-          { query: `${deal.prospect} ${deal.company} interview OR keynote`, type: "person", target: "Statements" },
-          { query: `${deal.company} news 2025`, type: "company", target: "Company news" },
-          { query: `${deal.company} strategy initiative 2025`, type: "company", target: "Strategy" },
-          { query: `${deal.company} challenges performance results`, type: "company", target: "Performance" },
+          { query: `${deal.prospect} interview OR keynote 2025 2026`, type: "person", target: "Statements" },
+          { query: `${deal.prospect} ${deal.company} speaker OR article`, type: "person", target: "Thought leadership" },
+          { query: `${deal.prospect} ${deal.company} appointed OR promoted`, type: "person", target: "Career moves" },
+          { query: `${deal.company} strategy goals 2025 2026`, type: "company", target: "Strategic commitments" },
+          { query: `${deal.company} ${deal.role} hiring OR jobs`, type: "company", target: "Capability gaps" },
         ];
       }
 
@@ -1048,6 +1114,14 @@ function MatrixScreen({ deal, onComplete, onBack }) {
                       onBlur={() => setFocused(null)}
                       placeholder={meta.hint}
                     />
+
+                    {/* Guided rep prompt — shows after search has run on empty cells only */}
+                    {searchResults !== null && !cells[key]?.trim() && !hasAiSource && meta.repPrompt && (
+                      <div style={{ marginTop: "6px", padding: "7px 10px", background: "rgba(204,0,0,0.05)", border: `1px solid rgba(204,0,0,0.2)`, borderRadius: "2px" }}>
+                        <div style={{ fontSize: "8px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "3px" }}>WHAT DO YOU KNOW?</div>
+                        <div style={{ fontSize: "10px", color: "#aaa", fontFamily: MONO, lineHeight: "1.6" }}>{meta.repPrompt}</div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
