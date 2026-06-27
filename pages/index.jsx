@@ -728,219 +728,93 @@ function MatrixScreen({ deal, onComplete, onBack }) {
   // ── AI SEARCH ──────────────────────────────
   const handleSearch = async () => {
     setSearching(true);
-    setSearchProgress("Building search strategy...");
+    setSearchProgress("Searching public sources...");
 
-    try {
-      // ── PHASE 0: Dynamic query construction ──
-      const existingMatrixSummary = Object.entries(cells)
-        .filter(([, v]) => v.trim())
-        .map(([k, v]) => `${k}: ${v}`)
-        .join("\n") || "Nothing entered yet";
+    // Build person-first search prompts for each cell
+    const PERSON_PROMPTS = {
+      "CURRENT STATE|ROLE": (name, role, company) =>
+        `Search for ${name}'s current role, title, and decision-making authority at ${company}. What can they approve independently? What requires sign-off above them? Look for LinkedIn profile, press releases announcing their appointment, company website bio, or any public source that confirms their scope and authority.`,
+      "CURRENT STATE|REACH": (name, role, company) =>
+        `Who does ${name} (${role} at ${company}) publicly interact with, influence, or report to? Look for board memberships, advisory roles, conference panels they've appeared on, co-authored content, LinkedIn connections of note, or any public mention of their professional relationships and network.`,
+      "CURRENT STATE|RESULTS": (name, role, company) =>
+        `What performance pressures, business challenges, or strategic priorities is ${name} (${role} at ${company}) dealing with right now? Look for earnings calls, press releases, industry news, analyst reports, or any public signals about what ${company} is being measured on in their function.`,
+      "FUTURE STATE|ROLE": (name, role, company) =>
+        `What is ${name}'s career trajectory at ${company} or in their industry? Look for recent promotions, expanded responsibilities, new titles, speaking engagements that suggest rising profile, industry awards, board appointments, or any signals about where they are heading professionally.`,
+      "FUTURE STATE|REACH": (name, role, company) =>
+        `What new professional relationships or networks is ${name} (${role} at ${company}) actively building? Look for recent conference appearances, new board or advisory roles, industry association involvement, new partnerships announced, or any public activity suggesting deliberate relationship expansion.`,
+      "FUTURE STATE|RESULTS": (name, role, company) =>
+        `What public commitments, stated goals, or strategic promises has ${name} (${role} at ${company}) made? Look for quotes in press releases, earnings calls, investor presentations, interviews, conference keynotes, LinkedIn posts, or company announcements where they personally committed to specific outcomes or targets.`,
+      "NEEDS|ROLE": (name, role, company) =>
+        `What capability, skill, or authority gaps exist for ${company}'s ${role} function right now? Look for job postings revealing what they are hiring for, technology gaps mentioned in industry coverage, transformation initiatives announced, or analyst commentary about where ${company} needs to improve.`,
+      "NEEDS|REACH": (name, role, company) =>
+        `What organizational or political challenges is ${company} facing that would affect ${name} as ${role}? Look for leadership changes, restructuring announcements, M&A activity, board changes, executive departures, or any public signals of internal tension or gaps in alignment that affect this role.`,
+      "NEEDS|RESULTS": (name, role, company) =>
+        `What resources, technology, budget, or tools does ${company} appear to need in the ${role} function to hit their stated goals? Look for RFPs, technology partnerships announced, hiring patterns, analyst recommendations, or any public signals about investment priorities or capability requirements.`,
+    };
 
-      const queryBuilderResp = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1200,
-          messages: [{ role: "user", content: QUERY_BUILDER_PROMPT(deal.prospect, deal.role, deal.company, existingMatrixSummary) }]
-        })
-      });
+    const allKeys = [];
+    MATRIX_ROWS.forEach(row => MATRIX_COLS.forEach(col => allKeys.push({ key: `${row}|${col}`, row, col })));
 
-      const queryBuilderData = await queryBuilderResp.json();
-      const queryText = queryBuilderData.content?.find(b => b.type === "text")?.text || "";
-      const queryRaw = queryText.replace(/```json|```/g, "").trim();
+    const results = [];
+    let completed = 0;
 
-      let queries = [];
+    await Promise.all(allKeys.map(async ({ key, row, col }) => {
+      const prompt = PERSON_PROMPTS[key](deal.prospect, deal.role, deal.company);
+      const existing = cells[key].trim();
+
       try {
-        const parsed = JSON.parse(queryRaw);
-        queries = parsed.queries || [];
-      } catch {
-        // Fallback to basic queries if builder fails
-        queries = [
-          { query: `${deal.prospect} ${deal.company} LinkedIn`, type: "person", target: "Profile" },
-          { query: `${deal.prospect} interview OR keynote 2025 2026`, type: "person", target: "Statements" },
-          { query: `${deal.prospect} ${deal.company} speaker OR article`, type: "person", target: "Thought leadership" },
-          { query: `${deal.prospect} ${deal.company} appointed OR promoted`, type: "person", target: "Career moves" },
-          { query: `${deal.company} strategy goals 2025 2026`, type: "company", target: "Strategic commitments" },
-          { query: `${deal.company} ${deal.role} hiring OR jobs`, type: "company", target: "Capability gaps" },
-        ];
-      }
-
-      // ── PHASE 1: Fire targeted web searches in parallel ──
-      setSearchProgress(`Searching ${queries.length} targeted sources...`);
-
-      const searchPromises = queries.map(q =>
-        fetch("/api/chat", {
+        const resp = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             model: "claude-sonnet-4-20250514",
-            max_tokens: 600,
+            max_tokens: 500,
             tools: [{ type: "web_search_20250305", name: "web_search" }],
-            messages: [{ role: "user", content: `Search for: ${q.query}\n\nReturn only factual findings — exact quotes, titles, URLs, dates, numbers. Do not analyze or interpret. Report what you found verbatim.` }]
+            system: `You are a sales intelligence researcher for the Semper Selling® methodology. Find factual, publicly verifiable information about a specific person to fill one cell of a Connection Intelligence Matrix.
+
+RULES:
+- Search for this specific person by name — prioritize person-level intel over generic company information
+- Only return information from a real, citable public source (LinkedIn, press release, news article, earnings call, conference recording, company website, etc.)
+- If you find something useful, return it with a real source URL
+- If you cannot find reliable sourced information, return {"found": false}
+- Keep intel to 1-2 sentences — sharp and specific
+- For the NEEDS row cells, inference from the gap between current and future state is acceptable — label it as inferred
+- Current date: June 2026. Only use sources from 2025 or 2026.
+- Return ONLY valid JSON, no markdown
+
+Format when found: {"found": true, "intel": "1-2 sentence finding", "source": "https://url.com", "source_label": "LinkedIn · 2025"}
+Format when not found: {"found": false}`,
+            messages: [{ role: "user", content: prompt + (existing ? `
+
+The rep already knows: "${existing}". Only surface new, additive information.` : "") }]
           })
-        }).then(r => r.json()).catch(() => null)
-      );
-
-      setSearchProgress("Gathering intelligence...");
-      const searchResponses = await Promise.all(searchPromises);
-
-      // ── Extract URLs from search results and fetch the best ones ──
-      // Collect all URLs found, prioritizing person-level results
-      const urlsFound = [];
-      searchResponses.forEach((data, i) => {
-        if (!data) return;
-        const q = queries[i];
-        // Extract URLs from text content
-        const allText = (data.content || [])
-          .filter(b => b.type === "text")
-          .map(b => b.text)
-          .join(" ");
-        const urlMatches = allText.match(/https?:\/\/[^\s"<>]+/g) || [];
-        urlMatches.forEach(url => {
-          // Skip LinkedIn login walls, PDFs, and social media noise
-          if (url.includes("linkedin.com/in/") || url.includes(".pdf") || url.includes("twitter.com") || url.includes("facebook.com") || url.includes("instagram.com")) return;
-          // Prioritize press releases, news, company sites, business publications
-          const priority = (url.includes("prnewswire") || url.includes("businesswire") || url.includes("globenewswire") || url.includes("reuters") || url.includes("bloomberg") || url.includes("wsj.com") || url.includes("ft.com") || url.includes("forbes") || url.includes("linkedin.com/pulse")) ? 1 : 2;
-          urlsFound.push({ url, type: q.type, priority });
         });
-      });
-
-      // Deduplicate and take top 3 highest-priority URLs
-      const seen = new Set();
-      const topUrls = urlsFound
-        .filter(u => { if (seen.has(u.url)) return false; seen.add(u.url); return true; })
-        .sort((a, b) => a.priority - b.priority)
-        .slice(0, 3);
-
-      // Fetch full content from top URLs
-      let fetchedContent = "";
-      if (topUrls.length > 0) {
-        setSearchProgress("Reading full articles...");
-        const fetchPromises = topUrls.map(u =>
-          fetch("/api/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model: "claude-sonnet-4-20250514",
-              max_tokens: 400,
-              messages: [{ role: "user", content: `Fetch this URL and return only the key facts, quotes, dates, and numbers relevant to a B2B sales rep researching a stakeholder. URL: ${u.url}\n\nReturn only the most relevant factual content. 3-4 sentences max.` }]
-            })
-          }).then(r => r.json()).catch(() => null)
-        );
-        const fetchResponses = await Promise.all(fetchPromises);
-        fetchedContent = fetchResponses.map((data, i) => {
-          if (!data) return "";
-          const text = (data.content || []).filter(b => b.type === "text").map(b => b.text.replace(/<[^>]*>/g, "").trim()).join(" ");
-          return text ? `[FULL ARTICLE: ${topUrls[i].url}]\n${text}` : "";
-        }).filter(Boolean).join("\n\n---\n\n");
-      }
-
-      // ── Build structured raw results with source labels ──
-      // Label each block with query, type (person/company), and target
-      // This gives synthesis the context to attribute correctly
-      const searchRawResults = searchResponses.map((data, i) => {
-        if (!data) return "";
-        const q = queries[i];
-        const textBlocks = (data.content || [])
-          .filter(b => b.type === "text")
-          .map(b => b.text.replace(/<[^>]*>/g, "").trim())
-          .filter(Boolean)
-          .join(" ");
-
-        // Also extract any URLs from tool_use blocks for better sourcing
-        const toolResults = (data.content || [])
-          .filter(b => b.type === "tool_result" || b.type === "mcp_tool_result")
-          .map(b => b.content?.[0]?.text || "")
-          .join(" ");
-
-        const combined = [textBlocks, toolResults].filter(Boolean).join(" ").trim();
-        if (!combined) return "";
-
-        return `[TYPE: ${q.type?.toUpperCase() || "SEARCH"} | TARGET: ${q.target} | QUERY: "${q.query}"]\n${combined}`;
-      }).filter(Boolean).join("\n\n---\n\n");
-
-      // Combine search snippets with full article fetches
-      const rawResults = [searchRawResults, fetchedContent].filter(Boolean).join("\n\n═══ FULL ARTICLE CONTENT ═══\n\n");
-
-      if (!rawResults.trim()) {
-        // Even with no search results, run synthesis for organizational inference
-        setSearchProgress("Building intelligence from role context...");
-      }
-
-      // ── PHASE 2: Synthesize into Matrix cells ──
-      setSearchProgress("Analyzing findings...");
-
-      const fullMatrixContent = Object.entries(cells)
-        .map(([k, v]) => `${k}: ${v.trim() || "[empty]"}`)
-        .join("\n");
-
-      const existingCells = Object.entries(cells)
-        .filter(([, v]) => v.trim())
-        .map(([k, v]) => `${k}: ${v}`)
-        .join("\n") || "None";
-
-      const synthResp = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1500,
-          messages: [{ role: "user", content: SYNTHESIS_PROMPT(deal.prospect, deal.role, deal.company, rawResults, existingCells, fullMatrixContent) }]
-        })
-      });
-
-      const synthData = await synthResp.json();
-      const textBlock = synthData.content?.find(b => b.type === "text");
-
-      if (!textBlock) {
-        // Synthesis failed entirely - show empty state with helpful message
-        setSearching(false);
-        setSearchProgress(null);
-        setSearchResults([]);
-        return;
-      }
-
-      let parsed = { findings: [] };
-      try {
-        const raw = textBlock.text.replace(/```json|```/g, "").trim();
-        parsed = JSON.parse(raw);
-      } catch {
-        // JSON parse failed - still show empty state gracefully
-        setSearching(false);
-        setSearchProgress(null);
-        setSearchResults([]);
-        return;
-      }
-      const findings = parsed.findings || [];
-
-      const results = findings.map(f => {
-        const [row, col] = f.cell.split("|");
-        return {
-          key: f.cell,
-          row: row || f.cell,
-          col: col || "",
-          existing: cells[f.cell]?.trim() || "",
-          result: {
-            found: true,
-            intel: f.intel.replace(/<[^>]*>/g, "").trim(),
-            source: f.source,
-            source_label: f.source_label
+        const data = await resp.json();
+        const textBlock = data.content?.find(b => b.type === "text");
+        if (textBlock) {
+          const raw = textBlock.text.replace(/```json|```/g, "").trim();
+          try {
+            const parsed = JSON.parse(raw);
+            // Strip any citation tags that web search injects
+            if (parsed.intel) parsed.intel = parsed.intel.replace(/<[^>]*>/g, "").trim();
+            results.push({ key, row, col, existing, result: parsed });
+          } catch {
+            results.push({ key, row, col, existing, result: { found: false } });
           }
-        };
-      });
+        } else {
+          results.push({ key, row, col, existing, result: { found: false } });
+        }
+      } catch {
+        results.push({ key, row, col, existing, result: { found: false } });
+      }
 
-      setSearching(false);
-      setSearchProgress(null);
-      setSearchResults(results);
+      completed++;
+      setSearchProgress(`Searching... ${completed} of 9 complete`);
+    }));
 
-    } catch (err) {
-      console.error("Search failed:", err);
-      setSearching(false);
-      setSearchProgress(null);
-      setSearchResults([]);
-    }
+    setSearching(false);
+    setSearchProgress(null);
+    setSearchResults(results);
   };
 
   // ── ACCEPT SEARCH RESULTS ──────────────────
