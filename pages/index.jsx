@@ -2,27 +2,71 @@ import { useState, useRef, useCallback } from "react";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap');`;
 
-// Exact original tokens
-const RED       = "#CC0000";
-const BG        = "#0d0d0d";
-const SURFACE   = "#141414";
-const BORDER    = "#2a2a2a";
-const MONO      = "'IBM Plex Mono', monospace";
+const RED = "#CC0000";
+const BG = "#0d0d0d";
+const SURFACE = "#141414";
+const BORDER = "#2a2a2a";
+const MONO = "'IBM Plex Mono', monospace";
 const CONDENSED = "'Barlow Condensed', sans-serif";
 
 const MATRIX_COLS = ["ROLE", "REACH", "RESULTS"];
 const MATRIX_ROWS = ["CURRENT STATE", "FUTURE STATE", "NEEDS"];
 
 const MATRIX_META = {
-  "CURRENT STATE|ROLE": { label: "Decision Authority", hint: "What can they approve or veto today?", description: "What formal authority does this person hold right now? What decisions can they make independently — and where do they need sign-off? Note budget thresholds, approval limits, and any constraints on their current decision-making power.", repPrompt: "What have you personally observed about how they make decisions? Have they mentioned needing approval from above? Referenced a budget limit? Deferred to someone else on a topic?", searchFocus: "current role, title, and decision-making authority. What can they approve independently? What requires sign-off?" },
-  "CURRENT STATE|REACH": { label: "Influence Network", hint: "Who influences them and who do they influence?", description: "Who are the key relationships shaping this person's thinking right now? Who do they go to for advice? Who listens when they speak? Map both directions — who pulls them and who they pull. This is where actual power lives, often separate from the org chart.", repPrompt: "Who has come up in your conversations with them? Whose opinion do they reference? Who do they mention when talking about decisions being made? Any names that have come up more than once?", searchFocus: "professional network, board memberships, advisory roles, conference panels, co-authored content, and public professional relationships." },
-  "CURRENT STATE|RESULTS": { label: "Performance Pressure", hint: "What metrics are they measured against right now?", description: "What does success look like for this person today? What KPIs, targets, or outcomes is their boss watching? What's the gap between where they are and where they need to be — and how visible is that gap? Numbers and specifics beat vague descriptions every time.", repPrompt: "What have they told you they're being measured on? What pressures have they mentioned? Any specific targets, numbers, or deadlines that came up? What did they sound most concerned about?", searchFocus: "performance pressures, business challenges, earnings calls, press releases, industry news, or public signals about what they're being measured on." },
-  "FUTURE STATE|ROLE": { label: "Career Trajectory", hint: "What role are they positioning for next?", description: "Where is this person trying to go professionally? Are they building toward a promotion, a lateral move, or a bigger platform? What title or scope represents their ambition? The answer shapes every conversation — people make decisions that serve their future, not just their present.", repPrompt: "Have they mentioned anything about their career direction? A next step they're working toward? A responsibility they're taking on? Something they want to be known for? Even indirect signals count.", searchFocus: "career trajectory, recent promotions, expanded responsibilities, new titles, speaking engagements, industry awards, board appointments, or signals about where they're heading professionally." },
-  "FUTURE STATE|REACH": { label: "Relationship Strategy", hint: "What new alliances are they building?", description: "What new relationships is this person actively cultivating? Are they expanding into new functions, new executive levels, or new external networks? Relationship building at this level is intentional — it reveals exactly where they're trying to go and who they need on their side to get there.", repPrompt: "Have they mentioned new initiatives they're involved in, committees they've joined, or people they're working with that are new? Any signals of deliberate relationship building outside their current lane?", searchFocus: "new professional relationships, recent conference appearances, new board or advisory roles, industry association involvement, new partnerships, or deliberate relationship expansion." },
-  "FUTURE STATE|RESULTS": { label: "Public Commitments", hint: "What goals have they staked their reputation on?", description: "What has this person said out loud — in a meeting, a presentation, a company communication — that they're committed to delivering? Public commitments are different from private goals. They've staked professional credibility on these outcomes. That makes them personal.", repPrompt: "What have they committed to out loud in your presence? What did they say they're trying to achieve this year? Any goals, targets, or timelines they've mentioned directly to you or that you've heard them mention to others?", searchFocus: "public commitments, stated goals, strategic promises — quotes in press releases, earnings calls, investor presentations, interviews, conference keynotes, or LinkedIn posts." },
-  "NEEDS|ROLE": { label: "Capability Gaps", hint: "What authority, skills, or resources are they missing?", description: "What is this person missing to do their job at the level they're being held to — or the level they're trying to reach? Think authority they don't yet have, skills they haven't built, tools they're working around. Gaps between Current State and Future State in the Role column are often your most direct path to relevance.", repPrompt: "What have they complained about not having? Where do they seem to be working around something — process, tool, authority, headcount? Any frustration they've expressed about what they can't get done?", searchFocus: "capability gaps, job postings revealing what they're hiring for, technology gaps mentioned in industry coverage, transformation initiatives, or commentary about where the company needs to improve." },
-  "NEEDS|REACH": { label: "Missing Support", hint: "Whose support do they need but don't have?", description: "What relationships or alliances are conspicuously absent? Who should be in their corner but isn't? What political capital do they need to build? When someone is missing both capability and support in the same area, they're exposed — and they know it, even if they don't say it.", repPrompt: "Have they mentioned anyone they're having trouble getting alignment with? A function that isn't cooperating? A stakeholder they need but can't get time with? Political friction anywhere in the organization?", searchFocus: "organizational alignment challenges, leadership changes, restructuring announcements, M&A activity, or public signals of internal tension affecting this role." },
-  "NEEDS|RESULTS": { label: "Resource Requirements", hint: "What tools or budget would solve their biggest problems?", description: "What would this person need — budget, tools, technology, people, process — to actually hit their targets? Not a wish list. The specific gap between what they have and what they need to deliver on their Public Commitments. This is where your solution either earns its seat at the table or doesn't.", repPrompt: "What have they said they don't have enough of? Budget constraints they've mentioned? Technology gaps? Headcount shortfalls? Any specific resource they've pointed to as the thing standing between them and their goal?", searchFocus: "resource requirements, RFPs, technology partnerships announced, hiring patterns, analyst recommendations, or public signals about investment priorities." },
+  "CURRENT STATE|ROLE": {
+    label: "Decision Authority",
+    hint: "What can they approve or veto today?",
+    description: "What formal authority does this person hold right now? What decisions can they make independently — and where do they need sign-off? Note budget thresholds, approval limits, and any constraints on their current decision-making power.",
+    repPrompt: "What have you personally observed about how they make decisions? Have they mentioned needing approval from above? Referenced a budget limit? Deferred to someone else on a topic?"
+  },
+  "CURRENT STATE|REACH": {
+    label: "Influence Network",
+    hint: "Who influences them and who do they influence?",
+    description: "Who are the key relationships shaping this person's thinking right now? Who do they go to for advice? Who listens when they speak? Map both directions — who pulls them and who they pull. This is where actual power lives, often separate from the org chart.",
+    repPrompt: "Who has come up in your conversations with them? Whose opinion do they reference? Who do they mention when talking about decisions being made? Any names that have come up more than once?"
+  },
+  "CURRENT STATE|RESULTS": {
+    label: "Performance Pressure",
+    hint: "What metrics are they measured against right now?",
+    description: "What does success look like for this person today? What KPIs, targets, or outcomes is their boss watching? What's the gap between where they are and where they need to be — and how visible is that gap? Numbers and specifics beat vague descriptions every time.",
+    repPrompt: "What have they told you they're being measured on? What pressures have they mentioned? Any specific targets, numbers, or deadlines that came up? What did they sound most concerned about?"
+  },
+  "FUTURE STATE|ROLE": {
+    label: "Career Trajectory",
+    hint: "What role are they positioning for next?",
+    description: "Where is this person trying to go professionally? Are they building toward a promotion, a lateral move, or a bigger platform? What title or scope represents their ambition? The answer shapes every conversation — people make decisions that serve their future, not just their present.",
+    repPrompt: "Have they mentioned anything about their career direction? A next step they're working toward? A responsibility they're taking on? Something they want to be known for? Even indirect signals count."
+  },
+  "FUTURE STATE|REACH": {
+    label: "Relationship Strategy",
+    hint: "What new alliances are they building?",
+    description: "What new relationships is this person actively cultivating? Are they expanding into new functions, new executive levels, or new external networks? Relationship building at this level is intentional — it reveals exactly where they're trying to go and who they need on their side to get there.",
+    repPrompt: "Have they mentioned new initiatives they're involved in, committees they've joined, or people they're working with that are new? Any signals of deliberate relationship building outside their current lane?"
+  },
+  "FUTURE STATE|RESULTS": {
+    label: "Public Commitments",
+    hint: "What goals have they staked their reputation on?",
+    description: "What has this person said out loud — in a meeting, a presentation, a company communication — that they're committed to delivering? Public commitments are different from private goals. They've staked professional credibility on these outcomes. That makes them personal.",
+    repPrompt: "What have they committed to out loud in your presence? What did they say they're trying to achieve this year? Any goals, targets, or timelines they've mentioned directly to you or that you've heard them mention to others?"
+  },
+  "NEEDS|ROLE": {
+    label: "Capability Gaps",
+    hint: "What authority, skills, or resources are they missing?",
+    description: "What is this person missing to do their job at the level they're being held to — or the level they're trying to reach? Think authority they don't yet have, skills they haven't built, tools they're working around. Gaps between Current State and Future State in the Role column are often your most direct path to relevance.",
+    repPrompt: "What have they complained about not having? Where do they seem to be working around something — process, tool, authority, headcount? Any frustration they've expressed about what they can't get done?"
+  },
+  "NEEDS|REACH": {
+    label: "Missing Support",
+    hint: "Whose support do they need but don't have?",
+    description: "What relationships or alliances are conspicuously absent? Who should be in their corner but isn't? What political capital do they need to build? When someone is missing both capability and support in the same area, they're exposed — and they know it, even if they don't say it.",
+    repPrompt: "Have they mentioned anyone they're having trouble getting alignment with? A function that isn't cooperating? A stakeholder they need but can't get time with? Political friction anywhere in the organization?"
+  },
+  "NEEDS|RESULTS": {
+    label: "Resource Requirements",
+    hint: "What tools or budget would solve their biggest problems?",
+    description: "What would this person need — budget, tools, technology, people, process — to actually hit their targets? Not a wish list. The specific gap between what they have and what they need to deliver on their Public Commitments. This is where your solution either earns its seat at the table or doesn't.",
+    repPrompt: "What have they said they don't have enough of? Budget constraints they've mentioned? Technology gaps? Headcount shortfalls? Any specific resource they've pointed to as the thing standing between them and their goal?"
+  },
 };
 
 const emptyMatrix = () => {
@@ -34,7 +78,7 @@ const emptyMatrix = () => {
 const matrixToText = (cells, deal) => {
   let out = `CONNECTION INTELLIGENCE MATRIX\n${deal.prospect} — ${deal.role} @ ${deal.company}\n${deal.opportunity ? `Deal: ${deal.opportunity}\n` : ""}\n`;
   MATRIX_ROWS.forEach(row => {
-    out += `-- ${row} --\n`;
+    out += `── ${row} ──\n`;
     MATRIX_COLS.forEach(col => {
       const key = `${row}|${col}`;
       out += `  ${MATRIX_META[key].label} (${col}): ${cells[key] || "[EMPTY — discovery gap]"}\n`;
@@ -44,125 +88,172 @@ const matrixToText = (cells, deal) => {
   return out;
 };
 
-// ─── SYSTEM PROMPTS ───────────────────────────────────────────────────────────
-const SEARCH_SYSTEM = `You are a sales intelligence researcher for the Semper Selling methodology. Your job is to find publicly verifiable information about a specific person to populate one cell of a Connection Intelligence Matrix.
+// ─── SEARCH SYSTEM PROMPT ─────────────────────
+const SEARCH_SYSTEM_PROMPT = `You are a sales intelligence researcher for the Semper Selling® methodology. Your job is to search the web and find publicly verifiable information about a specific person to populate one cell of a Connection Intelligence Matrix.
 
-SEARCH PRIORITY:
-1. Person-level intel first — search for the individual by name.
-2. Company-level intel second — only if person-level searches come up short.
-3. Organizational inference last — if no public sources exist, infer from role type and company context. Label as "Inferred:".
+PRIORITY ORDER:
+1. Person-level intel first — search for the individual by name. What have they said, done, committed to, or been recognized for publicly?
+2. Company-level intel second — only if person-level searches come up short, use organizational context to fill the gap.
+3. Organizational inference last — if no public sources exist, infer from the role type and company context. Label clearly as inferred.
 
 SEARCH BEHAVIOR:
 - Always search for the person by name first
-- Use the web_search tool to find current public information
-- Look for LinkedIn profiles, press releases, news articles, earnings calls, conference appearances, interviews, and company announcements
-- Prioritize information from 2024, 2025, or 2026
+- Use the web_search tool to find current, relevant public information
+- Look for LinkedIn profiles, press releases, news articles, earnings calls, conference appearances, published papers, awards, interviews, and company announcements
+- Only use information from 2025 or 2026 — discard anything older
+- Strip all citation tags like <cite> from your output
 
-OUTPUT — return ONLY valid JSON. No markdown. No backticks. No explanation before or after the JSON object.
+OUTPUT FORMAT — return ONLY valid JSON, no markdown, no backticks, no explanation:
 
 When you find sourced information:
-{"found": true, "intel": "1-2 sentences of specific, factual intelligence", "source": "https://actual-url.com", "source_label": "Source Name · Year"}
+{"found": true, "intel": "1-2 sentences of specific, factual intelligence", "source": "https://actual-url.com", "source_label": "Source Name · 2025"}
 
-When you can only infer from role/company context:
+When you find nothing but can infer from role/company context:
 {"found": true, "intel": "Inferred: 1-2 sentences based on role type and organizational context", "source": "inferred", "source_label": "Inferred from organizational context"}
 
 When you find nothing at all:
-{"found": false}
+{"found": false}`;
 
-CRITICAL: Output ONLY the JSON object. Nothing else.`;
-
-const buildSearchPrompt = (deal, key) => {
-  const meta = MATRIX_META[key];
-  return `Find public intelligence about ${deal.prospect}, who is ${deal.role} at ${deal.company}. Focus specifically on: ${meta.searchFocus}
-
-Search first for "${deal.prospect}" by name at ${deal.company}, then broaden if needed.
-
-Return only the JSON format specified in your instructions.`;
-};
-
-const ANALYSIS_PROMPT = (matrixText, deal) => `You are the Semper Selling Matrix Analysis Engine. You are a senior sales strategist doing deep analytical work — finding gaps, disconnects, and hidden connections between Matrix cells that reveal what is actually happening in this deal beneath the surface.
+// ─── ANALYSIS PROMPT ──────────────────────────
+const ANALYSIS_PROMPT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine — a senior sales strategist who has spent 20 years coaching enterprise reps on complex deals. You are not summarizing data. You are doing the analytical work a rep would never do sitting alone with their notes — finding the gaps, disconnects, and hidden connections between Matrix cells that reveal what is actually happening in this deal beneath the surface.
 
 Deal: ${deal.prospect} (${deal.role} @ ${deal.company})${deal.opportunity ? `\nOpportunity: ${deal.opportunity}` : ""}
 
 Matrix:
 ${matrixText}
 
-Run all 14 cross-cell patterns below. Only surface findings where genuine gaps exist between cells. Skip patterns where relevant boxes are empty or too thin.
+═══════════════════════════════
+YOUR ANALYTICAL MISSION
+═══════════════════════════════
 
-PATTERN 1 (Box 1+2): Decision authority vs influence gap. High authority + thin network = can approve but can't mobilize. Limited authority + strong network = more powerful than title suggests.
-PATTERN 2 (Box 2+5+8): Specific person/function in Box 2 or 5 absent from Box 8 — late-stage surprise risk.
-PATTERN 3 (Box 3+4+6): ALIGNMENT ONLY. When all three point same direction — name what they're optimizing for precisely. Mutually exclusive with Pattern 9.
-PATTERN 4 (Boxes 1-3 vs 4-6): Full distance across all dimensions. Large gap = high urgency. Small gap everywhere = maintenance mode, flag as deal risk.
-PATTERN 5 (Box 7+8+9): Needs row as complete picture — most fragile internal condition.
-PATTERN 6 (Box 3+7+9): Sharpest gap between current pressure, missing capability, resource needs — setup for breakthrough iQ question.
-PATTERN 7 (Box 6+7+9): Do public commitments create real urgency? Is timeline executable given capability and resource gaps?
-PATTERN 8 (Box 1+9): Does investment implied by Box 9 exceed what Box 1 says they can approve?
-PATTERN 9 (Box 3+4+6): CONTRADICTION ONLY. When all three conflict — name what they say vs what they're actually optimizing for. Mutually exclusive with Pattern 3.
-PATTERN 10 (Box 2+8): Specific person/function in Box 2 absent from Box 8 — coalition risk.
-PATTERN 11 (Box 4+5): Simultaneously positioning for bigger role AND building new external relationships? If yes — COMMERCIALLY URGENT, goes FIRST in report.
-PATTERN 12 (Box 1+4+7): Full ROLE column read — does this person have what it takes to deliver on their own ambition?
-PATTERN 13 (Box 1+2+3): Full CURRENT STATE row — high authority + strong network + strong performance = low urgency to change.
-PATTERN 14 (Box 3+6+9): Full RESULTS column — current pressure to future commitment to cost of execution.
+Run all 14 patterns below. For each, look for gaps where two or more cells reveal something together that neither reveals alone. A finding that restates one cell is not a finding. Surface only patterns where genuine cross-cell gaps exist in the data. Skip patterns where the relevant boxes are empty or too thin to analyze.
 
-OUTPUT RULES:
-- BRIEFING: 1-2 paragraphs. Inference only ("The data suggests...", "The patterns point to..."). Specific names/numbers from Matrix. No advice. No "you should". No box or pattern numbers. Never use "tension" — use gap, disconnect, exposure, pressure point.
-- FINDINGS: 2-3 sharpest cross-cell gaps. Headline ALL CAPS max 8 words. Body 2-3 sentences, no box references. Most urgent first.
-- GAPS: Empty/thin cells only. HIGH or MEDIUM. Max 4. For NEEDS cells name the specific discovery question.
-- DEFENSE: Max 3. Specific scenario that could kill the deal + one protective action in 5 business days. Title ALL CAPS.
-- iQ QUESTIONS: Exactly 2. Current Reality (specific named constraint) + Future State (specific named commitment) + Impact (career/reputation/promise/relationship — never operational). One natural sentence each. Completely different data points per question.
-- WATCH_FOR: Exactly 2 observable momentum behaviors tied to this person's specific intel.
-- WATCH_OUT: Exactly 2 observable resistance behaviors tied to this deal's vulnerabilities.
-- NEXT_ACTIONS: Exactly 3. What, to whom, by when + commercial consequence of not doing it. Never "prepare questions."
-- MATRIX_HEALTH: "STRONG FOUNDATION" = rich intel. "PARTIAL PICTURE" = meaningful but gaps. "FLYING BLIND" = too thin.
+PATTERN 1 — DECISION AUTHORITY VS. INFLUENCE (Box 1 + Box 2)
+Gap between formal authority and who actually moves decisions. High authority + thin network = can approve but can't mobilize support. Limited authority + strong network = more powerful than their title suggests. Name the commercial implication of whichever gap is present.
 
-RETURN FORMAT — PURE JSON ONLY. No backticks, no markdown, no explanation:
+PATTERN 2 — UNENGAGED STAKEHOLDER RISK (Box 2 + Box 5 + Box 8)
+Find the specific person or function present in Box 2 or Box 5 but absent from Box 8. That specific gap will surface as a late-stage surprise. Only fire if data names or implies a specific person or function — not a generic stakeholder risk.
 
-{"matrix_health":"STRONG FOUNDATION or PARTIAL PICTURE or FLYING BLIND","matrix_health_note":"One direct sentence.","briefing":["Paragraph 1.","Paragraph 2 only if Pattern 11 fired or Matrix is rich."],"findings":[{"headline":"ALL CAPS MAX 8 WORDS","finding":"Cross-cell gap. 2-3 sentences."}],"gaps":[{"cell":"ROW / COLUMN","label":"Cell label","severity":"HIGH or MEDIUM","note":"Why this matters. Discovery question for NEEDS cells."}],"defense":[{"title":"SPECIFIC RISK ALL CAPS","body":"Scenario and consequence. One protective action in 5 business days."}],"iq_questions":[{"question":"Full question one natural sentence","timing":"When to use and what it forces them to confront."},{"question":"Second question different data points","timing":"Timing and what it surfaces."}],"watch_for":["Observable momentum behavior 1.","Observable momentum behavior 2."],"watch_out":["Observable resistance behavior 1.","Observable resistance behavior 2."],"next_actions":["What to whom by when — consequence of inaction.","Second action.","Third action."]}`;
+PATTERN 3 — PERSONAL MOTIVATION DRIVER (Box 3 + Box 4 + Box 6) — fires on ALIGNMENT ONLY
+Run only when Box 3, Box 4, and Box 6 point in the same direction. The intersection is what this person is optimizing for — name it precisely. This is what they are selling to their own organization. Note: P3 and P9 are mutually exclusive — run only the one that matches the data.
 
-// ─── API UTILITIES ────────────────────────────────────────────────────────────
-const callAPI = async (payload) => {
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!resp.ok) throw new Error(`API ${resp.status}: ${await resp.text()}`);
-  return resp.json();
-};
+PATTERN 4 — CURRENT TO FUTURE STATE GAP (Boxes 1+2+3 vs 4+5+6)
+Read the full distance across all three dimensions. Large gap everywhere = high urgency. Gap concentrated in one dimension = where the pressure is. Small gap everywhere = maintenance mode, low urgency — flag as a deal risk.
 
-// Gets the last text block — handles web search tool use interleaving
-const extractLastText = (data) => {
-  const blocks = (data.content || []).filter(b => b.type === "text");
-  return blocks.length > 0 ? blocks[blocks.length - 1].text : "";
-};
+PATTERN 5 — PRIMARY DEAL VULNERABILITIES (Box 7 + Box 8 + Box 9)
+Read the Needs row as a complete picture. When all three point to the same problem area, the deal is fragile from the inside. Name the specific internal condition most likely to kill this deal before you get a no.
 
-// Strips ALL HTML tags broadly, removes markdown fences, finds outermost JSON object
-const extractJSON = (raw) => {
-  const stripped = raw.replace(/<[^>]+>/g, "").trim();
-  const noFences = stripped.replace(/```json|```/gi, "").trim();
-  const start = noFences.indexOf("{");
-  const end   = noFences.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) return null;
-  return noFences.slice(start, end + 1);
-};
+PATTERN 6 — BREAKTHROUGH QUESTION INDICATOR (Box 3 + Box 7 + Box 9)
+Find the sharpest gap between current performance pressure, missing capability, and resource needs. This gap is the setup for the iQ question nobody else will ask. Feed directly into iQ question construction.
 
-// ─── SHARED BUTTON ────────────────────────────────────────────────────────────
+PATTERN 7 — COMMITMENT CREDIBILITY (Box 6 + Box 7 + Box 9)
+Two questions in sequence: Do the public commitments create real urgency to act? Is the timeline actually executable given the capability and resource gaps? If a deadline in Box 6 conflicts with material gaps in Box 7 and Box 9, the timeline is aspirational not executable — name it directly.
+
+PATTERN 8 — AUTHORITY CEILING (Box 1 + Box 9)
+Does the investment implied by Box 9 exceed what Box 1 says this person can approve? If yes — you are selling to the wrong altitude. If aligned, skip this pattern.
+
+PATTERN 9 — STATED GOALS VS. REAL GOALS (Box 3 + Box 4 + Box 6) — fires on CONTRADICTION ONLY
+Run only when Box 3, Box 4, and Box 6 conflict with each other. The real motivation is hiding in the gap between them — name precisely what they say versus what the data suggests they are actually optimizing for. Note: mutually exclusive with P3.
+
+PATTERN 10 — COALITION RISK (Box 2 + Box 8)
+Find the specific person or function that appears in Box 2 as an influencer but is absent in Box 8. That is precisely where internal resistance will come from. Name the specific relationship gap — not a generic political risk.
+
+PATTERN 11 — COMPETITIVE VULNERABILITY WINDOW (Box 4 + Box 5)
+Is this person simultaneously positioning for a bigger role AND actively building new external relationships? If yes, this is the most commercially urgent pattern — they are open to new partners as part of their own repositioning right now. This finding goes FIRST in the report. A competitor with a career-narrative pitch could get a meeting you have not earned yet.
+
+PATTERN 12 — EXECUTION CREDIBILITY (Box 1 + Box 4 + Box 7)
+Read the full ROLE column: current authority + career trajectory + capability gaps. Does this person have what it takes to deliver on their own ambition? Limited authority + ambitious trajectory + missing capability = someone who needs a win on this program more than they are letting on. The most personally precise read in the Matrix.
+
+PATTERN 13 — CURRENT STATE ENTRENCHMENT (Box 1 + Box 2 + Box 3)
+Read the full CURRENT STATE row together. High authority + strong network + strong performance = comfortable, low urgency to change. Low authority + thin network + performance pressure = someone who needs a win now. This sets the context for how every other pattern should be weighted — a comfortable person requires a fundamentally different approach than a pressured one.
+
+PATTERN 14 — RESULTS COMMERCIAL STORY (Box 3 + Box 6 + Box 9)
+Read the full RESULTS column: what they are measured on today + what they have publicly committed to achieving + what resources are required to close that gap. When all three are populated this is the clearest commercial picture in the deal — current pressure to future commitment to cost of execution in one read.
+
+═══════════════════════════════
+OUTPUT RULES
+═══════════════════════════════
+
+BRIEFING (1-2 paragraphs):
+Read like a senior strategist briefing a sales professional before a high-stakes call. Interpret what the data reveals about the customer's world — not a cell summary, not rep advice. Every sentence framed as inference: "The data suggests...", "The patterns point to...", "Based on what's here...", "The gap between X and Y suggests..." — never stated as fact. Never say "you should", "a partner who", "the rep who" — that's advice, it goes in Next Actions. Never reference box numbers, pattern numbers, or methodology terms. Never use "tension" — use gap, disconnect, exposure, pressure point. Specific numbers, names, timelines from the Matrix. One paragraph if thin, two if rich. If Pattern 11 fired, second paragraph addresses that urgency — describing what's happening in their world, not telling the rep what to do.
+
+FINDINGS (2-3 sharpest gaps):
+Each has a headline and body. Headline: ALL CAPS, max 8 words, sharp commercial label, specific to this deal — never "KEY INSIGHT" or "IMPORTANT FINDING" or any pattern name. Body: name the first data point, name the second, state what their gap reveals that neither reveals alone. 2-3 sentences, no box references, no pattern numbers, no generic observations. Most urgent first.
+
+DEFENSE (max 3): Each answers: what could happen before close that you haven't prevented yet? Specific scenario + one protective action executable in 5 business days. Title ALL CAPS.
+
+NEXT ACTIONS (exactly 3): What to do, to whom, by when + commercial consequence of not doing it. Never "prepare questions" — always a specific executable move with a specific cost of inaction.
+
+SIGNALS (2 each): Observable behaviors only — something you can see or hear. Never internal states. Tied to this person's specific intel.
+
+iQ QUESTIONS (exactly 2): Target the highest personal stakes gap. CURRENT REALITY (specific named constraint from Current State) + FUTURE STATE (specific named commitment) + IMPACT (what the gap has already cost them — career, reputation, public promise, key relationship — never operational). One natural sentence the rep can say out loud. Second question uses completely different data points.
+
+LANGUAGE: Second person throughout ("you" not "the rep"). Direct, commercial. Never "actually", "real", "really", "tension", "pattern", box numbers. Every sentence references THIS specific person's specific intel.
+
+MATRIX HEALTH: "STRONG FOUNDATION" = rich intel, confident analysis. "PARTIAL PICTURE" = meaningful but gaps create blind spots. "FLYING BLIND" = too thin, next conversation must be discovery.
+
+═══════════════════════════════
+RETURN FORMAT — PURE JSON ONLY
+═══════════════════════════════
+
+{
+  "matrix_health": "STRONG FOUNDATION or PARTIAL PICTURE or FLYING BLIND",
+  "matrix_health_note": "One direct sentence — what this Matrix gives you and what it is missing.",
+  "briefing": [
+    "Paragraph 1 — inference only, customer's world only, specific intel from Matrix, no advice, no box/pattern references, no tension.",
+    "Paragraph 2 — urgency layer only if Matrix is rich or Pattern 11 fired. Omit if not warranted — return only one string in array if so."
+  ],
+  "findings": [
+    {"headline": "SHARP LABEL IN ALL CAPS — 8 words max", "finding": "First data point. Second data point. What their gap reveals. 2-3 sentences. No box references."}
+  ],
+  "gaps": [
+    {"cell": "ROW / COLUMN", "label": "Cell label", "severity": "HIGH or MEDIUM", "note": "Why this blind spot matters for this deal. For empty NEEDS cells, name the specific discovery question to ask next conversation."}
+  ],
+  "defense": [
+    {"title": "SPECIFIC RISK IN ALL CAPS", "body": "Specific scenario and commercial consequence. One protective action in next 5 business days."}
+  ],
+  "iq_questions": [
+    {"question": "CURRENT REALITY + FUTURE STATE + IMPACT (highest personal stakes gap, one natural sentence out loud)", "timing": "early/mid/late — what this forces them to confront."},
+    {"question": "Second question, different data points, second highest personal stakes.", "timing": "timing and what it surfaces."}
+  ],
+  "watch_for": ["Observable momentum behavior tied to this person's intel.", "Second observable momentum behavior."],
+  "watch_out": ["Observable resistance behavior tied to this deal's vulnerabilities.", "Second observable resistance behavior."],
+  "next_actions": ["What, to whom, by when — consequence of inaction.", "Second action same standard.", "Third action same standard."]
+}
+- briefing: 1-2 paragraphs array
+- findings: 2-3, headline + finding keys, most urgent first
+- gaps: HIGH/MEDIUM only, max 4, only if they affected briefing or findings
+- defense: max 3
+- iq_questions: exactly 2
+- watch_for/watch_out: exactly 2 each
+- next_actions: exactly 3
+Return pure JSON only. No backticks, no markdown, no explanation.`;
+
+// ─── SHARED BUTTON ─────────────────────────────
 function Btn({ children, onClick, disabled, variant, style = {} }) {
-  const base = { fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.12em", fontSize: "12px", borderRadius: "3px", padding: "11px 22px", cursor: disabled ? "not-allowed" : "pointer", transition: "all 0.15s", border: "none", outline: "none" };
+  const base = {
+    fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.12em",
+    fontSize: "12px", borderRadius: "3px", padding: "11px 22px",
+    cursor: disabled ? "not-allowed" : "pointer", transition: "all 0.15s",
+    border: "none", outline: "none",
+  };
   const styles = variant === "ghost"
     ? { ...base, background: "transparent", border: `1px solid #333`, color: "#888", ...style }
     : { ...base, background: disabled ? "#333" : RED, color: "#fff", opacity: disabled ? 0.5 : 1, ...style };
   return <button onClick={disabled ? undefined : onClick} style={styles}>{children}</button>;
 }
 
-// ─── WHAT GOES HERE DROPDOWN — exact original ─────────────────────────────────
+// ─── WHAT GOES HERE DROPDOWN ───────────────────
 function WhatGoesHere({ description }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ position: "relative", flexShrink: 0 }}>
-      <button onClick={() => setOpen(o => !o)} style={{ background: open ? "rgba(204,0,0,0.08)" : "transparent", border: `1px solid ${RED}`, borderRadius: "2px", padding: "2px 7px", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", transition: "all 0.15s", lineHeight: 1 }}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ background: open ? "rgba(204,0,0,0.08)" : "transparent", border: `1px solid ${RED}`, borderRadius: "2px", padding: "2px 7px", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", transition: "all 0.15s", lineHeight: 1 }}
         onMouseEnter={e => { e.currentTarget.style.opacity = "0.7"; }}
-        onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}>
+        onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+      >
         <span style={{ fontSize: "8px", color: open ? RED : "#fff", fontFamily: MONO, letterSpacing: "0.08em", whiteSpace: "nowrap", fontWeight: "700" }}>WHAT GOES HERE</span>
         <span style={{ fontSize: "7px", color: open ? RED : "#fff", fontFamily: MONO }}>{open ? "▲" : "▼"}</span>
       </button>
@@ -176,9 +267,9 @@ function WhatGoesHere({ description }) {
   );
 }
 
-// ─── SEARCH REVIEW MODAL — exact original ─────────────────────────────────────
+// ─── SEARCH REVIEW MODAL ───────────────────────
 function SearchReviewModal({ results, onAccept, onClose }) {
-  const found = results.filter(r => r.result?.found === true && r.result?.intel);
+  const found = results.filter(r => r.result?.found);
   const [accepted, setAccepted] = useState(() => {
     const a = {};
     found.forEach(r => { a[r.key] = true; });
@@ -186,7 +277,7 @@ function SearchReviewModal({ results, onAccept, onClose }) {
   });
   const [edited, setEdited] = useState(() => {
     const e = {};
-    found.forEach(r => { e[r.key] = r.result.intel || ""; });
+    found.forEach(r => { e[r.key] = r.result.intel; });
     return e;
   });
 
@@ -206,19 +297,31 @@ function SearchReviewModal({ results, onAccept, onClose }) {
 
   const handleConfirm = () => {
     const updates = {};
-    found.forEach(r => { if (accepted[r.key]) updates[r.key] = edited[r.key] || r.result.intel; });
-    onAccept(updates, found.reduce((acc, r) => { if (accepted[r.key]) acc[r.key] = r.result; return acc; }, {}));
+    found.forEach(r => {
+      if (accepted[r.key]) updates[r.key] = edited[r.key] || r.result.intel;
+    });
+    onAccept(updates, found.reduce((acc, r) => {
+      if (accepted[r.key]) acc[r.key] = r.result;
+      return acc;
+    }, {}));
   };
+
   const acceptedCount = Object.values(accepted).filter(Boolean).length;
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 1000, padding: "20px", overflowY: "auto" }}>
       <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "6px", width: "100%", maxWidth: "680px", marginTop: "20px", marginBottom: "20px" }}>
+
         <div style={{ padding: "20px 24px 16px", borderBottom: `1px solid ${BORDER}` }}>
           <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", marginBottom: "4px" }}>AI INTELLIGENCE SEARCH</div>
-          <div style={{ fontSize: "20px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em" }}>{found.length} {found.length === 1 ? "finding" : "findings"} discovered</div>
-          <div style={{ fontSize: "11px", color: "#fff", fontFamily: MONO, marginTop: "4px" }}>Review each finding. Accept what's useful, skip what isn't. Only accepted intel gets added to your Matrix.</div>
+          <div style={{ fontSize: "20px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em" }}>
+            {found.length} {found.length === 1 ? "finding" : "findings"} discovered
+          </div>
+          <div style={{ fontSize: "11px", color: "#fff", fontFamily: MONO, marginTop: "4px" }}>
+            Review each finding. Accept what's useful, skip what isn't. Only accepted intel gets added to your Matrix.
+          </div>
         </div>
+
         <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: "12px" }}>
           {found.map(r => {
             const meta = MATRIX_META[r.key];
@@ -231,33 +334,53 @@ function SearchReviewModal({ results, onAccept, onClose }) {
                     <span style={{ fontSize: "9px", color: "#fff", fontFamily: MONO, marginLeft: "8px" }}>— {meta?.label}</span>
                   </div>
                   <div style={{ display: "flex", gap: "6px" }}>
-                    <button onClick={() => setAccepted(a => ({ ...a, [r.key]: true }))} style={{ background: isAccepted ? "rgba(34,197,94,0.15)" : "transparent", border: `1px solid ${isAccepted ? "#22c55e" : "#333"}`, borderRadius: "3px", padding: "4px 12px", cursor: "pointer", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", color: isAccepted ? "#22c55e" : "#555" }}>✓ ACCEPT</button>
-                    <button onClick={() => setAccepted(a => ({ ...a, [r.key]: false }))} style={{ background: !isAccepted ? "rgba(204,0,0,0.15)" : "transparent", border: `1px solid ${!isAccepted ? RED : "#333"}`, borderRadius: "3px", padding: "4px 12px", cursor: "pointer", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", color: !isAccepted ? RED : "#555" }}>✕ REJECT</button>
+                    <button onClick={() => setAccepted(a => ({ ...a, [r.key]: true }))}
+                      style={{ background: isAccepted ? "rgba(34,197,94,0.15)" : "transparent", border: `1px solid ${isAccepted ? "#22c55e" : "#333"}`, borderRadius: "3px", padding: "4px 12px", cursor: "pointer", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", color: isAccepted ? "#22c55e" : "#555" }}>
+                      ✓ ACCEPT
+                    </button>
+                    <button onClick={() => setAccepted(a => ({ ...a, [r.key]: false }))}
+                      style={{ background: !isAccepted ? "rgba(204,0,0,0.15)" : "transparent", border: `1px solid ${!isAccepted ? RED : "#333"}`, borderRadius: "3px", padding: "4px 12px", cursor: "pointer", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", color: !isAccepted ? RED : "#555" }}>
+                      ✕ REJECT
+                    </button>
                   </div>
                 </div>
+
                 {r.existing && (
-                  <div style={{ fontSize: "11px", color: "#555", fontFamily: MONO, lineHeight: "1.5", marginBottom: "8px", paddingBottom: "8px", borderBottom: "1px solid #1e1e1e" }}>
+                  <div style={{ fontSize: "11px", color: "#555", fontFamily: MONO, lineHeight: "1.5", marginBottom: "8px", paddingBottom: "8px", borderBottom: `1px solid #1e1e1e` }}>
                     <span style={{ fontSize: "9px", color: "#444", fontFamily: CONDENSED, letterSpacing: "0.1em", display: "block", marginBottom: "3px" }}>YOUR INTEL</span>
                     {r.existing}
                   </div>
                 )}
+
                 <div>
                   <span style={{ fontSize: "9px", color: isAccepted ? "#22c55e" : "#555", fontFamily: CONDENSED, letterSpacing: "0.1em", display: "block", marginBottom: "4px" }}>AI FOUND</span>
-                  <textarea className="matrix-cell" defaultValue={r.result.intel} onChange={e => setEdited(ed => ({ ...ed, [r.key]: e.target.value }))} style={{ minHeight: "56px", opacity: isAccepted ? 1 : 0.5 }} />
+                  <textarea className="matrix-cell" defaultValue={r.result.intel}
+                    onChange={e => setEdited(ed => ({ ...ed, [r.key]: e.target.value }))}
+                    style={{ minHeight: "56px", opacity: isAccepted ? 1 : 0.5 }}
+                  />
                 </div>
-                <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: "1px solid #1e1e1e", display: "flex", alignItems: "center", gap: "8px" }}>
+
+                <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: `1px solid #1e1e1e`, display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ fontSize: "9px", color: "#444", fontFamily: CONDENSED, letterSpacing: "0.1em" }}>SOURCE</span>
-                  {r.result.source === "inferred"
-                    ? <span style={{ fontSize: "10px", color: "#aaa", fontFamily: MONO, fontStyle: "italic" }}>~ inferred from organizational context</span>
-                    : <a href={r.result.source} target="_blank" rel="noopener noreferrer" style={{ fontSize: "10px", color: "#4a9eff", fontFamily: MONO, textDecoration: "none", wordBreak: "break-all" }} onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"} onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>{r.result.source_label || r.result.source}</a>
-                  }
+                  {r.result.source === "inferred" ? (
+                    <span style={{ fontSize: "10px", color: "#aaa", fontFamily: MONO, fontStyle: "italic" }}>~ inferred from organizational context</span>
+                  ) : (
+                    <a href={r.result.source} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: "10px", color: "#4a9eff", fontFamily: MONO, textDecoration: "none", wordBreak: "break-all" }}
+                      onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
+                      onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
+                    >{r.result.source_label || r.result.source}</a>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
+
         <div style={{ padding: "16px 24px", borderTop: `1px solid ${BORDER}`, display: "flex", gap: "10px", alignItems: "center" }}>
-          <Btn onClick={handleConfirm} disabled={acceptedCount === 0} style={{ minWidth: "200px" }}>ADD {acceptedCount} {acceptedCount === 1 ? "FINDING" : "FINDINGS"} TO MATRIX →</Btn>
+          <Btn onClick={handleConfirm} disabled={acceptedCount === 0} style={{ minWidth: "200px" }}>
+            ADD {acceptedCount} {acceptedCount === 1 ? "FINDING" : "FINDINGS"} TO MATRIX →
+          </Btn>
           <Btn variant="ghost" onClick={onClose} style={{ padding: "12px 20px" }}>SKIP ALL</Btn>
           <span style={{ fontSize: "10px", color: "#fff", fontFamily: MONO, marginLeft: "4px" }}>{acceptedCount} of {found.length} accepted</span>
         </div>
@@ -266,42 +389,25 @@ function SearchReviewModal({ results, onAccept, onClose }) {
   );
 }
 
-// ─── ANALYSIS LOADER — exact original ────────────────────────────────────────
-function AnalysisLoader() {
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.93)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 500 }}>
-      <style>{`
-        @keyframes bar1 { 0%, 100% { height: 24px; } 50% { height: 56px; } }
-        @keyframes bar2 { 0%, 100% { height: 40px; } 50% { height: 80px; } }
-        @keyframes bar3 { 0%, 100% { height: 56px; } 50% { height: 108px; } }
-      `}</style>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: "10px", height: "120px", marginBottom: "32px" }}>
-        <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar1 1.1s ease-in-out infinite", animationDelay: "0s" }} />
-        <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar2 1.1s ease-in-out infinite", animationDelay: "0.18s" }} />
-        <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar3 1.1s ease-in-out infinite", animationDelay: "0.36s" }} />
-      </div>
-      <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.22em", marginBottom: "10px" }}>SEMPER SELLING®</div>
-      <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, letterSpacing: "0.06em" }}>Analyzing your intelligence...</div>
-    </div>
-  );
-}
-
-// ─── SCREEN 1: DEAL ENTRY — exact original ───────────────────────────────────
+// ─── SCREEN 1: DEAL ENTRY ──────────────────────
 function DealScreen({ onComplete }) {
   const [form, setForm] = useState({ prospect: "", role: "", company: "", opportunity: "" });
   const [errors, setErrors] = useState({});
+
   const fields = [
-    { key: "prospect", label: "CONTACT NAME", textarea: false },
-    { key: "role", label: "TITLE / ROLE", textarea: false },
-    { key: "company", label: "COMPANY", textarea: false },
-    { key: "opportunity", label: "OPPORTUNITY (optional)", textarea: true },
+    { key: "prospect",    label: "CONTACT NAME",           textarea: false },
+    { key: "role",        label: "TITLE / ROLE",           textarea: false },
+    { key: "company",     label: "COMPANY",                textarea: false },
+    { key: "opportunity", label: "OPPORTUNITY (optional)", textarea: true  },
   ];
+
   const handleSubmit = () => {
     const errs = {};
     ["prospect", "role", "company"].forEach(k => { if (!form[k].trim()) errs[k] = true; });
     if (Object.keys(errs).length) { setErrors(errs); return; }
     onComplete(form);
   };
+
   return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
       <div style={{ width: "100%", maxWidth: "560px" }}>
@@ -310,7 +416,9 @@ function DealScreen({ onComplete }) {
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
             <div style={{ fontSize: "36px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em", lineHeight: 1.1 }}>CONNECTION INTELLIGENCE<br />MATRIX</div>
             <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginTop: "2px", opacity: 0.9 }}>
-              {[0,1,2].map(row => [0,1,2].map(col => (<rect key={`${row}-${col}`} x={col*24+2} y={row*24+2} width="20" height="20" rx="2" fill="none" stroke="white" strokeWidth="1.5"/>)))}
+              {[0,1,2].map(row => [0,1,2].map(col => (
+                <rect key={`${row}-${col}`} x={col * 24 + 2} y={row * 24 + 2} width="20" height="20" rx="2" fill="none" stroke="white" strokeWidth="1.5"/>
+              )))}
             </svg>
           </div>
           <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, marginTop: "10px", lineHeight: 1.6 }}>Build your intel. Walk in masterfully prepared.</div>
@@ -341,8 +449,8 @@ function DealScreen({ onComplete }) {
               </div>
             ))}
           </div>
-          <div style={{ marginTop: "24px" }}>
-            <Btn onClick={handleSubmit} style={{ width: "100%", padding: "13px 22px", fontSize: "13px" }}>BUILD MY MATRIX →</Btn>
+          <div style={{ marginTop: "22px" }}>
+            <Btn onClick={handleSubmit} style={{ width: "100%", padding: "14px" }}>BUILD THE MATRIX →</Btn>
           </div>
         </div>
       </div>
@@ -350,77 +458,129 @@ function DealScreen({ onComplete }) {
   );
 }
 
-// ─── SCREEN 2: MATRIX EDITOR ──────────────────────────────────────────────────
+// ─── ANALYSIS LOADER ───────────────────────────
+function AnalysisLoader() {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.93)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 500 }}>
+      <style>{`
+        @keyframes bar1 { 0%, 100% { height: 24px; } 50% { height: 56px; } }
+        @keyframes bar2 { 0%, 100% { height: 40px; } 50% { height: 80px; } }
+        @keyframes bar3 { 0%, 100% { height: 56px; } 50% { height: 108px; } }
+      `}</style>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: "10px", height: "120px", marginBottom: "32px" }}>
+        <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar1 1.1s ease-in-out infinite", animationDelay: "0s" }} />
+        <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar2 1.1s ease-in-out infinite", animationDelay: "0.18s" }} />
+        <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar3 1.1s ease-in-out infinite", animationDelay: "0.36s" }} />
+      </div>
+      <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.22em", marginBottom: "10px" }}>SEMPER SELLING®</div>
+      <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, letterSpacing: "0.06em" }}>Analyzing your intelligence...</div>
+    </div>
+  );
+}
+
+// ─── SCREEN 2: MATRIX EDITOR ──────────────────
 function MatrixScreen({ deal, onComplete, onBack }) {
-  const [cells, setCells]                   = useState(emptyMatrix);
-  const [focused, setFocused]               = useState(null);
-  const [analyzing, setAnalyzing]           = useState(false);
-  const [searching, setSearching]           = useState(false);
+  const [cells, setCells] = useState(emptyMatrix());
+  const [focused, setFocused] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [searchProgress, setSearchProgress] = useState(null);
-  const [searchResults, setSearchResults]   = useState(null);
-  const [searchRan, setSearchRan]           = useState(false);
-  const [aiSources, setAiSources]           = useState({});
-  const [uploading, setUploading]           = useState(false);
-  const [uploadMsg, setUploadMsg]           = useState(null);
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchRan, setSearchRan] = useState(false);
+  const [aiSources, setAiSources] = useState({});
+  const [uploading, setUploading] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState(null);
   const fileRef = useRef(null);
 
-  const filled = Object.values(cells).filter(v => v.trim().length > 0).length;
+  // Cell prompts — what to search for in each cell
+  const CELL_PROMPTS = {
+    "CURRENT STATE|ROLE": `Search for ${deal.prospect}'s current role, title, and decision-making authority at ${deal.company}. What decisions can they make independently? What requires sign-off above them? Look for their LinkedIn profile, company bio, press releases, or any public source confirming their scope and authority.`,
+    "CURRENT STATE|REACH": `Who does ${deal.prospect} (${deal.role} at ${deal.company}) publicly interact with, influence, or report to? Look for board memberships, advisory roles, conference panels, co-authored content, or any public mention of their professional relationships and network.`,
+    "CURRENT STATE|RESULTS": `What performance pressures or business challenges is ${deal.prospect} at ${deal.company} dealing with right now? Look for earnings calls, press releases, industry news, analyst reports, or public signals about what they or their company is being measured on.`,
+    "FUTURE STATE|ROLE": `What is ${deal.prospect}'s career trajectory at ${deal.company} or in their industry? Look for recent promotions, expanded responsibilities, new titles, speaking engagements, industry awards, board appointments, or signals about where they are heading professionally.`,
+    "FUTURE STATE|REACH": `What new professional relationships or networks is ${deal.prospect} at ${deal.company} actively building? Look for recent conference appearances, new board or advisory roles, industry association involvement, new partnerships announced, or any activity suggesting deliberate relationship expansion.`,
+    "FUTURE STATE|RESULTS": `What public commitments, stated goals, or strategic promises has ${deal.prospect} at ${deal.company} made? Look for quotes in press releases, earnings calls, investor presentations, interviews, conference keynotes, or LinkedIn posts where they personally committed to specific outcomes or targets.`,
+    "NEEDS|ROLE": `What capability, skill, or authority gaps exist for ${deal.company}'s ${deal.role} function right now? Look for job postings revealing what they are hiring for, technology gaps mentioned in industry coverage, transformation initiatives announced, or commentary about where ${deal.company} needs to improve.`,
+    "NEEDS|REACH": `What organizational or stakeholder alignment challenges is ${deal.company} facing that would affect ${deal.prospect} as ${deal.role}? Look for leadership changes, restructuring announcements, M&A activity, or any public signals of internal tension or alignment gaps affecting this role.`,
+    "NEEDS|RESULTS": `What resources, technology, budget, or capability does ${deal.company} need in the ${deal.role} function to hit their stated goals? Look for RFPs, technology partnerships announced, hiring patterns, analyst recommendations, or public signals about investment priorities or resource requirements.`,
+  };
 
-  // ── SEARCH: sequential, one cell at a time ────────────────────────────────
-  const handleSearch = useCallback(async () => {
+  // ── AI SEARCH ──────────────────────────────────
+  const handleSearch = async () => {
     setSearching(true);
-    setSearchProgress("Initializing...");
+    setSearchProgress("Searching public sources...");
+
     const allKeys = [];
     MATRIX_ROWS.forEach(row => MATRIX_COLS.forEach(col => allKeys.push({ key: `${row}|${col}`, row, col })));
-    const results = [];
 
-    for (let i = 0; i < allKeys.length; i++) {
-      const { key, row, col } = allKeys[i];
+    const results = [];
+    let completed = 0;
+
+    await Promise.all(allKeys.map(async ({ key, row, col }) => {
       const existing = cells[key].trim();
-      setSearchProgress(`${i + 1} of 9 — ${MATRIX_META[key].label}...`);
+      const userContent = CELL_PROMPTS[key] + (existing ? `\n\nNote: The rep already knows this about the cell: "${existing}". Only surface new, additive information not already captured above.` : "");
 
       try {
-        const data = await callAPI({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1000,
-          system: SEARCH_SYSTEM,
-          tools: [{ type: "web_search_20250305", name: "web_search" }],
-          messages: [{
-            role: "user",
-            content: buildSearchPrompt(deal, key) + (existing ? `\n\nNote: The rep already has this intel: "${existing}". Only surface NEW additive information not already captured.` : ""),
-          }],
+        const resp = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 600,
+            system: SEARCH_SYSTEM_PROMPT,
+            tools: [{ type: "web_search_20250305", name: "web_search" }],
+            messages: [{ role: "user", content: userContent }],
+          }),
         });
 
-        const raw = extractLastText(data);
-        if (!raw) { results.push({ key, row, col, existing, result: { found: false } }); continue; }
+        const data = await resp.json();
 
-        const jsonStr = extractJSON(raw);
-        if (!jsonStr) { results.push({ key, row, col, existing, result: { found: false } }); continue; }
+        // Web search returns multiple content blocks — find the LAST text block
+        // which contains the final JSON response after web search tool use
+        const textBlocks = (data.content || []).filter(b => b.type === "text");
+        const lastText = textBlocks[textBlocks.length - 1];
 
-        let parsed;
-        try { parsed = JSON.parse(jsonStr); }
-        catch { results.push({ key, row, col, existing, result: { found: false } }); continue; }
+        if (lastText && lastText.text) {
+          // Clean citation tags injected by web search
+          const cleaned = lastText.text
+            .replace(/]*>|<\/antml:cite>/g, "")
+            .replace(/```json|```/g, "")
+            .trim();
 
-        if (parsed.intel) parsed.intel = parsed.intel.replace(/<[^>]+>/g, "").trim();
-        results.push({ key, row, col, existing, result: parsed });
-
-      } catch (err) {
-        console.error(`Search error for ${key}:`, err.message);
+          // Extract JSON — find the first { } block
+          const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            try {
+              const parsed = JSON.parse(jsonMatch[0]);
+              if (parsed.intel) {
+                parsed.intel = parsed.intel.replace(/<[^>]*>/g, "").trim();
+              }
+              results.push({ key, row, col, existing, result: parsed });
+            } catch {
+              results.push({ key, row, col, existing, result: { found: false } });
+            }
+          } else {
+            results.push({ key, row, col, existing, result: { found: false } });
+          }
+        } else {
+          results.push({ key, row, col, existing, result: { found: false } });
+        }
+      } catch {
         results.push({ key, row, col, existing, result: { found: false } });
       }
 
-      // Pause between calls — respects rate limits, prevents parallel failures
-      if (i < allKeys.length - 1) await new Promise(r => setTimeout(r, 400));
-    }
+      completed++;
+      setSearchProgress(`Searching... ${completed} of 9 complete`);
+    }));
 
     setSearching(false);
     setSearchProgress(null);
     setSearchRan(true);
     setSearchResults(results);
-  }, [cells, deal]);
+  };
 
-  // ── ACCEPT RESULTS ────────────────────────────────────────────────────────
-  const handleAcceptResults = useCallback((updates, sources) => {
+  // ── ACCEPT RESULTS ─────────────────────────────
+  const handleAcceptResults = (updates, sources) => {
     setCells(prev => {
       const next = { ...prev };
       Object.entries(updates).forEach(([key, intel]) => {
@@ -431,32 +591,37 @@ function MatrixScreen({ deal, onComplete, onBack }) {
     });
     setAiSources(prev => ({ ...prev, ...sources }));
     setSearchResults(null);
-  }, []);
+  };
 
-  // ── GENERATE ANALYSIS ─────────────────────────────────────────────────────
-  const handleGenerate = useCallback(async () => {
+  // ── GENERATE ANALYSIS ──────────────────────────
+  const filled = Object.values(cells).filter(v => v.trim().length > 0).length;
+
+  const handleGenerate = async () => {
     if (filled === 0 || analyzing) return;
     setAnalyzing(true);
     const matrixText = matrixToText(cells, deal);
     try {
-      const data = await callAPI({
-        model: "claude-sonnet-4-6",
-        max_tokens: 2500,
-        messages: [{ role: "user", content: ANALYSIS_PROMPT(matrixText, deal) }],
+      const resp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 2000,
+          messages: [{ role: "user", content: ANALYSIS_PROMPT(matrixText, deal) }],
+        }),
       });
-      const raw = extractLastText(data);
-      const jsonStr = extractJSON(raw);
-      let analysis = null;
-      if (jsonStr) { try { analysis = JSON.parse(jsonStr); } catch { analysis = null; } }
+      const data = await resp.json();
+      const raw = (data.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim();
+      let analysis = {};
+      try { analysis = JSON.parse(raw); } catch { analysis = null; }
       onComplete(cells, matrixText, analysis, aiSources);
-    } catch (err) {
-      console.error("Analysis error:", err);
+    } catch {
       onComplete(cells, matrixToText(cells, deal), null, aiSources);
     }
     setAnalyzing(false);
-  }, [cells, deal, filled, analyzing, aiSources, onComplete]);
+  };
 
-  // ── IMAGE UPLOAD ──────────────────────────────────────────────────────────
+  // ── IMAGE UPLOAD ───────────────────────────────
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -467,26 +632,26 @@ function MatrixScreen({ deal, onComplete, onBack }) {
       const base64 = ev.target.result.split(",")[1];
       const mediaType = file.type || "image/jpeg";
       try {
-        const data = await callAPI({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1200,
-          messages: [{ role: "user", content: [
-            { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-            { type: "text", text: `This is a Connection Intelligence Matrix — 9-box grid with columns: ROLE, REACH, RESULTS and rows: CURRENT STATE, FUTURE STATE, NEEDS. Extract all cell content. Return ONLY valid JSON:\n{"CURRENT STATE|ROLE":"","CURRENT STATE|REACH":"","CURRENT STATE|RESULTS":"","FUTURE STATE|ROLE":"","FUTURE STATE|REACH":"","FUTURE STATE|RESULTS":"","NEEDS|ROLE":"","NEEDS|REACH":"","NEEDS|RESULTS":""}` },
-          ]}],
+        const resp = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1200,
+            messages: [{ role: "user", content: [
+              { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+              { type: "text", text: `This is a Connection Intelligence Matrix — 9-box grid with columns: ROLE, REACH, RESULTS and rows: CURRENT STATE, FUTURE STATE, NEEDS. Extract all cell content. Return ONLY valid JSON:\n{"CURRENT STATE|ROLE":"","CURRENT STATE|REACH":"","CURRENT STATE|RESULTS":"","FUTURE STATE|ROLE":"","FUTURE STATE|REACH":"","FUTURE STATE|RESULTS":"","NEEDS|ROLE":"","NEEDS|REACH":"","NEEDS|RESULTS":""}` }
+            ]}],
+          }),
         });
-        const raw = extractLastText(data);
-        const jsonStr = extractJSON(raw);
-        if (jsonStr) {
-          const parsed = JSON.parse(jsonStr);
-          const newCells = emptyMatrix();
-          Object.keys(newCells).forEach(k => { if (parsed[k]) newCells[k] = parsed[k]; });
-          setCells(newCells);
-          const count = Object.values(parsed).filter(v => v).length;
-          setUploadMsg({ ok: true, text: `${count} of 9 cells extracted. Review and edit below.` });
-        } else {
-          setUploadMsg({ ok: false, text: "Couldn't read the image. Try a clearer photo or fill in manually." });
-        }
+        const data = await resp.json();
+        const raw = (data.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim();
+        const parsed = JSON.parse(raw);
+        const newCells = emptyMatrix();
+        Object.keys(newCells).forEach(k => { if (parsed[k]) newCells[k] = parsed[k]; });
+        setCells(newCells);
+        const count = Object.values(parsed).filter(v => v).length;
+        setUploadMsg({ ok: true, text: `${count} of 9 cells extracted. Review and edit below.` });
       } catch {
         setUploadMsg({ ok: false, text: "Couldn't read the image. Try a clearer photo or fill in manually." });
       }
@@ -507,9 +672,12 @@ function MatrixScreen({ deal, onComplete, onBack }) {
       `}</style>
 
       {analyzing && <AnalysisLoader />}
-      {searchResults !== null && <SearchReviewModal results={searchResults} onAccept={handleAcceptResults} onClose={() => setSearchResults(null)} />}
 
-      {/* Header — exact original */}
+      {searchResults !== null && (
+        <SearchReviewModal results={searchResults} onAccept={handleAcceptResults} onClose={() => setSearchResults(null)} />
+      )}
+
+      {/* Header */}
       <div style={{ padding: "14px 28px", borderBottom: `1px solid ${BORDER}`, background: SURFACE, display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
         <Btn variant="ghost" onClick={onBack} style={{ padding: "6px 12px", fontSize: "11px" }}>← BACK</Btn>
         <div style={{ width: "1px", height: "24px", background: "#333" }} />
@@ -535,7 +703,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
             </div>
           )}
 
-          {/* Column headers — exact original: red background */}
+          {/* Column headers */}
           <div style={{ display: "grid", gridTemplateColumns: "130px 1fr 1fr 1fr", gap: "5px", marginBottom: "5px" }}>
             <div />
             {MATRIX_COLS.map(col => (
@@ -543,7 +711,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
             ))}
           </div>
 
-          {/* Grid rows — exact original: red row labels, SURFACE cell bg */}
+          {/* Grid rows */}
           {MATRIX_ROWS.map(row => (
             <div key={row} style={{ display: "grid", gridTemplateColumns: "130px 1fr 1fr 1fr", gap: "5px", marginBottom: "5px" }}>
               <div style={{ background: RED, borderRadius: "3px", display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 8px", textAlign: "center", fontSize: "11px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", lineHeight: "1.35" }}>{row}</div>
@@ -557,12 +725,16 @@ function MatrixScreen({ deal, onComplete, onBack }) {
                   <div key={key} style={{ background: SURFACE, border: `1px solid ${isFocused ? RED : hasValue ? "#383838" : "#1e1e1e"}`, borderRadius: "3px", padding: "14px 14px 12px 14px", transition: "border-color 0.2s", display: "flex", flexDirection: "column", gap: "6px", minHeight: "130px" }}>
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "6px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
-                        <div style={{ fontSize: "9px", color: isFocused ? RED : "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", transition: "color 0.2s", textTransform: "uppercase", paddingTop: "2px" }}>{meta.label}</div>
+                        <div style={{ fontSize: "9px", color: isFocused ? RED : "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", transition: "color 0.2s", textTransform: "uppercase", paddingTop: "2px" }}>
+                          {meta.label}
+                        </div>
                         {hasAiSource && aiSources[key].source !== "inferred" && (
-                          <a href={aiSources[key].source} target="_blank" rel="noopener noreferrer" title={`Source: ${aiSources[key].source_label || aiSources[key].source}`}
+                          <a href={aiSources[key].source} target="_blank" rel="noopener noreferrer"
+                            title={`Source: ${aiSources[key].source_label || aiSources[key].source}`}
                             style={{ fontSize: "8px", color: "#4a9eff", fontFamily: MONO, textDecoration: "none", paddingTop: "2px", whiteSpace: "nowrap" }}
                             onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
-                            onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>↗ source</a>
+                            onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
+                          >↗ source</a>
                         )}
                         {hasAiSource && aiSources[key].source === "inferred" && (
                           <span style={{ fontSize: "8px", color: "#aaa", fontFamily: MONO, paddingTop: "2px", fontStyle: "italic" }}>~ inferred</span>
@@ -570,14 +742,17 @@ function MatrixScreen({ deal, onComplete, onBack }) {
                       </div>
                       <WhatGoesHere description={meta.description} />
                     </div>
+
                     <textarea className="matrix-cell" value={cells[key]}
                       onChange={e => setCells(prev => ({ ...prev, [key]: e.target.value }))}
                       onFocus={() => setFocused(key)}
                       onBlur={() => setFocused(null)}
                       placeholder={meta.hint}
                     />
+
+                    {/* Rep intelligence prompt — shows after search runs on empty cells */}
                     {searchRan && !cells[key]?.trim() && !hasAiSource && (
-                      <div style={{ marginTop: "4px", padding: "7px 10px", background: "rgba(204,0,0,0.05)", border: "1px solid rgba(204,0,0,0.2)", borderRadius: "2px" }}>
+                      <div style={{ marginTop: "4px", padding: "7px 10px", background: "rgba(204,0,0,0.05)", border: `1px solid rgba(204,0,0,0.2)`, borderRadius: "2px" }}>
                         <div style={{ fontSize: "8px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "3px" }}>WHAT DO YOU KNOW?</div>
                         <div style={{ fontSize: "10px", color: "#aaa", fontFamily: MONO, lineHeight: "1.6" }}>{meta.repPrompt}</div>
                       </div>
@@ -588,15 +763,17 @@ function MatrixScreen({ deal, onComplete, onBack }) {
             </div>
           ))}
 
-          {/* Action bar — exact original layout */}
+          {/* Action bar */}
           <div style={{ marginTop: "22px", paddingTop: "18px", borderTop: "1px solid #1e1e1e" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px", padding: "14px 16px", background: "#0f0f0f", border: "1px solid #1e1e1e", borderRadius: "4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px", padding: "14px 16px", background: "#0f0f0f", border: `1px solid #1e1e1e`, borderRadius: "4px" }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: "11px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", marginBottom: "2px" }}>AI INTELLIGENCE SEARCH</div>
-                <div style={{ fontSize: "10px", color: "#fff", fontFamily: MONO }}>Searches public sources for {deal.prospect} at {deal.company}</div>
+                <div style={{ fontSize: "10px", color: "#fff", fontFamily: MONO }}>
+                  Searches public sources for {deal.prospect} at {deal.company}
+                </div>
               </div>
               <button onClick={handleSearch} disabled={searching}
-                style={{ background: searching ? "rgba(74,158,255,0.08)" : "#1a1a1a", border: "1px solid #4a9eff", color: "#4a9eff", borderRadius: "3px", padding: "9px 18px", cursor: searching ? "not-allowed" : "pointer", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", whiteSpace: "nowrap", transition: "all 0.3s", minWidth: "200px" }}
+                style={{ background: searching ? "rgba(74,158,255,0.08)" : "#1a1a1a", border: `1px solid #4a9eff`, color: "#4a9eff", borderRadius: "3px", padding: "9px 18px", cursor: searching ? "not-allowed" : "pointer", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", whiteSpace: "nowrap", transition: "all 0.3s", minWidth: "200px" }}
                 onMouseEnter={e => { if (!searching) e.currentTarget.style.background = "rgba(74,158,255,0.1)"; }}
                 onMouseLeave={e => { if (!searching) e.currentTarget.style.background = "#1a1a1a"; }}
               >
@@ -605,6 +782,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
                   : "◈ SEARCH THE WEB"}
               </button>
             </div>
+
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
               <Btn onClick={handleGenerate} disabled={filled === 0 || analyzing} style={{ minWidth: "300px" }}>
                 {analyzing ? "[ Analyzing your intelligence... ]" : "GENERATE MATRIX ANALYSIS →"}
@@ -622,17 +800,18 @@ function MatrixScreen({ deal, onComplete, onBack }) {
   );
 }
 
-// ─── SCREEN 3: ANALYSIS REPORT — exact original ──────────────────────────────
+// ─── SCREEN 3: ANALYSIS REPORT ─────────────────
 function AnalysisScreen({ deal, analysis, aiSources, onBack, onRedo }) {
   const hasAnalysis = !!analysis;
 
   const exportHTML = useCallback(() => {
     if (!analysis) return;
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Matrix Analysis — ${deal.prospect}</title><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:'IBM Plex Mono',monospace;padding:40px 48px;max-width:1000px;margin:0 auto;line-height:1.6}</style></head><body>
-<div style="font-size:10px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.18em;margin-bottom:8px;">CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
+<div style="font-size:10px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.18em;margin-bottom:8px;">◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
 <div style="font-size:38px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;line-height:1;">${deal.prospect.toUpperCase()}</div>
 <div style="font-size:13px;color:#fff;font-family:'IBM Plex Mono',monospace;margin-top:6px;margin-bottom:28px;">${deal.role}${deal.company ? ` · ${deal.company}` : ""}${deal.opportunity ? ` · ${deal.opportunity}` : ""}</div>
-${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;padding:10px 16px;margin-bottom:32px;font-size:13px;color:#ccc;font-style:italic;">${analysis.matrix_health_note}</div>` : ""}
+${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;padding:10px 16px;margin-bottom:32px;font-size:13px;color:#ccc;font-style:italic;">● ${analysis.matrix_health_note}</div>` : ""}
+${((Array.isArray(analysis.briefing) ? analysis.briefing.length : 0) || (analysis.findings||[]).length) ? `<div style="margin-bottom:32px;"><div style="display:inline-flex;align-items:center;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:20px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">WHAT THE MATRIX IS TELLING YOU</span></div>${(Array.isArray(analysis.briefing)?analysis.briefing:[]).map(p=>`<p style="font-size:13px;color:#ccc;line-height:1.85;margin-bottom:18px;font-style:italic;">${p}</p>`).join("")}${(analysis.findings||[]).map(f=>{const h=typeof f==="object"?f.headline:null;const t=typeof f==="object"?f.finding:f;return `<div style="margin-bottom:20px;">${h?`<div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.16em;margin-bottom:7px;">${h}</div>`:""}<p style="font-size:13px;color:#ccc;line-height:1.75;">${t}</p></div>`;}).join("")}</div>`:""}
 </body></html>`;
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
@@ -644,7 +823,7 @@ ${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;paddi
   return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", flexDirection: "column" }}>
 
-      {/* Header — exact original */}
+      {/* Header */}
       <div style={{ padding: "14px 28px", borderBottom: `1px solid ${BORDER}`, background: SURFACE, display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
         <Btn variant="ghost" onClick={onBack} style={{ padding: "6px 12px", fontSize: "11px" }}>← BACK</Btn>
         <div style={{ width: "1px", height: "24px", background: "#333" }} />
@@ -652,29 +831,37 @@ ${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;paddi
         <span style={{ color: "#fff", fontSize: "11px", fontFamily: MONO }}>{deal.prospect} · {deal.company}</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
           {hasAnalysis && (
-            <button onClick={exportHTML} style={{ background: "none", border: "1px solid #333", color: "#888", borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.15s" }}
+            <button onClick={exportHTML}
+              style={{ background: "none", border: `1px solid #333`, color: "#888", borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.15s" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#22c55e"; e.currentTarget.style.color = "#22c55e"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#888"; }}>↓ EXPORT</button>
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#888"; }}
+            >↓ EXPORT</button>
           )}
           {hasAnalysis && (
-            <button onClick={() => window.print()} style={{ background: "none", border: "1px solid #333", color: "#888", borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.15s" }}
+            <button onClick={() => window.print()}
+              style={{ background: "none", border: `1px solid #333`, color: "#888", borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.15s" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = RED; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#888"; }}>↓ SAVE PDF</button>
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#888"; }}
+            >↓ SAVE PDF</button>
           )}
-          <button onClick={onRedo} style={{ background: "none", border: "1px solid #333", color: "#888", borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.15s" }}
+          <button onClick={onRedo}
+            style={{ background: "none", border: `1px solid #333`, color: "#888", borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.15s" }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = RED; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#888"; }}>↺ RE-ANALYZE</button>
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#888"; }}
+          >↺ RE-ANALYZE</button>
         </div>
       </div>
 
       <div style={{ flex: 1, padding: "40px 48px", overflowY: "auto", maxWidth: "1000px", width: "100%" }}>
 
-        {/* Report header — exact original */}
+        {/* Report header */}
         <div style={{ marginBottom: "8px", fontSize: "10px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.18em" }}>◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
         <div style={{ fontSize: "42px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.04em", lineHeight: 1, marginBottom: "10px" }}>{deal.prospect.toUpperCase()}</div>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
           <div style={{ width: "3px", height: "16px", background: RED, borderRadius: "1px", flexShrink: 0 }} />
-          <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO }}>{deal.role}{deal.company ? ` · ${deal.company}` : ""}{deal.opportunity ? ` · ${deal.opportunity}` : ""}</div>
+          <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO }}>
+            {deal.role}{deal.company ? ` · ${deal.company}` : ""}{deal.opportunity ? ` · ${deal.opportunity}` : ""}
+          </div>
         </div>
 
         {!hasAnalysis ? (
@@ -684,6 +871,7 @@ ${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;paddi
           </div>
         ) : (
           <div>
+
             {/* Matrix Health */}
             {analysis.matrix_health_note && (
               <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "36px", paddingBottom: "28px", borderBottom: "1px solid #1a1a1a" }}>
@@ -703,7 +891,7 @@ ${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;paddi
                 ))}
                 {(analysis.findings||[]).length > 0 && (
                   <div style={{ marginTop: "28px", paddingTop: "24px", borderTop: "1px solid #1e1e1e" }}>
-                    {(analysis.findings||[]).map((f, i) => {
+                            {(analysis.findings||[]).map((f, i) => {
                       const headline = typeof f === "object" ? f.headline : null;
                       const text = typeof f === "object" ? f.finding : f;
                       return (
@@ -825,6 +1013,7 @@ ${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;paddi
               <div style={{ fontSize: "10px", color: "#555", fontFamily: MONO }}>Semper Selling® Connection Intelligence Matrix — Semper Mind © 2026</div>
               <div style={{ fontSize: "10px", color: "#555", fontFamily: MONO }}>{deal.prospect} · {deal.company}</div>
             </div>
+
           </div>
         )}
       </div>
@@ -832,20 +1021,51 @@ ${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;paddi
   );
 }
 
-// ─── APP ROOT ─────────────────────────────────────────────────────────────────
+// ─── APP ROOT ──────────────────────────────────
 export default function App() {
   const [screen, setScreen] = useState("deal");
-  const [deal, setDeal]     = useState(null);
+  const [deal, setDeal] = useState(null);
   const [result, setResult] = useState(null);
 
   if (screen === "deal") {
-    return <div><style>{FONTS}</style><DealScreen onComplete={d => { setDeal(d); setScreen("matrix"); }} /></div>;
+    return (
+      <div>
+        <style>{FONTS}</style>
+        <DealScreen onComplete={d => { setDeal(d); setScreen("matrix"); }} />
+      </div>
+    );
   }
+
   if (screen === "matrix") {
-    return <div><style>{FONTS}</style><MatrixScreen deal={deal} onBack={() => setScreen("deal")} onComplete={(cells, matrixText, analysis, aiSources) => { setResult({ cells, matrixText, analysis, aiSources }); setScreen("analysis"); }} /></div>;
+    return (
+      <div>
+        <style>{FONTS}</style>
+        <MatrixScreen
+          deal={deal}
+          onBack={() => setScreen("deal")}
+          onComplete={(cells, matrixText, analysis, aiSources) => {
+            setResult({ cells, matrixText, analysis, aiSources });
+            setScreen("analysis");
+          }}
+        />
+      </div>
+    );
   }
+
   if (screen === "analysis") {
-    return <div><style>{FONTS}</style><AnalysisScreen deal={deal} analysis={result?.analysis} aiSources={result?.aiSources} onBack={() => setScreen("matrix")} onRedo={() => { setDeal(null); setResult(null); setScreen("deal"); }} /></div>;
+    return (
+      <div>
+        <style>{FONTS}</style>
+        <AnalysisScreen
+          deal={deal}
+          analysis={result?.analysis}
+          aiSources={result?.aiSources}
+          onBack={() => setScreen("matrix")}
+          onRedo={() => setScreen("matrix")}
+        />
+      </div>
+    );
   }
+
   return null;
 }
