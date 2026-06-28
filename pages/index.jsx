@@ -1,9 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap');`;
 
 const RED = "#CC0000";
-const DARK_RED = "#aa0000";
 const BG = "#0d0d0d";
 const SURFACE = "#141414";
 const BORDER = "#2a2a2a";
@@ -89,185 +88,34 @@ const matrixToText = (cells, deal) => {
   return out;
 };
 
-// ─── TWO-PHASE SEARCH ──────────────────────────
+// ─── SEARCH SYSTEM PROMPT ─────────────────────
+const SEARCH_SYSTEM_PROMPT = `You are a sales intelligence researcher for the Semper Selling® methodology. Your job is to search the web and find publicly verifiable information about a specific person to populate one cell of a Connection Intelligence Matrix.
 
-// ─── FOUR-PHASE SEARCH ARCHITECTURE ───────────
+PRIORITY ORDER:
+1. Person-level intel first — search for the individual by name. What have they said, done, committed to, or been recognized for publicly?
+2. Company-level intel second — only if person-level searches come up short, use organizational context to fill the gap.
+3. Organizational inference last — if no public sources exist, infer from the role type and company context. Label clearly as inferred.
 
-const QUERY_BUILDER_PROMPT = (name, role, company, existingMatrix) => `You are an elite B2B sales intelligence researcher. Your mission is to find everything publicly available about a specific individual — ${name}, ${role} at ${company}. Person-level intelligence is the priority. Company intel fills gaps only when person searches come up short.
+SEARCH BEHAVIOR:
+- Always search for the person by name first
+- Use the web_search tool to find current, relevant public information
+- Look for LinkedIn profiles, press releases, news articles, earnings calls, conference appearances, published papers, awards, interviews, and company announcements
+- Only use information from 2025 or 2026 — discard anything older
+- Strip all citation tags like <cite> from your output
 
-Contact: ${name}
-Role: ${role}
-Company: ${company}
-Current date: June 2026 — only surface intel from 2025 or 2026
-What the rep already knows:
-${existingMatrix}
+OUTPUT FORMAT — return ONLY valid JSON, no markdown, no backticks, no explanation:
 
-STEP 1 — ASSESS THE PERSON
-Before constructing queries, determine what type of person this is based on their role and company. This determines which sources are most likely to contain meaningful intelligence about them specifically.
+When you find sourced information:
+{"found": true, "intel": "1-2 sentences of specific, factual intelligence", "source": "https://actual-url.com", "source_label": "Source Name · 2025"}
 
-ROLE TYPE ROUTING — match the role to the highest-yield person-level sources:
+When you find nothing but can infer from role/company context:
+{"found": true, "intel": "Inferred: 1-2 sentences based on role type and organizational context", "source": "inferred", "source_label": "Inferred from organizational context"}
 
-EXECUTIVE / C-SUITE (CEO, CFO, CRO, COO, CMO, CTO, CHRO, President, EVP, SVP):
-- Earnings calls and investor presentations where they spoke
-- Major business press: Forbes, Fortune, Bloomberg, WSJ, FT, Reuters
-- Conference keynotes: their industry's flagship events
-- Podcast appearances on leadership, business, or industry shows
-- LinkedIn thought leadership posts and articles
-- Board memberships and advisory roles
-- Company press releases announcing their appointments or statements
+When you find nothing at all:
+{"found": false}`;
 
-COMMERCIAL LEADER (VP Sales, VP Marketing, VP Revenue, Director of Sales, Head of Growth):
-- Sales and marketing conference appearances: Salesforce Dreamforce, HubSpot INBOUND, Gartner CSO&SCO, SaaStr
-- Revenue leadership podcast appearances
-- LinkedIn activity — they tend to be active
-- Published articles on sales, revenue, go-to-market topics
-- Awards: Sales leader of the year, top revenue leader lists
-- Company announcements about their go-to-market changes
-
-TECHNICAL LEADER (CTO, VP Engineering, Chief Architect, Director of Engineering, Head of Technology):
-- GitHub profile and open source contributions
-- Technical conference appearances: re:Invent, KubeCon, QCon, DockerCon, industry-specific tech events
-- Engineering blog posts on company tech blog
-- Stack Overflow, dev.to, Medium technical articles
-- Patents filed under their name: site:patents.google.com
-- Tech podcast appearances
-
-OPERATIONS / SUPPLY CHAIN / PROCUREMENT (COO, VP Operations, VP Supply Chain, CPO, Director of Procurement):
-- Industry association involvement: ASCM, ISM, CSCMP, APICS conference appearances
-- Supply chain and operations trade press: Supply Chain Dive, Logistics Management, DC Velocity
-- Procurement publications: Spend Matters, Procurement Leaders
-- LinkedIn — procurement leaders are often active
-- Company operational announcements they're associated with
-
-FINANCE LEADER (CFO, VP Finance, Controller, Treasurer, Director of FP&A):
-- CFO conference appearances: Gartner CFO & Finance Executive Summit, CFO Leadership Council
-- Finance publications: CFO Magazine, CFO.com, Finance & Commerce
-- Earnings call transcripts where they spoke
-- SEC filings that mention them by name
-- LinkedIn and finance community content
-
-HR / TALENT / L&D (CHRO, VP People, VP HR, CLO, Chief People Officer, Director of Learning):
-- HR conference appearances: SHRM Annual, ATD International, HR Tech
-- HR trade press: HR Executive, People Management, SHRM publications, Training Magazine
-- LinkedIn — HR leaders are frequently active
-- Talent and culture podcast appearances
-- Published articles on people, culture, learning topics
-
-TECHNICAL / RESEARCH PROFESSIONAL (Engineer, Scientist, Researcher, Technical Director, Principal Engineer):
-- Published papers: site:scholar.google.com OR site:researchgate.net OR site:osti.gov OR site:dtic.mil
-- Conference proceedings: IEEE, AIAA, SAE, SPIE, ACM, industry-specific technical conferences
-- Patents: site:patents.google.com
-- University alumni profiles or faculty pages
-- Technical association memberships: IEEE, ASME, AIAA member listings
-- Government contract databases if defense/government adjacent: site:usaspending.gov
-
-HEALTHCARE / CLINICAL (CMO, CNO, VP Clinical, Medical Director, Chief of Staff):
-- Clinical publication databases: PubMed, medical journal articles
-- Healthcare conference appearances: HIMSS, HLTH, MGMA, ACHE Congress
-- Healthcare trade press: Modern Healthcare, Becker's Hospital Review, Health Affairs
-- Hospital or health system press releases mentioning them
-- Medicare/Medicaid quality reporting where relevant
-
-STEP 2 — CONSTRUCT 8 PERSON-LEVEL QUERIES FIRST
-Based on the role type routing above, construct 8 queries specifically targeting this individual using the highest-yield sources for their role type. Every query must include ${name} and hunt for something specific about them personally — not their company generically.
-
-Person query types to cover:
-1. Their professional profile and current role verification
-2. Their public statements, interviews, or authored content
-3. Their conference appearances or speaking engagements
-4. Their career history and any recent moves or promotions
-5. Their published work, patents, or technical contributions (if applicable)
-6. Their industry recognition, awards, or association roles
-7. Their LinkedIn presence and thought leadership
-8. Any press mentions, quotes, or third-party references to them
-
-STEP 3 — CONSTRUCT 2 COMPANY GAP-FILL QUERIES
-Only after the 8 person queries are constructed, add 2 company-level queries that target the specific Matrix cells most likely to still be empty after person searches. Do not add generic company news queries — add targeted queries for what person searches are unlikely to find:
-1. The company's most recent strategic commitments or public goals relevant to ${role}'s function — what has this company publicly promised that creates pressure on someone in this role?
-2. The company's current capability gaps or hiring signals in ${role}'s functional area — what are they missing that someone in this role would be responsible for?
-
-RULES:
-- Each query 4-10 words, immediately searchable
-- Every person query includes ${name} by name
-- Use site: operators wherever they improve precision
-- 2025 OR 2026 in queries where recency matters
-- Company queries fill gaps only — do not duplicate what person queries will find
-- Never construct a generic "company news" query as a company gap-fill
-
-Return ONLY valid JSON, no markdown, no backticks:
-{
-  "role_type": "the role type category you identified from the routing above",
-  "person_sources": "the 2-3 highest-yield source types for this specific person based on their role",
-  "queries": [
-    {"query": "exact search string", "type": "person", "target": "specific intel this query hunts for this individual"},
-    {"query": "exact search string", "type": "company", "target": "specific gap this fills that person searches won't cover"}
-  ]
-}`;
-
-const SYNTHESIS_PROMPT = (name, role, company, rawResults, existingCells, fullMatrix) => `You are a sales intelligence analyst for the Semper Selling® methodology. You have been given structured web search results about ${name} (${role} at ${company}). Results are labeled PERSON (about the individual specifically) or COMPANY (organizational context). 
-
-CRITICAL PRIORITY ORDER:
-1. Person-level intel populates cells first — always. If a search result is about ${name} specifically, it goes into the Matrix before any company-level result.
-2. Company-level intel fills gaps only — cells that person searches could not populate.
-3. Organizational inference fills anything remaining — clearly labeled as inferred, never as fact.
-
-RAW SEARCH RESULTS:
-${rawResults}
-
-WHAT THE REP ALREADY KNOWS (highest priority — never overwrite or contradict):
-${existingCells}
-
-FULL MATRIX CONTEXT:
-${fullMatrix}
-
-PERSON-FIRST CELL MAPPING:
-
-CURRENT STATE|ROLE — Decision Authority
-Draw exclusively from PERSON results. What does ${name} specifically do, decide, approve, or own? What is their formal scope? What can they authorize independently? If no person-level result addresses this, leave sourced field empty and use organizational inference only as last resort.
-
-CURRENT STATE|REACH — Influence Network  
-Draw exclusively from PERSON results. Who has ${name} mentioned, quoted, thanked, or appeared alongside? Who references them? What communities, associations, or networks do they belong to? Who influences their thinking publicly? Company-level results are not a substitute here.
-
-CURRENT STATE|RESULTS — Performance Pressure
-Draw from PERSON results first — any statement ${name} has made about their pressures, metrics, or challenges. Then supplement with COMPANY results for organizational context. Never use company-level results to populate this cell if person-level results exist.
-
-FUTURE STATE|ROLE — Career Trajectory
-Draw exclusively from PERSON results. What has ${name} said about where they are heading? Any promotion, role expansion, or new responsibilities announced? What does their public content reveal about their professional ambitions? Do not infer career trajectory from company strategy.
-
-FUTURE STATE|REACH — Relationship Strategy
-Draw from PERSON results first — new relationships ${name} is building, communities they are joining, people they are connecting with publicly. Supplement with COMPANY results only for organizational partnerships that would directly affect someone in their role.
-
-FUTURE STATE|RESULTS — Public Commitments
-Draw from PERSON results first — specific statements ${name} has made about goals, targets, or commitments. Then company-level announcements that create pressure on someone in their role. Clearly attribute which is personal and which is organizational.
-
-NEEDS ROW — INFERRED LAST, AFTER ALL SOURCED CELLS ARE POPULATED:
-Only infer Needs cells after mapping everything from person and company searches. Use the gap between Current State and Future State to infer what type of capability, support, or resource is missing. Written as inference always — "The data suggests...", "The patterns point to...", "Based on the gap between X and Y...". Never name a vendor or product. Only infer if both corresponding Current State AND Future State cells have meaningful content.
-
-NEEDS|ROLE — Capability Gaps: what type of authority, expertise, or organizational capacity is missing between their current position and their stated trajectory? Name the type of gap precisely.
-
-NEEDS|REACH — Missing Support: what type of relationship, alliance, or stakeholder alignment is conspicuously absent between their current network and where they are building toward? Name the specific nature of the absence.
-
-NEEDS|RESULTS — Resource Requirements: what type of resource, capability, or investment would close the gap between their current pressures and their stated commitments? Name the nature of what is required with commercial precision.
-
-THIN FOOTPRINT PROTOCOL:
-If person-level results are sparse, do not substitute company intel into person-level cells. Instead use organizational inference — clearly labeled — for the person cells that searches could not populate. "In organizations like ${company}, someone in the role of ${role} typically..." This is more honest and more useful than filling person cells with company content.
-
-SOURCE ATTRIBUTION:
-- Person findings: source_label identifies the specific source — "LinkedIn", "Forbes Interview · 2025", "IEEE Conference Paper · 2026", "Patent Filing"
-- Company findings: source_label identifies — "Press Release · 2025", "Earnings Call · Q1 2026", "Job Posting · June 2026"  
-- Inferred: source "inferred", source_label "Inferred from organizational context" or "Inferred from Current/Future State gap"
-
-RECENCY: Current date is June 2026. Discard anything from 2024 or earlier. If date cannot be determined, exclude it.
-
-Return ONLY valid JSON, no markdown, no backticks:
-{"findings": [
-  {"cell": "CURRENT STATE|ROLE", "intel": "1-2 sentences about ${name} specifically", "source": "https://url.com", "source_label": "Source · Date"},
-  {"cell": "NEEDS|ROLE", "intel": "Inferred gap language", "source": "inferred", "source_label": "Inferred from organizational context"}
-]}
-
-IMPORTANT: Never return {"findings": []}. If no sourced intel was found, still return inferred findings for as many cells as possible based on the role type and organizational context. Inferred findings are more useful than empty cells — they give the rep hypotheses to test. Use source "inferred" and source_label "Inferred from organizational context" for these.`;
-
-const ANALYSIS_PROMPT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine — a senior sales strategist who has spent 20 years coaching enterprise reps on complex deals. You are not summarizing data. You are doing the analytical work a rep would never do sitting alone with their notes — finding the tensions, contradictions, and hidden connections between Matrix cells that reveal what is actually happening in this deal beneath the surface.
+// ─── ANALYSIS PROMPT ──────────────────────────
+const ANALYSIS_PROMPT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine — a senior sales strategist who has spent 20 years coaching enterprise reps on complex deals. You are not summarizing data. You are doing the analytical work a rep would never do sitting alone with their notes — finding the gaps, disconnects, and hidden connections between Matrix cells that reveal what is actually happening in this deal beneath the surface.
 
 Deal: ${deal.prospect} (${deal.role} @ ${deal.company})${deal.opportunity ? `\nOpportunity: ${deal.opportunity}` : ""}
 
@@ -330,7 +178,7 @@ BRIEFING (1-2 paragraphs):
 Read like a senior strategist briefing a sales professional before a high-stakes call. Interpret what the data reveals about the customer's world — not a cell summary, not rep advice. Every sentence framed as inference: "The data suggests...", "The patterns point to...", "Based on what's here...", "The gap between X and Y suggests..." — never stated as fact. Never say "you should", "a partner who", "the rep who" — that's advice, it goes in Next Actions. Never reference box numbers, pattern numbers, or methodology terms. Never use "tension" — use gap, disconnect, exposure, pressure point. Specific numbers, names, timelines from the Matrix. One paragraph if thin, two if rich. If Pattern 11 fired, second paragraph addresses that urgency — describing what's happening in their world, not telling the rep what to do.
 
 FINDINGS (2-3 sharpest gaps):
-Each has a headline and body. Headline: ALL CAPS, max 8 words, sharp commercial label, specific to this deal — never "KEY INSIGHT" or "IMPORTANT FINDING". Body: name the first data point, name the second, state what their gap reveals that neither reveals alone. 2-3 sentences, no box references, no pattern numbers, no generic observations. Most urgent first.
+Each has a headline and body. Headline: ALL CAPS, max 8 words, sharp commercial label, specific to this deal — never "KEY INSIGHT" or "IMPORTANT FINDING" or any pattern name. Body: name the first data point, name the second, state what their gap reveals that neither reveals alone. 2-3 sentences, no box references, no pattern numbers, no generic observations. Most urgent first.
 
 DEFENSE (max 3): Each answers: what could happen before close that you haven't prevented yet? Specific scenario + one protective action executable in 5 business days. Title ALL CAPS.
 
@@ -352,8 +200,8 @@ RETURN FORMAT — PURE JSON ONLY
   "matrix_health": "STRONG FOUNDATION or PARTIAL PICTURE or FLYING BLIND",
   "matrix_health_note": "One direct sentence — what this Matrix gives you and what it is missing.",
   "briefing": [
-    "Paragraph 1 — inference only, customer's world only, specific intel from Matrix, no advice, no box/pattern references, no 'tension'.",
-    "Paragraph 2 — urgency layer only if Matrix is rich or Pattern 11 fired. Omit if not warranted."
+    "Paragraph 1 — inference only, customer's world only, specific intel from Matrix, no advice, no box/pattern references, no tension.",
+    "Paragraph 2 — urgency layer only if Matrix is rich or Pattern 11 fired. Omit if not warranted — return only one string in array if so."
   ],
   "findings": [
     {"headline": "SHARP LABEL IN ALL CAPS — 8 words max", "finding": "First data point. Second data point. What their gap reveals. 2-3 sentences. No box references."}
@@ -372,7 +220,8 @@ RETURN FORMAT — PURE JSON ONLY
   "watch_out": ["Observable resistance behavior tied to this deal's vulnerabilities.", "Second observable resistance behavior."],
   "next_actions": ["What, to whom, by when — consequence of inaction.", "Second action same standard.", "Third action same standard."]
 }
-- findings: 2-3, headline + finding keys
+- briefing: 1-2 paragraphs array
+- findings: 2-3, headline + finding keys, most urgent first
 - gaps: HIGH/MEDIUM only, max 4, only if they affected briefing or findings
 - defense: max 3
 - iq_questions: exactly 2
@@ -380,66 +229,28 @@ RETURN FORMAT — PURE JSON ONLY
 - next_actions: exactly 3
 Return pure JSON only. No backticks, no markdown, no explanation.`;
 
-
-// ─── SHARED COMPONENTS ─────────────────────────
-
-function Btn({ children, onClick, variant = "primary", disabled, style = {} }) {
+// ─── SHARED BUTTON ─────────────────────────────
+function Btn({ children, onClick, disabled, variant, style = {} }) {
   const base = {
-    border: "none", borderRadius: "4px", cursor: disabled ? "not-allowed" : "pointer",
-    fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em",
-    fontSize: "14px", padding: "12px 28px",
-    transition: "background 0.15s, border-color 0.15s, color 0.15s",
-    opacity: disabled ? 0.4 : 1,
+    fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.12em",
+    fontSize: "12px", borderRadius: "3px", padding: "11px 22px",
+    cursor: disabled ? "not-allowed" : "pointer", transition: "all 0.15s",
+    border: "none", outline: "none",
   };
-  const variants = {
-    primary: { background: RED, color: "#fff" },
-    ghost:   { background: "none", border: `1px solid ${BORDER}`, color: "#aaa", fontSize: "12px", fontFamily: MONO },
-  };
-  return (
-    <button onClick={disabled ? undefined : onClick} style={{ ...base, ...variants[variant], ...style }}
-      onMouseEnter={e => {
-        if (disabled) return;
-        if (variant === "primary") e.currentTarget.style.background = DARK_RED;
-        if (variant === "ghost") { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = RED; }
-      }}
-      onMouseLeave={e => {
-        if (variant === "primary") e.currentTarget.style.background = RED;
-        if (variant === "ghost") { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = "#aaa"; }
-      }}
-    >{children}</button>
-  );
-}
-
-function Tag({ label, color = RED }) {
-  return <span style={{ fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.14em", color, border: `1px solid ${color}`, padding: "2px 7px", borderRadius: "2px" }}>{label}</span>;
-}
-
-function SectionHeader({ label }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-      <div style={{ width: "3px", height: "16px", background: RED, borderRadius: "1px" }} />
-      <span style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>{label}</span>
-    </div>
-  );
+  const styles = variant === "ghost"
+    ? { ...base, background: "transparent", border: `1px solid #333`, color: "#888", ...style }
+    : { ...base, background: disabled ? "#333" : RED, color: "#fff", opacity: disabled ? 0.5 : 1, ...style };
+  return <button onClick={disabled ? undefined : onClick} style={styles}>{children}</button>;
 }
 
 // ─── WHAT GOES HERE DROPDOWN ───────────────────
-
 function WhatGoesHere({ description }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
   return (
-    <div ref={ref} style={{ position: "relative", flexShrink: 0 }}>
-      <button onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
-        style={{ background: open ? "rgba(204,0,0,0.08)" : "transparent", border: `1px solid ${open ? RED : RED}`, borderRadius: "2px", padding: "2px 7px", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", transition: "all 0.15s", lineHeight: 1 }}
+    <div style={{ position: "relative", flexShrink: 0 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ background: open ? "rgba(204,0,0,0.08)" : "transparent", border: `1px solid ${RED}`, borderRadius: "2px", padding: "2px 7px", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", transition: "all 0.15s", lineHeight: 1 }}
         onMouseEnter={e => { e.currentTarget.style.opacity = "0.7"; }}
         onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
       >
@@ -447,7 +258,7 @@ function WhatGoesHere({ description }) {
         <span style={{ fontSize: "7px", color: open ? RED : "#fff", fontFamily: MONO }}>{open ? "▲" : "▼"}</span>
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 5px)", right: 0, width: "244px", background: "#1c1c1c", border: `1px solid ${BORDER}`, borderTop: `2px solid ${RED}`, borderRadius: "0 0 4px 4px", padding: "12px 14px", zIndex: 200, boxShadow: "0 8px 28px rgba(0,0,0,0.8)", animation: "fadeSlideIn 0.15s ease" }}>
+        <div style={{ position: "absolute", top: "calc(100% + 5px)", right: 0, width: "244px", background: "#1c1c1c", border: `1px solid ${BORDER}`, borderTop: `2px solid ${RED}`, borderRadius: "0 0 4px 4px", padding: "12px 14px", zIndex: 200, boxShadow: "0 8px 28px rgba(0,0,0,0.8)" }}>
           <div style={{ fontSize: "9px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700", marginBottom: "8px" }}>WHAT GOES HERE</div>
           <div style={{ fontSize: "11px", color: "#fff", fontFamily: MONO, lineHeight: "1.7" }}>{description}</div>
         </div>
@@ -456,18 +267,17 @@ function WhatGoesHere({ description }) {
   );
 }
 
-// ─── AI SEARCH REVIEW MODAL ────────────────────
-
+// ─── SEARCH REVIEW MODAL ───────────────────────
 function SearchReviewModal({ results, onAccept, onClose }) {
   const found = results.filter(r => r.result?.found);
   const [accepted, setAccepted] = useState(() => {
     const a = {};
-    results.forEach(r => { if (r.result?.found) a[r.key] = true; });
+    found.forEach(r => { a[r.key] = true; });
     return a;
   });
   const [edited, setEdited] = useState(() => {
     const e = {};
-    results.forEach(r => { if (r.result?.found) e[r.key] = r.result.intel; });
+    found.forEach(r => { e[r.key] = r.result.intel; });
     return e;
   });
 
@@ -475,8 +285,9 @@ function SearchReviewModal({ results, onAccept, onClose }) {
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
         <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "6px", padding: "32px", maxWidth: "480px", width: "100%", textAlign: "center" }}>
-          <div style={{ fontSize: "11px", color: "#fff", fontFamily: MONO, lineHeight: "1.7", marginBottom: "20px" }}>
-            No public intel found for this contact. This person has a thin online footprint — add what you know from your own conversations and relationship to fill the Matrix before generating your analysis.
+          <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", marginBottom: "12px" }}>SEARCH COMPLETE</div>
+          <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.8", marginBottom: "24px" }}>
+            No public intel found for this contact. This person has a thin online footprint — add what you know from your own conversations to fill the Matrix before generating your analysis.
           </div>
           <Btn onClick={onClose} variant="ghost" style={{ width: "100%" }}>CLOSE</Btn>
         </div>
@@ -489,7 +300,10 @@ function SearchReviewModal({ results, onAccept, onClose }) {
     found.forEach(r => {
       if (accepted[r.key]) updates[r.key] = edited[r.key] || r.result.intel;
     });
-    onAccept(updates, results.reduce((acc, r) => { if (r.result?.found) acc[r.key] = r.result; return acc; }, {}));
+    onAccept(updates, found.reduce((acc, r) => {
+      if (accepted[r.key]) acc[r.key] = r.result;
+      return acc;
+    }, {}));
   };
 
   const acceptedCount = Object.values(accepted).filter(Boolean).length;
@@ -498,46 +312,39 @@ function SearchReviewModal({ results, onAccept, onClose }) {
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 1000, padding: "20px", overflowY: "auto" }}>
       <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "6px", width: "100%", maxWidth: "680px", marginTop: "20px", marginBottom: "20px" }}>
 
-        {/* Header */}
         <div style={{ padding: "20px 24px 16px", borderBottom: `1px solid ${BORDER}` }}>
           <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", marginBottom: "4px" }}>AI INTELLIGENCE SEARCH</div>
           <div style={{ fontSize: "20px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em" }}>
-            {found.length} {found.length === 1 ? "finding" : "findings"} with verified sources
+            {found.length} {found.length === 1 ? "finding" : "findings"} discovered
           </div>
           <div style={{ fontSize: "11px", color: "#fff", fontFamily: MONO, marginTop: "4px" }}>
             Review each finding. Accept what's useful, skip what isn't. Only accepted intel gets added to your Matrix.
           </div>
         </div>
 
-        {/* Results */}
         <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: "12px" }}>
           {found.map(r => {
             const meta = MATRIX_META[r.key];
             const isAccepted = accepted[r.key];
             return (
               <div key={r.key} style={{ border: `1px solid ${isAccepted ? "#383838" : "#1e1e1e"}`, borderRadius: "4px", padding: "14px 16px", opacity: isAccepted ? 1 : 0.45, transition: "all 0.2s" }}>
-
-                {/* Cell label + accept/reject */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                   <div>
-                    <span style={{ fontSize: "9px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700" }}>
-                      {r.row} / {r.col}
-                    </span>
-                    <span style={{ fontSize: "9px", color: "#fff", fontFamily: MONO, marginLeft: "8px" }}>— {meta && meta.label}</span>
+                    <span style={{ fontSize: "9px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700" }}>{r.row} / {r.col}</span>
+                    <span style={{ fontSize: "9px", color: "#fff", fontFamily: MONO, marginLeft: "8px" }}>— {meta?.label}</span>
                   </div>
                   <div style={{ display: "flex", gap: "6px" }}>
-                    <button
-                      onClick={() => setAccepted(a => ({ ...a, [r.key]: true }))}
-                      style={{ background: isAccepted ? "rgba(34,197,94,0.15)" : "transparent", border: `1px solid ${isAccepted ? "#22c55e" : "#333"}`, borderRadius: "3px", padding: "4px 12px", cursor: "pointer", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", color: isAccepted ? "#22c55e" : "#555", transition: "all 0.15s" }}
-                    >✓ ACCEPT</button>
-                    <button
-                      onClick={() => setAccepted(a => ({ ...a, [r.key]: false }))}
-                      style={{ background: !isAccepted ? "rgba(204,0,0,0.15)" : "transparent", border: `1px solid ${!isAccepted ? RED : "#333"}`, borderRadius: "3px", padding: "4px 12px", cursor: "pointer", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", color: !isAccepted ? RED : "#555", transition: "all 0.15s" }}
-                    >✕ REJECT</button>
+                    <button onClick={() => setAccepted(a => ({ ...a, [r.key]: true }))}
+                      style={{ background: isAccepted ? "rgba(34,197,94,0.15)" : "transparent", border: `1px solid ${isAccepted ? "#22c55e" : "#333"}`, borderRadius: "3px", padding: "4px 12px", cursor: "pointer", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", color: isAccepted ? "#22c55e" : "#555" }}>
+                      ✓ ACCEPT
+                    </button>
+                    <button onClick={() => setAccepted(a => ({ ...a, [r.key]: false }))}
+                      style={{ background: !isAccepted ? "rgba(204,0,0,0.15)" : "transparent", border: `1px solid ${!isAccepted ? RED : "#333"}`, borderRadius: "3px", padding: "4px 12px", cursor: "pointer", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", color: !isAccepted ? RED : "#555" }}>
+                      ✕ REJECT
+                    </button>
                   </div>
                 </div>
 
-                {/* Existing cell content if any */}
                 {r.existing && (
                   <div style={{ fontSize: "11px", color: "#555", fontFamily: MONO, lineHeight: "1.5", marginBottom: "8px", paddingBottom: "8px", borderBottom: `1px solid #1e1e1e` }}>
                     <span style={{ fontSize: "9px", color: "#444", fontFamily: CONDENSED, letterSpacing: "0.1em", display: "block", marginBottom: "3px" }}>YOUR INTEL</span>
@@ -545,22 +352,18 @@ function SearchReviewModal({ results, onAccept, onClose }) {
                   </div>
                 )}
 
-                {/* AI finding — editable */}
                 <div>
                   <span style={{ fontSize: "9px", color: isAccepted ? "#22c55e" : "#555", fontFamily: CONDENSED, letterSpacing: "0.1em", display: "block", marginBottom: "4px" }}>AI FOUND</span>
-                  <textarea
-                    className="matrix-cell"
-                    defaultValue={r.result.intel}
+                  <textarea className="matrix-cell" defaultValue={r.result.intel}
                     onChange={e => setEdited(ed => ({ ...ed, [r.key]: e.target.value }))}
                     style={{ minHeight: "56px", opacity: isAccepted ? 1 : 0.5 }}
                   />
                 </div>
 
-                {/* Source */}
                 <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: `1px solid #1e1e1e`, display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ fontSize: "9px", color: "#444", fontFamily: CONDENSED, letterSpacing: "0.1em" }}>SOURCE</span>
                   {r.result.source === "inferred" ? (
-                    <span style={{ fontSize: "10px", color: "#aaa", fontFamily: MONO, fontStyle: "italic" }}>Inferred from search intel — no direct source</span>
+                    <span style={{ fontSize: "10px", color: "#aaa", fontFamily: MONO, fontStyle: "italic" }}>~ inferred from organizational context</span>
                   ) : (
                     <a href={r.result.source} target="_blank" rel="noopener noreferrer"
                       style={{ fontSize: "10px", color: "#4a9eff", fontFamily: MONO, textDecoration: "none", wordBreak: "break-all" }}
@@ -574,15 +377,12 @@ function SearchReviewModal({ results, onAccept, onClose }) {
           })}
         </div>
 
-        {/* Footer */}
         <div style={{ padding: "16px 24px", borderTop: `1px solid ${BORDER}`, display: "flex", gap: "10px", alignItems: "center" }}>
           <Btn onClick={handleConfirm} disabled={acceptedCount === 0} style={{ minWidth: "200px" }}>
             ADD {acceptedCount} {acceptedCount === 1 ? "FINDING" : "FINDINGS"} TO MATRIX →
           </Btn>
           <Btn variant="ghost" onClick={onClose} style={{ padding: "12px 20px" }}>SKIP ALL</Btn>
-          <span style={{ fontSize: "10px", color: "#fff", fontFamily: MONO, marginLeft: "4px" }}>
-            {acceptedCount} of {found.length} accepted
-          </span>
+          <span style={{ fontSize: "10px", color: "#fff", fontFamily: MONO, marginLeft: "4px" }}>{acceptedCount} of {found.length} accepted</span>
         </div>
       </div>
     </div>
@@ -590,16 +390,15 @@ function SearchReviewModal({ results, onAccept, onClose }) {
 }
 
 // ─── SCREEN 1: DEAL ENTRY ──────────────────────
-
 function DealScreen({ onComplete }) {
   const [form, setForm] = useState({ prospect: "", role: "", company: "", opportunity: "" });
   const [errors, setErrors] = useState({});
 
   const fields = [
-    { key: "prospect",    label: "CONTACT NAME",           placeholder: "" },
-    { key: "role",        label: "TITLE / ROLE",           placeholder: "" },
-    { key: "company",     label: "COMPANY",                placeholder: "" },
-    { key: "opportunity", label: "OPPORTUNITY (optional)", placeholder: "", textarea: true },
+    { key: "prospect",    label: "CONTACT NAME",           textarea: false },
+    { key: "role",        label: "TITLE / ROLE",           textarea: false },
+    { key: "company",     label: "COMPANY",                textarea: false },
+    { key: "opportunity", label: "OPPORTUNITY (optional)", textarea: true  },
   ];
 
   const handleSubmit = () => {
@@ -613,7 +412,6 @@ function DealScreen({ onComplete }) {
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
       <div style={{ width: "100%", maxWidth: "560px" }}>
         <div style={{ marginBottom: "32px" }}>
-          
           <div style={{ fontSize: "11px", color: RED, fontFamily: MONO, letterSpacing: "0.14em", marginBottom: "8px" }}>SEMPER SELLING®</div>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
             <div style={{ fontSize: "36px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em", lineHeight: 1.1 }}>CONNECTION INTELLIGENCE<br />MATRIX</div>
@@ -634,16 +432,18 @@ function DealScreen({ onComplete }) {
                   {f.label}{errors[f.key] && " — REQUIRED"}
                 </label>
                 {f.textarea ? (
-                  <textarea value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} rows={2}
+                  <textarea value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} rows={2}
                     style={{ width: "100%", background: "#0d0d0d", border: `1px solid ${BORDER}`, borderLeft: `3px solid ${BORDER}`, borderRadius: "3px", color: "#fff", padding: "10px 12px", fontSize: "12px", fontFamily: MONO, resize: "none", outline: "none", transition: "all 0.2s" }}
-                    onFocus={e => { e.target.style.borderColor = RED; e.target.style.borderLeftColor = RED; }} onBlur={e => { e.target.style.borderColor = BORDER; e.target.style.borderLeftColor = BORDER; }}
+                    onFocus={e => { e.target.style.borderColor = RED; e.target.style.borderLeftColor = RED; }}
+                    onBlur={e => { e.target.style.borderColor = BORDER; e.target.style.borderLeftColor = BORDER; }}
                   />
                 ) : (
                   <input value={form[f.key]}
                     onChange={e => { setForm(p => ({ ...p, [f.key]: e.target.value })); setErrors(p => ({ ...p, [f.key]: false })); }}
-                    placeholder={f.placeholder} onKeyDown={e => e.key === "Enter" && handleSubmit()}
+                    onKeyDown={e => e.key === "Enter" && handleSubmit()}
                     style={{ width: "100%", background: "#0d0d0d", border: `1px solid ${errors[f.key] ? "#ff6666" : BORDER}`, borderLeft: `3px solid ${errors[f.key] ? "#ff6666" : BORDER}`, borderRadius: "3px", color: "#fff", padding: "10px 12px", fontSize: "12px", fontFamily: MONO, outline: "none", transition: "all 0.2s" }}
-                    onFocus={e => { e.target.style.borderColor = RED; e.target.style.borderLeftColor = RED; }} onBlur={e => { e.target.style.borderColor = errors[f.key] ? "#ff6666" : BORDER; e.target.style.borderLeftColor = errors[f.key] ? "#ff6666" : BORDER; }}
+                    onFocus={e => { e.target.style.borderColor = RED; e.target.style.borderLeftColor = RED; }}
+                    onBlur={e => { e.target.style.borderColor = errors[f.key] ? "#ff6666" : BORDER; e.target.style.borderLeftColor = errors[f.key] ? "#ff6666" : BORDER; }}
                   />
                 )}
               </div>
@@ -658,61 +458,27 @@ function DealScreen({ onComplete }) {
   );
 }
 
-// ─── SCREEN 2: MATRIX EDITOR ──────────────────
-
 // ─── ANALYSIS LOADER ───────────────────────────
-
 function AnalysisLoader() {
   return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(10,10,10,0.96)",
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      zIndex: 500
-    }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.93)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 500 }}>
       <style>{`
-        @keyframes bar1 {
-          0%, 100% { height: 24px; }
-          50% { height: 56px; }
-        }
-        @keyframes bar2 {
-          0%, 100% { height: 40px; }
-          50% { height: 80px; }
-        }
-        @keyframes bar3 {
-          0%, 100% { height: 56px; }
-          50% { height: 108px; }
-        }
+        @keyframes bar1 { 0%, 100% { height: 24px; } 50% { height: 56px; } }
+        @keyframes bar2 { 0%, 100% { height: 40px; } 50% { height: 80px; } }
+        @keyframes bar3 { 0%, 100% { height: 56px; } 50% { height: 108px; } }
       `}</style>
-
-      {/* Bar graph */}
       <div style={{ display: "flex", alignItems: "flex-end", gap: "10px", height: "120px", marginBottom: "32px" }}>
-        <div style={{
-          width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0",
-          animation: "bar1 1.1s ease-in-out infinite",
-          animationDelay: "0s"
-        }} />
-        <div style={{
-          width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0",
-          animation: "bar2 1.1s ease-in-out infinite",
-          animationDelay: "0.18s"
-        }} />
-        <div style={{
-          width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0",
-          animation: "bar3 1.1s ease-in-out infinite",
-          animationDelay: "0.36s"
-        }} />
+        <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar1 1.1s ease-in-out infinite", animationDelay: "0s" }} />
+        <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar2 1.1s ease-in-out infinite", animationDelay: "0.18s" }} />
+        <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar3 1.1s ease-in-out infinite", animationDelay: "0.36s" }} />
       </div>
-
-      <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.22em", marginBottom: "10px" }}>
-        SEMPER SELLING®
-      </div>
-      <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, letterSpacing: "0.06em" }}>
-        Analyzing your intelligence...
-      </div>
+      <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.22em", marginBottom: "10px" }}>SEMPER SELLING®</div>
+      <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, letterSpacing: "0.06em" }}>Analyzing your intelligence...</div>
     </div>
   );
 }
 
+// ─── SCREEN 2: MATRIX EDITOR ──────────────────
 function MatrixScreen({ deal, onComplete, onBack }) {
   const [cells, setCells] = useState(emptyMatrix());
   const [focused, setFocused] = useState(null);
@@ -720,37 +486,29 @@ function MatrixScreen({ deal, onComplete, onBack }) {
   const [searching, setSearching] = useState(false);
   const [searchProgress, setSearchProgress] = useState(null);
   const [searchResults, setSearchResults] = useState(null);
+  const [searchRan, setSearchRan] = useState(false);
   const [aiSources, setAiSources] = useState({});
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState(null);
   const fileRef = useRef(null);
 
-  // ── AI SEARCH ──────────────────────────────
+  // Cell prompts — what to search for in each cell
+  const CELL_PROMPTS = {
+    "CURRENT STATE|ROLE": `Search for ${deal.prospect}'s current role, title, and decision-making authority at ${deal.company}. What decisions can they make independently? What requires sign-off above them? Look for their LinkedIn profile, company bio, press releases, or any public source confirming their scope and authority.`,
+    "CURRENT STATE|REACH": `Who does ${deal.prospect} (${deal.role} at ${deal.company}) publicly interact with, influence, or report to? Look for board memberships, advisory roles, conference panels, co-authored content, or any public mention of their professional relationships and network.`,
+    "CURRENT STATE|RESULTS": `What performance pressures or business challenges is ${deal.prospect} at ${deal.company} dealing with right now? Look for earnings calls, press releases, industry news, analyst reports, or public signals about what they or their company is being measured on.`,
+    "FUTURE STATE|ROLE": `What is ${deal.prospect}'s career trajectory at ${deal.company} or in their industry? Look for recent promotions, expanded responsibilities, new titles, speaking engagements, industry awards, board appointments, or signals about where they are heading professionally.`,
+    "FUTURE STATE|REACH": `What new professional relationships or networks is ${deal.prospect} at ${deal.company} actively building? Look for recent conference appearances, new board or advisory roles, industry association involvement, new partnerships announced, or any activity suggesting deliberate relationship expansion.`,
+    "FUTURE STATE|RESULTS": `What public commitments, stated goals, or strategic promises has ${deal.prospect} at ${deal.company} made? Look for quotes in press releases, earnings calls, investor presentations, interviews, conference keynotes, or LinkedIn posts where they personally committed to specific outcomes or targets.`,
+    "NEEDS|ROLE": `What capability, skill, or authority gaps exist for ${deal.company}'s ${deal.role} function right now? Look for job postings revealing what they are hiring for, technology gaps mentioned in industry coverage, transformation initiatives announced, or commentary about where ${deal.company} needs to improve.`,
+    "NEEDS|REACH": `What organizational or stakeholder alignment challenges is ${deal.company} facing that would affect ${deal.prospect} as ${deal.role}? Look for leadership changes, restructuring announcements, M&A activity, or any public signals of internal tension or alignment gaps affecting this role.`,
+    "NEEDS|RESULTS": `What resources, technology, budget, or capability does ${deal.company} need in the ${deal.role} function to hit their stated goals? Look for RFPs, technology partnerships announced, hiring patterns, analyst recommendations, or public signals about investment priorities or resource requirements.`,
+  };
+
+  // ── AI SEARCH ──────────────────────────────────
   const handleSearch = async () => {
     setSearching(true);
     setSearchProgress("Searching public sources...");
-
-    // Build person-first search prompts for each cell
-    const PERSON_PROMPTS = {
-      "CURRENT STATE|ROLE": (name, role, company) =>
-        `Search for ${name}'s current role, title, and decision-making authority at ${company}. What can they approve independently? What requires sign-off above them? Look for LinkedIn profile, press releases announcing their appointment, company website bio, or any public source that confirms their scope and authority.`,
-      "CURRENT STATE|REACH": (name, role, company) =>
-        `Who does ${name} (${role} at ${company}) publicly interact with, influence, or report to? Look for board memberships, advisory roles, conference panels they've appeared on, co-authored content, LinkedIn connections of note, or any public mention of their professional relationships and network.`,
-      "CURRENT STATE|RESULTS": (name, role, company) =>
-        `What performance pressures, business challenges, or strategic priorities is ${name} (${role} at ${company}) dealing with right now? Look for earnings calls, press releases, industry news, analyst reports, or any public signals about what ${company} is being measured on in their function.`,
-      "FUTURE STATE|ROLE": (name, role, company) =>
-        `What is ${name}'s career trajectory at ${company} or in their industry? Look for recent promotions, expanded responsibilities, new titles, speaking engagements that suggest rising profile, industry awards, board appointments, or any signals about where they are heading professionally.`,
-      "FUTURE STATE|REACH": (name, role, company) =>
-        `What new professional relationships or networks is ${name} (${role} at ${company}) actively building? Look for recent conference appearances, new board or advisory roles, industry association involvement, new partnerships announced, or any public activity suggesting deliberate relationship expansion.`,
-      "FUTURE STATE|RESULTS": (name, role, company) =>
-        `What public commitments, stated goals, or strategic promises has ${name} (${role} at ${company}) made? Look for quotes in press releases, earnings calls, investor presentations, interviews, conference keynotes, LinkedIn posts, or company announcements where they personally committed to specific outcomes or targets.`,
-      "NEEDS|ROLE": (name, role, company) =>
-        `What capability, skill, or authority gaps exist for ${company}'s ${role} function right now? Look for job postings revealing what they are hiring for, technology gaps mentioned in industry coverage, transformation initiatives announced, or analyst commentary about where ${company} needs to improve.`,
-      "NEEDS|REACH": (name, role, company) =>
-        `What organizational or political challenges is ${company} facing that would affect ${name} as ${role}? Look for leadership changes, restructuring announcements, M&A activity, board changes, executive departures, or any public signals of internal tension or gaps in alignment that affect this role.`,
-      "NEEDS|RESULTS": (name, role, company) =>
-        `What resources, technology, budget, or tools does ${company} appear to need in the ${role} function to hit their stated goals? Look for RFPs, technology partnerships announced, hiring patterns, analyst recommendations, or any public signals about investment priorities or capability requirements.`,
-    };
 
     const allKeys = [];
     MATRIX_ROWS.forEach(row => MATRIX_COLS.forEach(col => allKeys.push({ key: `${row}|${col}`, row, col })));
@@ -759,8 +517,8 @@ function MatrixScreen({ deal, onComplete, onBack }) {
     let completed = 0;
 
     await Promise.all(allKeys.map(async ({ key, row, col }) => {
-      const prompt = PERSON_PROMPTS[key](deal.prospect, deal.role, deal.company);
       const existing = cells[key].trim();
+      const userContent = CELL_PROMPTS[key] + (existing ? `\n\nNote: The rep already knows this about the cell: "${existing}". Only surface new, additive information not already captured above.` : "");
 
       try {
         const resp = await fetch("/api/chat", {
@@ -768,37 +526,40 @@ function MatrixScreen({ deal, onComplete, onBack }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             model: "claude-sonnet-4-20250514",
-            max_tokens: 500,
+            max_tokens: 600,
+            system: SEARCH_SYSTEM_PROMPT,
             tools: [{ type: "web_search_20250305", name: "web_search" }],
-            system: `You are a sales intelligence researcher for the Semper Selling® methodology. Find factual, publicly verifiable information about a specific person to fill one cell of a Connection Intelligence Matrix.
-
-RULES:
-- Search for this specific person by name — prioritize person-level intel over generic company information
-- Only return information from a real, citable public source (LinkedIn, press release, news article, earnings call, conference recording, company website, etc.)
-- If you find something useful, return it with a real source URL
-- If you cannot find reliable sourced information, return {"found": false}
-- Keep intel to 1-2 sentences — sharp and specific
-- For the NEEDS row cells, inference from the gap between current and future state is acceptable — label it as inferred
-- Current date: June 2026. Only use sources from 2025 or 2026.
-- Return ONLY valid JSON, no markdown
-
-Format when found: {"found": true, "intel": "1-2 sentence finding", "source": "https://url.com", "source_label": "LinkedIn · 2025"}
-Format when not found: {"found": false}`,
-            messages: [{ role: "user", content: prompt + (existing ? `
-
-The rep already knows: "${existing}". Only surface new, additive information.` : "") }]
-          })
+            messages: [{ role: "user", content: userContent }],
+          }),
         });
+
         const data = await resp.json();
-        const textBlock = data.content?.find(b => b.type === "text");
-        if (textBlock) {
-          const raw = textBlock.text.replace(/```json|```/g, "").trim();
-          try {
-            const parsed = JSON.parse(raw);
-            // Strip any citation tags that web search injects
-            if (parsed.intel) parsed.intel = parsed.intel.replace(/<[^>]*>/g, "").trim();
-            results.push({ key, row, col, existing, result: parsed });
-          } catch {
+
+        // Web search returns multiple content blocks — find the LAST text block
+        // which contains the final JSON response after web search tool use
+        const textBlocks = (data.content || []).filter(b => b.type === "text");
+        const lastText = textBlocks[textBlocks.length - 1];
+
+        if (lastText && lastText.text) {
+          // Clean citation tags injected by web search
+          const cleaned = lastText.text
+            .replace(/]*>|<\/antml:cite>/g, "")
+            .replace(/```json|```/g, "")
+            .trim();
+
+          // Extract JSON — find the first { } block
+          const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            try {
+              const parsed = JSON.parse(jsonMatch[0]);
+              if (parsed.intel) {
+                parsed.intel = parsed.intel.replace(/<[^>]*>/g, "").trim();
+              }
+              results.push({ key, row, col, existing, result: parsed });
+            } catch {
+              results.push({ key, row, col, existing, result: { found: false } });
+            }
+          } else {
             results.push({ key, row, col, existing, result: { found: false } });
           }
         } else {
@@ -814,10 +575,11 @@ The rep already knows: "${existing}". Only surface new, additive information.` :
 
     setSearching(false);
     setSearchProgress(null);
+    setSearchRan(true);
     setSearchResults(results);
   };
 
-  // ── ACCEPT SEARCH RESULTS ──────────────────
+  // ── ACCEPT RESULTS ─────────────────────────────
   const handleAcceptResults = (updates, sources) => {
     setCells(prev => {
       const next = { ...prev };
@@ -831,7 +593,7 @@ The rep already knows: "${existing}". Only surface new, additive information.` :
     setSearchResults(null);
   };
 
-  // ── GENERATE ANALYSIS ─────────────────────
+  // ── GENERATE ANALYSIS ──────────────────────────
   const filled = Object.values(cells).filter(v => v.trim().length > 0).length;
 
   const handleGenerate = async () => {
@@ -845,17 +607,13 @@ The rep already knows: "${existing}". Only surface new, additive information.` :
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 2000,
-          messages: [{ role: "user", content: ANALYSIS_PROMPT(matrixText, deal) }]
-        })
+          messages: [{ role: "user", content: ANALYSIS_PROMPT(matrixText, deal) }],
+        }),
       });
       const data = await resp.json();
       const raw = (data.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim();
       let analysis = {};
-      try {
-        analysis = JSON.parse(raw);
-      } catch {
-        analysis = null;
-      }
+      try { analysis = JSON.parse(raw); } catch { analysis = null; }
       onComplete(cells, matrixText, analysis, aiSources);
     } catch {
       onComplete(cells, matrixToText(cells, deal), null, aiSources);
@@ -863,7 +621,7 @@ The rep already knows: "${existing}". Only surface new, additive information.` :
     setAnalyzing(false);
   };
 
-  // ── IMAGE UPLOAD ──────────────────────────
+  // ── IMAGE UPLOAD ───────────────────────────────
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -882,9 +640,9 @@ The rep already knows: "${existing}". Only surface new, additive information.` :
             max_tokens: 1200,
             messages: [{ role: "user", content: [
               { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-              { type: "text", text: `This is a Connection Intelligence Matrix — 9-box grid with columns: ROLE, REACH, RESULTS and rows: CURRENT STATE, FUTURE STATE, NEEDS. Extract all cell content. Return ONLY valid JSON, no markdown, no backticks:\n{"CURRENT STATE|ROLE":"","CURRENT STATE|REACH":"","CURRENT STATE|RESULTS":"","FUTURE STATE|ROLE":"","FUTURE STATE|REACH":"","FUTURE STATE|RESULTS":"","NEEDS|ROLE":"","NEEDS|REACH":"","NEEDS|RESULTS":""}` }
-            ]}]
-          })
+              { type: "text", text: `This is a Connection Intelligence Matrix — 9-box grid with columns: ROLE, REACH, RESULTS and rows: CURRENT STATE, FUTURE STATE, NEEDS. Extract all cell content. Return ONLY valid JSON:\n{"CURRENT STATE|ROLE":"","CURRENT STATE|REACH":"","CURRENT STATE|RESULTS":"","FUTURE STATE|ROLE":"","FUTURE STATE|REACH":"","FUTURE STATE|RESULTS":"","NEEDS|ROLE":"","NEEDS|REACH":"","NEEDS|RESULTS":""}` }
+            ]}],
+          }),
         });
         const data = await resp.json();
         const raw = (data.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim();
@@ -905,19 +663,18 @@ The rep already knows: "${existing}". Only surface new, additive information.` :
 
   return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", flexDirection: "column" }}>
+      <style>{`
+        .matrix-cell { width: 100%; background: transparent; border: none; color: #fff; font-family: ${MONO}; font-size: 11px; line-height: 1.65; resize: none; outline: none; min-height: 72px; }
+        .matrix-cell::placeholder { color: #444; }
+        @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes readingPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        @media print { body { background: #fff !important; color: #000 !important; } * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } button, [data-noprint] { display: none !important; } }
+      `}</style>
 
-      {/* Analysis Loader */}
       {analyzing && <AnalysisLoader />}
 
-
-
-      {/* Search Review Modal */}
       {searchResults !== null && (
-        <SearchReviewModal
-          results={searchResults}
-          onAccept={handleAcceptResults}
-          onClose={() => setSearchResults(null)}
-        />
+        <SearchReviewModal results={searchResults} onAccept={handleAcceptResults} onClose={() => setSearchResults(null)} />
       )}
 
       {/* Header */}
@@ -958,7 +715,6 @@ The rep already knows: "${existing}". Only surface new, additive information.` :
           {MATRIX_ROWS.map(row => (
             <div key={row} style={{ display: "grid", gridTemplateColumns: "130px 1fr 1fr 1fr", gap: "5px", marginBottom: "5px" }}>
               <div style={{ background: RED, borderRadius: "3px", display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 8px", textAlign: "center", fontSize: "11px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", lineHeight: "1.35" }}>{row}</div>
-
               {MATRIX_COLS.map(col => {
                 const key = `${row}|${col}`;
                 const meta = MATRIX_META[key];
@@ -967,7 +723,6 @@ The rep already knows: "${existing}". Only surface new, additive information.` :
                 const hasAiSource = !!aiSources[key];
                 return (
                   <div key={key} style={{ background: SURFACE, border: `1px solid ${isFocused ? RED : hasValue ? "#383838" : "#1e1e1e"}`, borderRadius: "3px", padding: "14px 14px 12px 14px", transition: "border-color 0.2s", display: "flex", flexDirection: "column", gap: "6px", minHeight: "130px" }}>
-
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "6px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
                         <div style={{ fontSize: "9px", color: isFocused ? RED : "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", transition: "color 0.2s", textTransform: "uppercase", paddingTop: "2px" }}>
@@ -975,31 +730,29 @@ The rep already knows: "${existing}". Only surface new, additive information.` :
                         </div>
                         {hasAiSource && aiSources[key].source !== "inferred" && (
                           <a href={aiSources[key].source} target="_blank" rel="noopener noreferrer"
-                            title={`AI source: ${aiSources[key].source_label || aiSources[key].source}`}
+                            title={`Source: ${aiSources[key].source_label || aiSources[key].source}`}
                             style={{ fontSize: "8px", color: "#4a9eff", fontFamily: MONO, textDecoration: "none", paddingTop: "2px", whiteSpace: "nowrap" }}
                             onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
                             onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
                           >↗ source</a>
                         )}
                         {hasAiSource && aiSources[key].source === "inferred" && (
-                          <span title="Inferred from search intel" style={{ fontSize: "8px", color: "#aaa", fontFamily: MONO, paddingTop: "2px", whiteSpace: "nowrap", fontStyle: "italic" }}>~ inferred</span>
+                          <span style={{ fontSize: "8px", color: "#aaa", fontFamily: MONO, paddingTop: "2px", fontStyle: "italic" }}>~ inferred</span>
                         )}
                       </div>
                       <WhatGoesHere description={meta.description} />
                     </div>
 
-                    <textarea
-                      className="matrix-cell"
-                      value={cells[key]}
+                    <textarea className="matrix-cell" value={cells[key]}
                       onChange={e => setCells(prev => ({ ...prev, [key]: e.target.value }))}
                       onFocus={() => setFocused(key)}
                       onBlur={() => setFocused(null)}
                       placeholder={meta.hint}
                     />
 
-                    {/* Guided rep prompt — shows after search has run on empty cells only */}
-                    {searchResults !== null && !cells[key]?.trim() && !hasAiSource && meta.repPrompt && (
-                      <div style={{ marginTop: "6px", padding: "7px 10px", background: "rgba(204,0,0,0.05)", border: `1px solid rgba(204,0,0,0.2)`, borderRadius: "2px" }}>
+                    {/* Rep intelligence prompt — shows after search runs on empty cells */}
+                    {searchRan && !cells[key]?.trim() && !hasAiSource && (
+                      <div style={{ marginTop: "4px", padding: "7px 10px", background: "rgba(204,0,0,0.05)", border: `1px solid rgba(204,0,0,0.2)`, borderRadius: "2px" }}>
                         <div style={{ fontSize: "8px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "3px" }}>WHAT DO YOU KNOW?</div>
                         <div style={{ fontSize: "10px", color: "#aaa", fontFamily: MONO, lineHeight: "1.6" }}>{meta.repPrompt}</div>
                       </div>
@@ -1012,20 +765,16 @@ The rep already knows: "${existing}". Only surface new, additive information.` :
 
           {/* Action bar */}
           <div style={{ marginTop: "22px", paddingTop: "18px", borderTop: "1px solid #1e1e1e" }}>
-
-            {/* Search bar */}
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px", padding: "14px 16px", background: "#0f0f0f", border: `1px solid #1e1e1e`, borderRadius: "4px" }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: "11px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", marginBottom: "2px" }}>AI INTELLIGENCE SEARCH</div>
                 <div style={{ fontSize: "10px", color: "#fff", fontFamily: MONO }}>
-                  Searches public sources for {deal.prospect} at {deal.company} — adds only verified, sourced intel
+                  Searches public sources for {deal.prospect} at {deal.company}
                 </div>
               </div>
-              <button
-                onClick={handleSearch}
-                disabled={searching}
-                style={{ background: searching ? "rgba(74,158,255,0.08)" : "#1a1a1a", border: `1px solid ${searching ? "#4a9eff" : "#4a9eff"}`, color: "#4a9eff", borderRadius: "3px", padding: "9px 18px", cursor: searching ? "not-allowed" : "pointer", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", whiteSpace: "nowrap", transition: "all 0.3s", minWidth: "200px" }}
-                onMouseEnter={e => { if (!searching) { e.currentTarget.style.background = "rgba(74,158,255,0.1)"; } }}
+              <button onClick={handleSearch} disabled={searching}
+                style={{ background: searching ? "rgba(74,158,255,0.08)" : "#1a1a1a", border: `1px solid #4a9eff`, color: "#4a9eff", borderRadius: "3px", padding: "9px 18px", cursor: searching ? "not-allowed" : "pointer", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", whiteSpace: "nowrap", transition: "all 0.3s", minWidth: "200px" }}
+                onMouseEnter={e => { if (!searching) e.currentTarget.style.background = "rgba(74,158,255,0.1)"; }}
                 onMouseLeave={e => { if (!searching) e.currentTarget.style.background = "#1a1a1a"; }}
               >
                 {searching
@@ -1034,7 +783,6 @@ The rep already knows: "${existing}". Only surface new, additive information.` :
               </button>
             </div>
 
-            {/* Generate bar */}
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
               <Btn onClick={handleGenerate} disabled={filled === 0 || analyzing} style={{ minWidth: "300px" }}>
                 {analyzing ? "[ Analyzing your intelligence... ]" : "GENERATE MATRIX ANALYSIS →"}
@@ -1045,7 +793,6 @@ The rep already knows: "${existing}". Only surface new, additive information.` :
                 {filled === 9 && "All 9 cells complete — strong foundation"}
               </span>
             </div>
-
           </div>
         </div>
       </div>
@@ -1054,75 +801,34 @@ The rep already knows: "${existing}". Only surface new, additive information.` :
 }
 
 // ─── SCREEN 3: ANALYSIS REPORT ─────────────────
-
-const SEVERITY_COLOR = { HIGH: "#ff4444", MEDIUM: "#f59e0b", LOW: "#22c55e" };
-const SEVERITY_BG    = { HIGH: "rgba(255,68,68,0.08)", MEDIUM: "rgba(245,158,11,0.08)", LOW: "rgba(34,197,94,0.08)" };
-
-function SeverityBar({ level }) {
-  const bars = { HIGH: 3, MEDIUM: 2, LOW: 1 };
-  const count = bars[level] || 1;
-  const color = SEVERITY_COLOR[level];
-  return (
-    <div style={{ display: "flex", gap: "3px", alignItems: "center" }}>
-      {[1, 2, 3].map(i => (
-        <div key={i} style={{ width: "16px", height: "4px", borderRadius: "1px", background: i <= count ? color : "#2a2a2a" }} />
-      ))}
-      <span style={{ fontSize: "9px", color, fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", marginLeft: "4px" }}>{level}</span>
-    </div>
-  );
-}
-
-function ReportCard({ children, style = {} }) {
-  return <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "4px", padding: "20px 22px", ...style }}>{children}</div>;
-}
-
 function AnalysisScreen({ deal, analysis, aiSources, onBack, onRedo }) {
   const hasAnalysis = !!analysis;
 
-  // ── SECTION BADGE (matches screenshot red outlined pill with diamond icon) ──
-  const SectionBadge = ({ icon = "◆", label }) => (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-      <span style={{ color: RED, fontSize: "9px" }}>{icon}</span>
-      <span style={{ color: "#fff", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>{label}</span>
-    </div>
-  );
-
   const exportHTML = useCallback(() => {
     if (!analysis) return;
-    const now = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Matrix Analysis — ${deal.prospect}</title><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:'IBM Plex Mono',monospace;padding:40px 48px;max-width:1000px;margin:0 auto;line-height:1.6}@media print{body{background:#fff;color:#000}}</style></head><body>
-<div style="margin-bottom:8px;font-size:10px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.18em;">◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
-<div style="font-size:38px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.04em;line-height:1;">${deal.prospect.toUpperCase()}</div>
-<div style="font-size:13px;color:#fff;font-family:'IBM Plex Mono',monospace;margin-top:6px;margin-bottom:24px;">${deal.role}${deal.company ? ` · ${deal.company}` : ""}${deal.opportunity ? ` · ${deal.opportunity}` : ""}</div>
-${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;padding:10px 16px;margin-bottom:32px;font-size:13px;color:#ccc;font-style:italic;line-height:1.7;">● ${analysis.matrix_health_note}</div>` : ""}
-${((analysis.briefing||[]).length||(analysis.findings||[]).length) ? `<div style="margin-bottom:32px;"><div style="display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:20px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">WHAT THE MATRIX IS TELLING YOU</span></div>${(analysis.briefing||[]).map(p=>`<p style="font-size:13px;color:#ccc;line-height:1.85;margin:0 0 18px 0;font-style:italic;">${p}</p>`).join("")}${(analysis.findings||[]).length?`<div style="margin-top:${(analysis.briefing||[]).length?'24px':'0'};padding-top:${(analysis.briefing||[]).length?'20px':'0'};border-top:${(analysis.briefing||[]).length?'1px solid #1e1e1e':'none'};">${(analysis.findings||[]).map(f=>{const headline=typeof f==="object"?f.headline:null;const text=typeof f==="object"?f.finding:f;return `<div style="margin-bottom:20px;">${headline?`<div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.16em;margin-bottom:7px;">${headline}</div>`:""}<p style="font-size:13px;color:#ccc;line-height:1.75;margin:0;">${text}</p></div>`;}).join("")}</div>`:""}</div>` : ""}
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px;">
-<div>${(analysis.gaps||[]).length ? `<div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:12px;"><span style="color:#CC0000;font-size:9px;">▣</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">INTELLIGENCE GAPS</span></div><div style="font-size:10px;color:#666;font-family:'IBM Plex Mono',monospace;margin-bottom:12px;">HIGH — critical to close &nbsp;|&nbsp; MEDIUM — worth exploring</div>${(analysis.gaps||[]).map(g=>`<div style="border-left:3px solid ${g.severity==='HIGH'?'#CC0000':'#f59e0b'};padding:8px 14px;margin-bottom:10px;"><div style="font-size:10px;font-weight:700;color:${g.severity==='HIGH'?'#CC0000':'#f59e0b'};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:4px;">${g.cell}</div><div style="font-size:12px;color:#ccc;line-height:1.55;">${g.note}</div></div>`).join("")}` : ""}</div>
-<div>${(analysis.defense||[]).length ? `<div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:12px;"><span style="color:#CC0000;font-size:9px;">◎</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">DEFENSE STRATEGY</span></div>${(analysis.defense||[]).map(r=>`<div style="margin-bottom:14px;"><div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:5px;">${r.title}</div><div style="font-size:12px;color:#ccc;line-height:1.6;">${r.body}</div></div>`).join("")}` : ""}</div>
-</div>
-${(analysis.iq_questions||[]).length ? `<div style="margin-bottom:32px;"><div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:16px;"><span style="color:#CC0000;font-size:9px;">◉</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">iQ QUESTIONS — USE NEXT CALL</span></div>${(analysis.iq_questions||[]).map(q=>`<div style="margin-bottom:18px;padding-left:16px;border-left:2px solid #333;"><div style="font-size:13px;color:#fff;font-style:italic;line-height:1.75;margin-bottom:6px;">"${q.question}"</div><div style="font-size:11px;color:#666;">${q.timing}</div></div>`).join("")}</div>` : ""}
-${(analysis.watch_for||analysis.watch_out) ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px;">
-<div><div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:16px;"><span style="color:#CC0000;font-size:9px;">◆</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">MOMENTUM SIGNALS — WATCH FOR</span></div>${(analysis.watch_for||[]).map(s=>`<div style="display:flex;gap:12px;margin-bottom:12px;align-items:flex-start;"><div style="flex-shrink:0;border:1px solid #22c55e;border-radius:2px;padding:2px 8px;font-size:9px;font-family:'Barlow Condensed',sans-serif;font-weight:700;color:#22c55e;letter-spacing:0.1em;margin-top:2px;">WATCH FOR</div><div style="font-size:12px;color:#ccc;line-height:1.6;">${s}</div></div>`).join("")}</div>
-<div><div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:16px;"><span style="color:#CC0000;font-size:9px;">◆</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">RESISTANCE SIGNALS — WATCH OUT</span></div>${(analysis.watch_out||[]).map(s=>`<div style="display:flex;gap:12px;margin-bottom:12px;align-items:flex-start;"><div style="flex-shrink:0;border:1px solid #CC0000;border-radius:2px;padding:2px 8px;font-size:9px;font-family:'Barlow Condensed',sans-serif;font-weight:700;color:#CC0000;letter-spacing:0.1em;margin-top:2px;">WATCH OUT</div><div style="font-size:12px;color:#ccc;line-height:1.6;">${s}</div></div>`).join("")}</div>
-</div>` : ""}
-${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #CC0000;border-radius:3px;padding:5px 12px;margin-bottom:16px;"><span style="color:#CC0000;font-size:9px;">◆</span><span style="color:#fff;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">RECOMMENDED NEXT ACTIONS</span></div>${(analysis.next_actions||[]).map((a,i)=>`<div style="display:flex;gap:16px;margin-bottom:14px;"><div style="color:#CC0000;font-size:13px;font-weight:700;font-family:'Barlow Condensed',sans-serif;flex-shrink:0;padding-top:1px;">${i+1}.</div><div style="font-size:13px;color:#ccc;line-height:1.7;">${a}</div></div>`).join("")}</div>` : ""}
-<div style="margin-top:40px;padding-top:16px;border-top:1px solid #1e1e1e;font-size:10px;color:#444;">SEMPER MIND © 2026 — SEMPERMIND.COM · ${now}</div>
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Matrix Analysis — ${deal.prospect}</title><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:'IBM Plex Mono',monospace;padding:40px 48px;max-width:1000px;margin:0 auto;line-height:1.6}</style></head><body>
+<div style="font-size:10px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.18em;margin-bottom:8px;">◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
+<div style="font-size:38px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;line-height:1;">${deal.prospect.toUpperCase()}</div>
+<div style="font-size:13px;color:#fff;font-family:'IBM Plex Mono',monospace;margin-top:6px;margin-bottom:28px;">${deal.role}${deal.company ? ` · ${deal.company}` : ""}${deal.opportunity ? ` · ${deal.opportunity}` : ""}</div>
+${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;padding:10px 16px;margin-bottom:32px;font-size:13px;color:#ccc;font-style:italic;">● ${analysis.matrix_health_note}</div>` : ""}
+${((Array.isArray(analysis.briefing) ? analysis.briefing.length : 0) || (analysis.findings||[]).length) ? `<div style="margin-bottom:32px;"><div style="display:inline-flex;align-items:center;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:20px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">WHAT THE MATRIX IS TELLING YOU</span></div>${(Array.isArray(analysis.briefing)?analysis.briefing:[]).map(p=>`<p style="font-size:13px;color:#ccc;line-height:1.85;margin-bottom:18px;font-style:italic;">${p}</p>`).join("")}${(analysis.findings||[]).map(f=>{const h=typeof f==="object"?f.headline:null;const t=typeof f==="object"?f.finding:f;return `<div style="margin-bottom:20px;">${h?`<div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.16em;margin-bottom:7px;">${h}</div>`:""}<p style="font-size:13px;color:#ccc;line-height:1.75;">${t}</p></div>`;}).join("")}</div>`:""}
 </body></html>`;
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `matrix_analysis_${deal.prospect.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.html`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    a.href = url; a.download = `${deal.prospect.replace(/\s+/g, "_")}_matrix_analysis.html`;
+    a.click(); URL.revokeObjectURL(url);
   }, [analysis, deal]);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0a", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", background: BG, display: "flex", flexDirection: "column" }}>
 
-      {/* Header bar */}
-      <div style={{ padding: "14px 28px", borderBottom: `1px solid #1a1a1a`, background: "#0d0d0d", display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-        <Btn variant="ghost" onClick={onBack} style={{ padding: "6px 12px", fontSize: "11px" }}>← EDIT MATRIX</Btn>
-        <div style={{ width: "1px", height: "24px", background: "#222" }} />
-        <span style={{ color: RED, fontSize: "11px", fontFamily: MONO, letterSpacing: "0.14em" }}>CONNECTION INTELLIGENCE — MATRIX ANALYSIS</span>
+      {/* Header */}
+      <div style={{ padding: "14px 28px", borderBottom: `1px solid ${BORDER}`, background: SURFACE, display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+        <Btn variant="ghost" onClick={onBack} style={{ padding: "6px 12px", fontSize: "11px" }}>← BACK</Btn>
+        <div style={{ width: "1px", height: "24px", background: "#333" }} />
+        <span style={{ color: RED, fontSize: "15px", fontWeight: "700", fontFamily: CONDENSED, letterSpacing: "0.1em" }}>MATRIX ANALYSIS</span>
+        <span style={{ color: "#fff", fontSize: "11px", fontFamily: MONO }}>{deal.prospect} · {deal.company}</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
           {hasAnalysis && (
             <button onClick={exportHTML}
@@ -1148,7 +854,7 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
 
       <div style={{ flex: 1, padding: "40px 48px", overflowY: "auto", maxWidth: "1000px", width: "100%" }}>
 
-        {/* Deal header — matches screenshot large name treatment */}
+        {/* Report header */}
         <div style={{ marginBottom: "8px", fontSize: "10px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.18em" }}>◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
         <div style={{ fontSize: "42px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.04em", lineHeight: 1, marginBottom: "10px" }}>{deal.prospect.toUpperCase()}</div>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
@@ -1170,35 +876,27 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
             {analysis.matrix_health_note && (
               <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "36px", paddingBottom: "28px", borderBottom: "1px solid #1a1a1a" }}>
                 <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: RED, flexShrink: 0, marginTop: "5px" }} />
-                <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, fontStyle: "italic", lineHeight: "1.75" }}>
-                  {analysis.matrix_health_note}
-                </div>
+                <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, fontStyle: "italic", lineHeight: "1.75" }}>{analysis.matrix_health_note}</div>
               </div>
             )}
 
-            {/* WHAT THE MATRIX IS TELLING YOU — briefing + labeled findings */}
-            {((Array.isArray(analysis.briefing) ? analysis.briefing.length > 0 : !!analysis.briefing) || (analysis.findings || []).length > 0) && (
+            {/* WHAT THE MATRIX IS TELLING YOU */}
+            {((Array.isArray(analysis.briefing) ? analysis.briefing.length > 0 : !!analysis.briefing) || (analysis.findings||[]).length > 0) && (
               <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "24px" }}>
+                <div style={{ display: "inline-flex", alignItems: "center", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "24px" }}>
                   <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>WHAT THE MATRIX IS TELLING YOU</span>
                 </div>
-
-                {/* Briefing paragraphs — continuous read */}
                 {(Array.isArray(analysis.briefing) ? analysis.briefing : analysis.briefing ? [analysis.briefing] : []).map((para, i) => (
                   <p key={i} style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.85", margin: 0, marginBottom: "18px", fontStyle: "italic" }}>{para}</p>
                 ))}
-
-                {/* Labeled findings — sharpest specific gaps */}
-                {(analysis.findings || []).length > 0 && (
-                  <div style={{ marginTop: (analysis.briefing || []).length > 0 ? "28px" : "0", paddingTop: (analysis.briefing || []).length > 0 ? "24px" : "0", borderTop: (analysis.briefing || []).length > 0 ? "1px solid #1e1e1e" : "none" }}>
-                    {(analysis.findings || []).map((f, i) => {
+                {(analysis.findings||[]).length > 0 && (
+                  <div style={{ marginTop: "28px", paddingTop: "24px", borderTop: "1px solid #1e1e1e" }}>
+                            {(analysis.findings||[]).map((f, i) => {
                       const headline = typeof f === "object" ? f.headline : null;
                       const text = typeof f === "object" ? f.finding : f;
                       return (
                         <div key={i} style={{ marginBottom: "22px" }}>
-                          {headline && (
-                            <div style={{ fontSize: "11px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.16em", marginBottom: "7px" }}>{headline}</div>
-                          )}
+                          {headline && <div style={{ fontSize: "11px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.16em", marginBottom: "7px" }}>{headline}</div>}
                           <p style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.75", margin: 0 }}>{text}</p>
                         </div>
                       );
@@ -1208,21 +906,19 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
               </div>
             )}
 
-            {/* INTELLIGENCE GAPS + DEFENSE STRATEGY — two column */}
-            {((analysis.gaps || []).length > 0 || (analysis.defense || []).length > 0) && (
+            {/* GAPS + DEFENSE */}
+            {((analysis.gaps||[]).length > 0 || (analysis.defense||[]).length > 0) && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
-
-                {/* GAPS */}
-                {(analysis.gaps || []).length > 0 && (
+                {(analysis.gaps||[]).length > 0 && (
                   <div>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "12px" }}>
+                    <div style={{ display: "inline-flex", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "16px" }}>
                       <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>INTELLIGENCE GAPS</span>
                     </div>
                     <div style={{ fontSize: "10px", color: "#fff", fontFamily: MONO, marginBottom: "14px" }}>
                       <span style={{ borderLeft: `2px solid ${RED}`, paddingLeft: "6px", marginRight: "12px" }}>HIGH — critical to close</span>
                       <span style={{ borderLeft: "2px solid #f59e0b", paddingLeft: "6px" }}>MEDIUM — worth exploring</span>
                     </div>
-                    {(analysis.gaps || []).map((gap, i) => (
+                    {(analysis.gaps||[]).map((gap, i) => (
                       <div key={i} style={{ borderLeft: `3px solid ${gap.severity === "HIGH" ? RED : "#f59e0b"}`, paddingLeft: "14px", marginBottom: "16px" }}>
                         <div style={{ fontSize: "11px", fontWeight: "700", color: gap.severity === "HIGH" ? RED : "#f59e0b", fontFamily: CONDENSED, letterSpacing: "0.12em", marginBottom: "5px" }}>{gap.cell}</div>
                         <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.6" }}>{gap.note}</div>
@@ -1230,17 +926,15 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
                     ))}
                   </div>
                 )}
-
-                {/* DEFENSE */}
-                {(analysis.defense || []).length > 0 && (
+                {(analysis.defense||[]).length > 0 && (
                   <div>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
+                    <div style={{ display: "inline-flex", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "16px" }}>
                       <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>DEFENSE STRATEGY</span>
                     </div>
-                    {(analysis.defense || []).map((risk, i) => (
-                      <div key={i} style={{ marginBottom: "20px" }}>
-                        <div style={{ fontSize: "11px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.12em", marginBottom: "6px" }}>{risk.title}</div>
-                        <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.65" }}>{risk.body}</div>
+                    {(analysis.defense||[]).map((d, i) => (
+                      <div key={i} style={{ borderLeft: `3px solid ${RED}`, paddingLeft: "14px", marginBottom: "20px" }}>
+                        <div style={{ fontSize: "11px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.12em", marginBottom: "6px" }}>{d.title}</div>
+                        <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.65" }}>{d.body}</div>
                       </div>
                     ))}
                   </div>
@@ -1249,72 +943,75 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
             )}
 
             {/* iQ QUESTIONS */}
-            {(analysis.iq_questions || []).length > 0 && (
+            {(analysis.iq_questions||[]).length > 0 && (
               <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
+                <div style={{ display: "inline-flex", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
                   <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>iQ QUESTIONS — USE NEXT CALL</span>
                 </div>
-                {(analysis.iq_questions || []).map((q, i) => (
-                  <div key={i} style={{ marginBottom: "22px", paddingLeft: "16px", borderLeft: "2px solid #222" }}>
-                    <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, fontStyle: "italic", lineHeight: "1.75", marginBottom: "8px" }}>"{q.question}"</div>
-                    <div style={{ fontSize: "11px", color: "#aaa", fontFamily: MONO }}>{q.timing}</div>
-                  </div>
-                ))}
+                {(analysis.iq_questions||[]).map((q, i) => {
+                  const question = typeof q === "object" ? q.question : q;
+                  const timing = typeof q === "object" ? q.timing : null;
+                  return (
+                    <div key={i} style={{ marginBottom: "22px", paddingLeft: "16px", borderLeft: `3px solid ${RED}` }}>
+                      <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.8", fontStyle: "italic", marginBottom: timing ? "8px" : 0 }}>"{question}"</div>
+                      {timing && <div style={{ fontSize: "10px", color: "#888", fontFamily: MONO, lineHeight: "1.6" }}>{timing}</div>}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
-            {/* MOMENTUM + RESISTANCE — two column */}
-            {((analysis.watch_for || []).length > 0 || (analysis.watch_out || []).length > 0) && (
+            {/* SIGNALS */}
+            {((analysis.watch_for||[]).length > 0 || (analysis.watch_out||[]).length > 0) && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
-
-                <div>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                    <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>MOMENTUM SIGNALS</span>
-                  </div>
-                  {(analysis.watch_for || []).map((s, i) => (
-                    <div key={i} style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "flex-start" }}>
-                      <div style={{ flexShrink: 0, border: "1px solid #22c55e", borderRadius: "2px", padding: "2px 8px", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", color: "#22c55e", letterSpacing: "0.1em", marginTop: "2px" }}>WATCH FOR</div>
-                      <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.65" }}>{s}</div>
+                {(analysis.watch_for||[]).length > 0 && (
+                  <div>
+                    <div style={{ display: "inline-flex", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "16px" }}>
+                      <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>MOMENTUM SIGNALS</span>
                     </div>
-                  ))}
-                </div>
-
-                <div>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                    <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>RESISTANCE SIGNALS</span>
+                    {(analysis.watch_for||[]).map((s, i) => (
+                      <div key={i} style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
+                        <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e", flexShrink: 0, marginTop: "5px" }} />
+                        <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.65" }}>{s}</div>
+                      </div>
+                    ))}
                   </div>
-                  {(analysis.watch_out || []).map((s, i) => (
-                    <div key={i} style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "flex-start" }}>
-                      <div style={{ flexShrink: 0, border: `1px solid ${RED}`, borderRadius: "2px", padding: "2px 8px", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", color: RED, letterSpacing: "0.1em", marginTop: "2px" }}>WATCH OUT</div>
-                      <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.65" }}>{s}</div>
+                )}
+                {(analysis.watch_out||[]).length > 0 && (
+                  <div>
+                    <div style={{ display: "inline-flex", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "16px" }}>
+                      <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>RESISTANCE SIGNALS</span>
                     </div>
-                  ))}
-                </div>
+                    {(analysis.watch_out||[]).map((s, i) => (
+                      <div key={i} style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
+                        <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: RED, flexShrink: 0, marginTop: "5px" }} />
+                        <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.65" }}>{s}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
-            {/* RECOMMENDED NEXT ACTIONS */}
-            {(analysis.next_actions || []).length > 0 && (
-              <div style={{ marginBottom: "40px" }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "7px", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                  <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em", color: "#000" }}>RECOMMENDED NEXT ACTIONS</span>
+            {/* NEXT ACTIONS */}
+            {(analysis.next_actions||[]).length > 0 && (
+              <div style={{ marginBottom: "36px" }}>
+                <div style={{ display: "inline-flex", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
+                  <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>RECOMMENDED NEXT ACTIONS</span>
                 </div>
-                {(analysis.next_actions || []).map((action, i) => (
-                  <div key={i} style={{ display: "flex", gap: "16px", marginBottom: "16px", alignItems: "flex-start" }}>
-                    <div style={{ color: RED, fontSize: "14px", fontWeight: "700", fontFamily: CONDENSED, flexShrink: 0, paddingTop: "1px", minWidth: "16px" }}>{i + 1}.</div>
-                    <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.75" }}>{action}</div>
+                {(analysis.next_actions||[]).map((action, i) => (
+                  <div key={i} style={{ display: "flex", gap: "14px", marginBottom: "16px", paddingBottom: "16px", borderBottom: i < (analysis.next_actions||[]).length - 1 ? "1px solid #1a1a1a" : "none" }}>
+                    <div style={{ fontSize: "18px", fontWeight: "900", color: RED, fontFamily: CONDENSED, flexShrink: 0, lineHeight: 1.2 }}>{i + 1}</div>
+                    <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.7" }}>{action}</div>
                   </div>
                 ))}
               </div>
             )}
 
             {/* Footer */}
-            <div style={{ paddingTop: "20px", borderTop: "1px solid #1a1a1a", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "10px", color: "#333", fontFamily: MONO }}>SEMPER MIND © 2026 — SEMPERMIND.COM</span>
-              <div style={{ display: "flex", gap: "8px" }}>
-                {hasAnalysis && <Btn variant="ghost" onClick={exportHTML} style={{ fontSize: "10px", padding: "7px 14px" }}>↓ EXPORT</Btn>}
-                <Btn variant="ghost" onClick={onRedo} style={{ fontSize: "10px", padding: "7px 14px" }}>↺ RE-ANALYZE</Btn>
-              </div>
+            <div style={{ borderTop: "1px solid #1a1a1a", paddingTop: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: "10px", color: "#555", fontFamily: MONO }}>Semper Selling® Connection Intelligence Matrix — Semper Mind © 2026</div>
+              <div style={{ fontSize: "10px", color: "#555", fontFamily: MONO }}>{deal.prospect} · {deal.company}</div>
             </div>
 
           </div>
@@ -1324,77 +1021,51 @@ ${(analysis.next_actions||[]).length ? `<div style="margin-bottom:32px;"><div st
   );
 }
 
-// ─── ROOT ──────────────────────────────────────
-
+// ─── APP ROOT ──────────────────────────────────
 export default function App() {
   const [screen, setScreen] = useState("deal");
   const [deal, setDeal] = useState(null);
-  const [cells, setCells] = useState(null);
-  const [matrixText, setMatrixText] = useState(null);
-  const [analysis, setAnalysis] = useState(null);
-  const [aiSources, setAiSources] = useState({});
+  const [result, setResult] = useState(null);
 
-  return (
-    <>
-      <style>{FONTS}{`
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #0d0d0d; color: #fff; }
-        ::placeholder { color: #444 !important; opacity: 1; }
-        input, textarea { color-scheme: dark; }
-        textarea.matrix-cell {
-          display: block;
-          background: transparent !important;
-          background-color: transparent !important;
-          border: none !important;
-          outline: none !important;
-          box-shadow: none !important;
-          -webkit-appearance: none !important;
-          appearance: none !important;
-          resize: none !important;
-          color: #ffffff;
-          font-size: 12px;
-          line-height: 1.55;
-          width: 100%;
-          min-height: 72px;
-          flex: 1;
-          padding: 0;
-          margin: 0;
-          font-family: 'IBM Plex Mono', monospace;
-        }
-        textarea.matrix-cell:focus { outline: none !important; box-shadow: none !important; }
-        @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes readingPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        @media print {
-          body { background: #fff !important; color: #000 !important; }
-          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          button, [data-noprint] { display: none !important; }
-        }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #0d0d0d; }
-        ::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 2px; }
-        ::-webkit-scrollbar-thumb:hover { background: #CC0000; }
-      `}</style>
-
-      {screen === "deal" && (
+  if (screen === "deal") {
+    return (
+      <div>
+        <style>{FONTS}</style>
         <DealScreen onComplete={d => { setDeal(d); setScreen("matrix"); }} />
-      )}
-      {screen === "matrix" && deal && (
+      </div>
+    );
+  }
+
+  if (screen === "matrix") {
+    return (
+      <div>
+        <style>{FONTS}</style>
         <MatrixScreen
           deal={deal}
-          onComplete={(c, txt, a, sources) => { setCells(c); setMatrixText(txt); setAnalysis(a); setAiSources(sources || {}); setScreen("report"); }}
           onBack={() => setScreen("deal")}
+          onComplete={(cells, matrixText, analysis, aiSources) => {
+            setResult({ cells, matrixText, analysis, aiSources });
+            setScreen("analysis");
+          }}
         />
-      )}
-      {screen === "report" && deal && (
+      </div>
+    );
+  }
+
+  if (screen === "analysis") {
+    return (
+      <div>
+        <style>{FONTS}</style>
         <AnalysisScreen
           deal={deal}
-          cells={cells}
-          analysis={analysis}
-          aiSources={aiSources}
+          analysis={result?.analysis}
+          aiSources={result?.aiSources}
           onBack={() => setScreen("matrix")}
           onRedo={() => setScreen("matrix")}
         />
-      )}
-    </>
-  );
+      </div>
+    );
+  }
+
+  return null;
 }
