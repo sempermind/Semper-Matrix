@@ -1,4 +1,10 @@
-export const config = { api: { bodyParser: true } };
+export const config = {
+  api: {
+    bodyParser: true,
+  },
+  // Extend Vercel function timeout to 60 seconds
+  maxDuration: 60,
+};
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -15,8 +21,8 @@ export default async function handler(req, res) {
         "anthropic-beta": "web-search-2025-03-05",
       },
       body: JSON.stringify({
-        model: req.body.model || "claude-sonnet-4-20250514",
-        max_tokens: req.body.max_tokens || 1024,
+        model: req.body.model || "claude-sonnet-4-6",
+        max_tokens: req.body.max_tokens || 2000,
         ...(req.body.system ? { system: req.body.system } : {}),
         ...(req.body.tools ? { tools: req.body.tools } : {}),
         messages: req.body.messages,
@@ -24,7 +30,10 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+
+    // Forward Anthropic's status code so the frontend can detect errors
     return res.status(response.status).json(data);
+
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
