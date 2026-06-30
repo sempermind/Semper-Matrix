@@ -606,12 +606,19 @@ function MatrixScreen({ deal, onComplete, onBack }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-6",
-          max_tokens: 2000,
+          max_tokens: 4000,
           messages: [{ role: "user", content: ANALYSIS_PROMPT(matrixText, deal) }],
         }),
       });
       const data = await resp.json();
-      const raw = (data.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim();
+      // Always use the LAST text block — model may emit preamble before the JSON
+      const textBlocks = (data.content || []).filter(b => b.type === "text");
+      const rawText = textBlocks.length > 0 ? textBlocks[textBlocks.length - 1].text : "";
+      // Strip HTML tags, markdown fences, then extract outermost JSON object
+      const stripped = rawText.replace(/<[^>]+>/g, "").replace(/```json|```/gi, "").trim();
+      const start = stripped.indexOf("{");
+      const end = stripped.lastIndexOf("}");
+      const raw = (start !== -1 && end > start) ? stripped.slice(start, end + 1) : "";
       let analysis = {};
       try { analysis = JSON.parse(raw); } catch { analysis = null; }
       onComplete(cells, matrixText, analysis, aiSources);
