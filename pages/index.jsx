@@ -46,67 +46,41 @@ const cloudLoad = async (code) => {
   } catch { return null; }
 };
 
-// ─── STREAMING ANALYSIS ────────────────────────
-// The analysis is a long generation. Streaming keeps the connection alive
-// (no 46s function timeout) and lets the loader tick off sections as they land.
-// Ordered to match the JSON schema so progress moves top-to-bottom naturally.
+// ─── ANALYSIS PROGRESS STAGES ──────────────────
+// The analysis runs as two smaller calls in parallel (a READ and a PLAN), so
+// neither can hit the function timeout. These stages drive the loader's ticks.
 const ANALYSIS_STAGES = [
-  { key: '"matrix_health"', label: "Reading the terrain" },
-  { key: '"briefing"',      label: "Interpreting the intel" },
-  { key: '"findings"',      label: "Finding cross-cell patterns" },
-  { key: '"gaps"',          label: "Flagging intelligence gaps" },
-  { key: '"defense"',       label: "Building defense strategy" },
-  { key: '"objective"',     label: "Drafting your call objective" },
-  { key: '"opener"',        label: "Writing your opener" },
-  { key: '"iq_questions"',  label: "Loading iQ questions" },
-  { key: '"next_actions"',  label: "Setting next actions" },
+  { label: "Reading the terrain" },
+  { label: "Interpreting the intel" },
+  { label: "Finding cross-cell patterns" },
+  { label: "Flagging intelligence gaps" },
+  { label: "Building defense strategy" },
+  { label: "Drafting your call objective" },
+  { label: "Writing your opener" },
+  { label: "Loading iQ questions" },
+  { label: "Setting next actions" },
 ];
 
-// Streams /api/chat, calling onText with the accumulated text as it arrives.
-// Falls back to plain JSON read if the route isn't streaming yet — so the
-// front end works whether or not the chat route has been updated.
-async function streamChat(body, onText) {
+// One /api/chat call that returns parsed JSON. Works with a plain, non-streaming
+// chat route — no streaming, no maxDuration changes, no route format to match.
+async function callAnalysis(prompt) {
   const resp = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...body, stream: true }),
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1500,
+      messages: [{ role: "user", content: prompt }],
+    }),
   });
-  const ctype = resp.headers.get("content-type") || "";
-
-  // Fallback path: old (non-streaming) route — read the whole JSON at once.
-  if (!resp.body || !ctype.includes("event-stream")) {
-    const data = await resp.json().catch(() => null);
-    const blocks = (data?.content || []).filter(b => b.type === "text");
-    const text = blocks.length ? blocks[blocks.length - 1].text : "";
-    if (text) onText(text);
-    return text;
-  }
-
-  const reader = resp.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let full = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let nl;
-    while ((nl = buffer.indexOf("\n")) >= 0) {
-      const line = buffer.slice(0, nl).trim();
-      buffer = buffer.slice(nl + 1);
-      if (!line.startsWith("data:")) continue;
-      const payload = line.slice(5).trim();
-      if (!payload || payload === "[DONE]") continue;
-      try {
-        const evt = JSON.parse(payload);
-        if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta") {
-          full += evt.delta.text;
-          onText(full);
-        }
-      } catch { /* keepalive or partial line — ignore */ }
-    }
-  }
-  return full;
+  const data = await resp.json();
+  const blocks = (data.content || []).filter(b => b.type === "text");
+  const txt = blocks.length ? blocks[blocks.length - 1].text : "";
+  const stripped = txt.replace(/<[^>]+>/g, "").replace(/```json|```/gi, "").trim();
+  const a = stripped.indexOf("{");
+  const b = stripped.lastIndexOf("}");
+  if (a === -1 || b <= a) return null;
+  try { return JSON.parse(stripped.slice(a, b + 1)); } catch { return null; }
 }
 
 const MATRIX_COLS = ["ROLE", "REACH", "RESULTS"];
@@ -225,7 +199,9 @@ When you find nothing at all:
 {"found": false}`;
 
 // ─── ANALYSIS PROMPT ──────────────────────────
-const ANALYSIS_PROMPT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine. Senior sales strategist. Find cross-cell gaps that reveal what's actually happening in this deal beneath the surface. A finding that restates one cell is not a finding.
+// Shared context both halves of the analysis need: the intel, the pattern
+// library, and the classification rule. Sent with each of the two parallel calls.
+const ANALYSIS_CONTEXT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine. Senior sales strategist. Find cross-cell gaps that reveal what's actually happening in this deal beneath the surface. A finding that restates one cell is not a finding.
 
 Deal: ${deal.prospect} (${deal.role} @ ${deal.company})${deal.opportunity ? ` | ${deal.opportunity}` : ""}
 
@@ -251,26 +227,37 @@ P12 Box1+4+7: Full ROLE column — can they actually deliver on their own ambiti
 P13 Box1+2+3: Full CURRENT STATE row — comfortable+entrenched vs pressured+needs a win. Colors everything.
 P14 Box3+6+9: Full RESULTS column — current pressure → committed future → execution cost. Clearest commercial picture.
 
-CLASSIFY EVERY FINDING before anything feeds downstream — this is the core logic, do not skip it:
-- OPENING = this works FOR the rep (a motivated champion, an opening to advance, alignment to exploit).
-- THREAT = this works AGAINST the rep (a risk that could stall or kill the deal).
+CLASSIFY EVERY FINDING before anything feeds downstream — this is the core logic:
+- OPENING = works FOR the rep (a motivated champion, an opening to advance, alignment to exploit).
+- THREAT = works AGAINST the rep (a risk that could stall or kill the deal).
 - VALIDATE = can't tell yet — a hypothesis to confirm or kill on the next call. Anything resting on [INFERRED] intel defaults here.
-A pattern existing does NOT make it a risk. Do not manufacture threats to fill a quota.
+A pattern existing does NOT make it a risk. Do not manufacture threats to fill a quota.`;
 
-OUTPUT RULES:
+// CALL 1 of 2 — the READ. Diagnosis half. Smaller + faster than one big call.
+const ANALYSIS_PROMPT_READ = (matrixText, deal) => `${ANALYSIS_CONTEXT(matrixText, deal)}
+
+YOUR JOB: produce the READ of this deal — what the Matrix is telling the rep. Output ONLY these fields:
+- MATRIX_HEALTH: STRONG FOUNDATION / PARTIAL PICTURE / FLYING BLIND. matrix_health_note: one honest sentence on how much weight this analysis can bear.
 - BRIEFING: 1-2 paragraphs. Inference only ("The data suggests...", "The gap between X and Y points to..."). Customer's world only. No advice, no "you should", no box/pattern numbers, never "tension". Specific names/numbers from Matrix. P11 firing = second paragraph on urgency in their world.
-- FINDINGS: 2-3 sharpest cross-cell gaps, each classified OPENING / THREAT / VALIDATE. Headline ALL CAPS max 8 words specific to this deal. Body: data point 1, data point 2, what gap reveals. 2-3 sentences, no box refs. Most urgent first.
-- GAPS: Empty/thin cells only. HIGH or MEDIUM. Max 4. NEEDS cells: name the discovery question.
-- DEFENSE: Build ONLY from THREAT findings and HIGH gaps. Max 3. Specific scenario that kills deal + one countermove the rep can do in 5 business days. Title ALL CAPS. If there are no THREAT findings and no HIGH gaps, return an empty array — do not invent risks.
-- OBJECTIVE: One customer-centric call objective. FEELS ← drawn from a Current State cell (make them feel understood). SEES HOW ← the sharpest finding's insight (perspective shift). TAKES STEPS ← the countermove from the top THREAT (or, if no threats, the move that presses the top OPENING). Also give a fallback: the minimum viable win if the primary step stalls in the call.
-- OPENER: One opening insight, three parts flowing as natural speech — unexpected point → personally relevant to them → a question that makes them think. Built from the highest-reliability cells. In "note": if Future State cells (Box 4-6) are empty/thin so the opener can't be truly specific to this person, say so plainly and name which cells to fill to sharpen it.
-- iQ QUESTIONS: Exactly 3, each banked. VALIDATION = full iQ (named Current Reality + named Future State + personal impact — never operational) that tests a finding; at least one of these. DISCOVERY = a question that fills the single most blocking empty cell; at least one of these. One natural sentence each, different data per question. Give Early/Mid/Late timing on each.
-- WATCH_FOR/OUT: Exactly 2 each. Observable only. Tied to this person's intel.
-- NEXT_ACTIONS: Exactly 3. What, to whom, by when + cost of inaction. Never "prepare questions."
-- MATRIX_HEALTH: STRONG FOUNDATION / PARTIAL PICTURE / FLYING BLIND
+- FINDINGS: 2-3 sharpest cross-cell gaps, each classified OPENING / THREAT / VALIDATE. Headline ALL CAPS max 8 words specific to this deal. Body: data point 1, data point 2, what the gap reveals. 2-3 sentences, no box refs. Most urgent first.
+- GAPS: Empty/thin cells only. HIGH or MEDIUM. Max 4. For NEEDS cells: name the discovery question.
 
 Return ONLY this JSON, no backticks, no markdown:
-{"matrix_health":"","matrix_health_note":"","briefing":[""],"findings":[{"classification":"","headline":"","finding":""}],"gaps":[{"cell":"","label":"","severity":"","note":""}],"defense":[{"title":"","body":""}],"objective":{"who":"","feels":"","sees_how":"","takes_steps":"","fallback":""},"opener":{"text":"","note":""},"iq_questions":[{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""}],"watch_for":["",""],"watch_out":["",""],"next_actions":["","",""]}`;
+{"matrix_health":"","matrix_health_note":"","briefing":[""],"findings":[{"classification":"","headline":"","finding":""}],"gaps":[{"cell":"","label":"","severity":"","note":""}]}`;
+
+// CALL 2 of 2 — the PLAN. Action half. Runs in parallel with the READ.
+const ANALYSIS_PROMPT_PLAN = (matrixText, deal) => `${ANALYSIS_CONTEXT(matrixText, deal)}
+
+YOUR JOB: produce the PLAN for the rep's next call. First, silently identify the THREAT / OPENING / VALIDATE findings and the HIGH gaps yourself using the rules above. Then output ONLY these action fields, built from that internal read:
+- DEFENSE: Build ONLY from THREAT findings and HIGH gaps. Max 3. Specific scenario that kills the deal + one countermove the rep can do in 5 business days. Title ALL CAPS. If there are no THREATs and no HIGH gaps, return an empty array — do not invent risks.
+- OBJECTIVE: One customer-centric call objective. FEELS ← a Current State cell (make them feel understood). SEES HOW ← the sharpest finding's insight. TAKES STEPS ← the countermove from the top THREAT (or, if no threats, the move that presses the top OPENING). fallback: the minimum viable win if the primary step stalls in the call.
+- OPENER: One opening insight, three parts as natural speech — unexpected point → personally relevant → a question that makes them think. Built from the highest-reliability cells. In "note": if Future State cells are empty/thin so the opener can't be truly specific, say so and name which cells to fill.
+- iQ QUESTIONS: Exactly 3, each banked. VALIDATION = full iQ (named Current Reality + named Future State + personal impact — never operational) testing a finding; at least one. DISCOVERY = a question filling the single most blocking empty cell; at least one. One natural sentence each, different data per question. Early/Mid/Late timing on each.
+- WATCH_FOR / WATCH_OUT: Exactly 2 each. Observable only. Tied to this person's intel.
+- NEXT_ACTIONS: Exactly 3. What, to whom, by when + cost of inaction. Never "prepare questions."
+
+Return ONLY this JSON, no backticks, no markdown:
+{"defense":[{"title":"","body":""}],"objective":{"who":"","feels":"","sees_how":"","takes_steps":"","fallback":""},"opener":{"text":"","note":""},"iq_questions":[{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""}],"watch_for":["",""],"watch_out":["",""],"next_actions":["","",""]}`;
 
 // ─── SHARED BUTTON ─────────────────────────────
 function Btn({ children, onClick, disabled, variant, style = {} }) {
@@ -724,24 +711,30 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
     setAnalyzing(true);
     setAnalyzeSteps(ANALYSIS_STAGES.map(s => ({ label: s.label, done: false })));
     const matrixText = matrixToText(cells, deal, aiSources);
+
+    // Gentle timed progress so the bars always feel alive. Advances up to the
+    // second-to-last stage; the real completions finish the rest.
+    let idx = 0;
+    const ticker = setInterval(() => {
+      idx = Math.min(idx + 1, ANALYSIS_STAGES.length - 1);
+      setAnalyzeSteps(ANALYSIS_STAGES.map((s, i) => ({ label: s.label, done: i < idx })));
+    }, 2000);
+
     try {
-      const full = await streamChat(
-        {
-          model: "claude-sonnet-4-6",
-          max_tokens: 2600,
-          messages: [{ role: "user", content: ANALYSIS_PROMPT(matrixText, deal) }],
-        },
-        // As text streams in, light up each stage whose key has appeared.
-        (acc) => setAnalyzeSteps(ANALYSIS_STAGES.map(s => ({ label: s.label, done: acc.includes(s.key) }))),
-      );
-      const stripped = full.replace(/<[^>]+>/g, "").replace(/```json|```/gi, "").trim();
-      const start = stripped.indexOf("{");
-      const end = stripped.lastIndexOf("}");
-      const raw = (start !== -1 && end > start) ? stripped.slice(start, end + 1) : "";
-      let analysis = null;
-      try { analysis = JSON.parse(raw); } catch { analysis = null; }
+      // Two smaller calls, in parallel. Wall time ≈ the slower half, not the sum
+      // — and neither half is big enough to approach the timeout.
+      const [readPart, planPart] = await Promise.all([
+        callAnalysis(ANALYSIS_PROMPT_READ(matrixText, deal)),
+        callAnalysis(ANALYSIS_PROMPT_PLAN(matrixText, deal)),
+      ]);
+      clearInterval(ticker);
+      setAnalyzeSteps(ANALYSIS_STAGES.map(s => ({ label: s.label, done: true })));
+
+      // Merge the two halves. If one half fails, keep whatever came back.
+      const analysis = (readPart || planPart) ? { ...(readPart || {}), ...(planPart || {}) } : null;
       onComplete(cells, matrixText, analysis, aiSources);
     } catch {
+      clearInterval(ticker);
       onComplete(cells, matrixToText(cells, deal, aiSources), null, aiSources);
     }
     setAnalyzing(false);
