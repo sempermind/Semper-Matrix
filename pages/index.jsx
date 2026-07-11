@@ -1,13 +1,50 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap');`;
 
 const RED = "#CC0000";
+const GREEN = "#22c55e";
+const AMBER = "#f59e0b";
 const BG = "#0d0d0d";
 const SURFACE = "#141414";
 const BORDER = "#2a2a2a";
 const MONO = "'IBM Plex Mono', monospace";
 const CONDENSED = "'Barlow Condensed', sans-serif";
+
+const STORAGE_KEY = "semper_matrix_session_v1";
+
+// ─── RESUME CODE + CLOUD SAVE ──────────────────
+// A short human-writable code is the portable key to a rep's Matrix.
+// No login. Enter the code on any device to reopen and keep editing.
+// Cloud save talks to /api/session (Upstash Redis via Vercel). If the KV
+// store isn't provisioned yet, saves fall back to this-device localStorage
+// and the UI says so honestly — nothing breaks.
+const genCode = () => {
+  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no I/L/O/0/1 — unambiguous when written by hand
+  let s = "";
+  for (let i = 0; i < 5; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return `SEMPER-${s}`;
+};
+
+const cloudSave = async (code, session) => {
+  try {
+    const r = await fetch("/api/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, session }),
+    });
+    return r.ok;
+  } catch { return false; }
+};
+
+const cloudLoad = async (code) => {
+  try {
+    const r = await fetch(`/api/session?code=${encodeURIComponent(code)}`);
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.session || null;
+  } catch { return null; }
+};
 
 const MATRIX_COLS = ["ROLE", "REACH", "RESULTS"];
 const MATRIX_ROWS = ["CURRENT STATE", "FUTURE STATE", "NEEDS"];
@@ -75,13 +112,23 @@ const emptyMatrix = () => {
   return m;
 };
 
-const matrixToText = (cells, deal) => {
+// Tag each cell by intel source so the analysis engine can weight it:
+// [SOURCED] verified public source · [INFERRED] AI hypothesis · [REP INTEL] rep's own knowledge
+const matrixToText = (cells, deal, aiSources = {}) => {
   let out = `CONNECTION INTELLIGENCE MATRIX\n${deal.prospect} — ${deal.role} @ ${deal.company}\n${deal.opportunity ? `Deal: ${deal.opportunity}\n` : ""}\n`;
   MATRIX_ROWS.forEach(row => {
     out += `── ${row} ──\n`;
     MATRIX_COLS.forEach(col => {
       const key = `${row}|${col}`;
-      out += `  ${MATRIX_META[key].label} (${col}): ${cells[key] || "[EMPTY — discovery gap]"}\n`;
+      const val = cells[key] || "";
+      let tag = "";
+      if (val.trim()) {
+        const src = aiSources[key];
+        if (src && src.source === "inferred") tag = " [INFERRED]";
+        else if (src) tag = " [SOURCED]";
+        else tag = " [REP INTEL]";
+      }
+      out += `  ${MATRIX_META[key].label} (${col}): ${val.trim() ? val + tag : "[EMPTY — discovery gap]"}\n`;
     });
     out += "\n";
   });
@@ -121,6 +168,10 @@ Deal: ${deal.prospect} (${deal.role} @ ${deal.company})${deal.opportunity ? ` | 
 
 ${matrixText}
 
+INTEL RELIABILITY — cells are tagged:
+- [SOURCED] and [REP INTEL] = reliable. State conclusions from these plainly.
+- [INFERRED] = an AI hypothesis, not confirmed. Hedge anything resting on it, and lean toward classifying such findings VALIDATE (needs confirming) rather than OPENING or THREAT.
+
 PATTERNS — run each, skip if relevant boxes are empty or thin:
 P1 Box1+2: Authority vs influence gap. High authority+thin network=can't mobilize. Low authority+strong network=more powerful than title.
 P2 Box2+5+8: Specific person/function in Box2 or Box5 absent from Box8 = late-stage surprise. Skip if no specific name/function implied.
@@ -137,18 +188,26 @@ P12 Box1+4+7: Full ROLE column — can they actually deliver on their own ambiti
 P13 Box1+2+3: Full CURRENT STATE row — comfortable+entrenched vs pressured+needs a win. Colors everything.
 P14 Box3+6+9: Full RESULTS column — current pressure → committed future → execution cost. Clearest commercial picture.
 
+CLASSIFY EVERY FINDING before anything feeds downstream — this is the core logic, do not skip it:
+- OPENING = this works FOR the rep (a motivated champion, an opening to advance, alignment to exploit).
+- THREAT = this works AGAINST the rep (a risk that could stall or kill the deal).
+- VALIDATE = can't tell yet — a hypothesis to confirm or kill on the next call. Anything resting on [INFERRED] intel defaults here.
+A pattern existing does NOT make it a risk. Do not manufacture threats to fill a quota.
+
 OUTPUT RULES:
 - BRIEFING: 1-2 paragraphs. Inference only ("The data suggests...", "The gap between X and Y points to..."). Customer's world only. No advice, no "you should", no box/pattern numbers, never "tension". Specific names/numbers from Matrix. P11 firing = second paragraph on urgency in their world.
-- FINDINGS: 2-3 sharpest cross-cell gaps. Headline ALL CAPS max 8 words specific to this deal. Body: data point 1, data point 2, what gap reveals. 2-3 sentences, no box refs. Most urgent first.
+- FINDINGS: 2-3 sharpest cross-cell gaps, each classified OPENING / THREAT / VALIDATE. Headline ALL CAPS max 8 words specific to this deal. Body: data point 1, data point 2, what gap reveals. 2-3 sentences, no box refs. Most urgent first.
 - GAPS: Empty/thin cells only. HIGH or MEDIUM. Max 4. NEEDS cells: name the discovery question.
-- DEFENSE: Max 3. Specific scenario that kills deal + one action in 5 business days. Title ALL CAPS.
-- iQ QUESTIONS: Exactly 2. Current Reality (named constraint) + Future State (named commitment) + Impact (career/reputation/promise — never operational). One natural sentence. Different data per question.
+- DEFENSE: Build ONLY from THREAT findings and HIGH gaps. Max 3. Specific scenario that kills deal + one countermove the rep can do in 5 business days. Title ALL CAPS. If there are no THREAT findings and no HIGH gaps, return an empty array — do not invent risks.
+- OBJECTIVE: One customer-centric call objective. FEELS ← drawn from a Current State cell (make them feel understood). SEES HOW ← the sharpest finding's insight (perspective shift). TAKES STEPS ← the countermove from the top THREAT (or, if no threats, the move that presses the top OPENING). Also give a fallback: the minimum viable win if the primary step stalls in the call.
+- OPENER: One opening insight, three parts flowing as natural speech — unexpected point → personally relevant to them → a question that makes them think. Built from the highest-reliability cells. In "note": if Future State cells (Box 4-6) are empty/thin so the opener can't be truly specific to this person, say so plainly and name which cells to fill to sharpen it.
+- iQ QUESTIONS: Exactly 3, each banked. VALIDATION = full iQ (named Current Reality + named Future State + personal impact — never operational) that tests a finding; at least one of these. DISCOVERY = a question that fills the single most blocking empty cell; at least one of these. One natural sentence each, different data per question. Give Early/Mid/Late timing on each.
 - WATCH_FOR/OUT: Exactly 2 each. Observable only. Tied to this person's intel.
 - NEXT_ACTIONS: Exactly 3. What, to whom, by when + cost of inaction. Never "prepare questions."
 - MATRIX_HEALTH: STRONG FOUNDATION / PARTIAL PICTURE / FLYING BLIND
 
 Return ONLY this JSON, no backticks, no markdown:
-{"matrix_health":"","matrix_health_note":"","briefing":[""],"findings":[{"headline":"","finding":""}],"gaps":[{"cell":"","label":"","severity":"","note":""}],"defense":[{"title":"","body":""}],"iq_questions":[{"question":"","timing":""},{"question":"","timing":""}],"watch_for":["",""],"watch_out":["",""],"next_actions":["","",""]}`;
+{"matrix_health":"","matrix_health_note":"","briefing":[""],"findings":[{"classification":"","headline":"","finding":""}],"gaps":[{"cell":"","label":"","severity":"","note":""}],"defense":[{"title":"","body":""}],"objective":{"who":"","feels":"","sees_how":"","takes_steps":"","fallback":""},"opener":{"text":"","note":""},"iq_questions":[{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""}],"watch_for":["",""],"watch_out":["",""],"next_actions":["","",""]}`;
 
 // ─── SHARED BUTTON ─────────────────────────────
 function Btn({ children, onClick, disabled, variant, style = {} }) {
@@ -162,6 +221,37 @@ function Btn({ children, onClick, disabled, variant, style = {} }) {
     ? { ...base, background: "transparent", border: `1px solid #333`, color: "#888", ...style }
     : { ...base, background: disabled ? "#333" : RED, color: "#fff", opacity: disabled ? 0.5 : 1, ...style };
   return <button onClick={disabled ? undefined : onClick} style={styles}>{children}</button>;
+}
+
+// ─── RESUME CODE CHIP (header) ─────────────────
+function CodeChip({ code, status }) {
+  const [copied, setCopied] = useState(false);
+  if (!code) return null;
+  const statusText = status === "saving" ? "saving…"
+    : status === "cloud" ? "saved · reopen with code"
+    : status === "local" ? "saved on this device"
+    : "";
+  const statusColor = status === "cloud" ? GREEN : status === "saving" ? "#888" : AMBER;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+      <button
+        onClick={() => { try { navigator.clipboard?.writeText(code); } catch {} setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+        title="Copy your resume code — reopen your Matrix on any device"
+        style={{ background: "#1a1a1a", border: `1px solid ${BORDER}`, borderRadius: "3px", padding: "5px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: "7px", transition: "all 0.15s" }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = RED; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; }}
+      >
+        <span style={{ fontSize: "8px", color: "#888", fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700" }}>CODE</span>
+        <span style={{ fontSize: "11px", color: "#fff", fontFamily: MONO, fontWeight: "700", letterSpacing: "0.04em" }}>{code}</span>
+        <span style={{ fontSize: "10px", color: copied ? GREEN : "#666", fontFamily: MONO }}>{copied ? "✓ copied" : "⧉"}</span>
+      </button>
+      {statusText && (
+        <span style={{ fontSize: "9px", color: statusColor, fontFamily: MONO, whiteSpace: "nowrap" }}>
+          {status === "cloud" ? "☁ " : status === "saving" ? "" : "● "}{statusText}
+        </span>
+      )}
+    </div>
+  );
 }
 
 // ─── WHAT GOES HERE DROPDOWN ───────────────────
@@ -256,7 +346,7 @@ function SearchReviewModal({ results, onAccept, onClose }) {
                   </div>
                   <div style={{ display: "flex", gap: "6px" }}>
                     <button onClick={() => setAccepted(a => ({ ...a, [r.key]: true }))}
-                      style={{ background: isAccepted ? "rgba(34,197,94,0.15)" : "transparent", border: `1px solid ${isAccepted ? "#22c55e" : "#333"}`, borderRadius: "3px", padding: "4px 12px", cursor: "pointer", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", color: isAccepted ? "#22c55e" : "#555" }}>
+                      style={{ background: isAccepted ? "rgba(34,197,94,0.15)" : "transparent", border: `1px solid ${isAccepted ? GREEN : "#333"}`, borderRadius: "3px", padding: "4px 12px", cursor: "pointer", fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", color: isAccepted ? GREEN : "#555" }}>
                       ✓ ACCEPT
                     </button>
                     <button onClick={() => setAccepted(a => ({ ...a, [r.key]: false }))}
@@ -274,7 +364,7 @@ function SearchReviewModal({ results, onAccept, onClose }) {
                 )}
 
                 <div>
-                  <span style={{ fontSize: "9px", color: isAccepted ? "#22c55e" : "#555", fontFamily: CONDENSED, letterSpacing: "0.1em", display: "block", marginBottom: "4px" }}>AI FOUND</span>
+                  <span style={{ fontSize: "9px", color: isAccepted ? GREEN : "#555", fontFamily: CONDENSED, letterSpacing: "0.1em", display: "block", marginBottom: "4px" }}>AI FOUND</span>
                   <textarea className="matrix-cell" defaultValue={r.result.intel}
                     onChange={e => setEdited(ed => ({ ...ed, [r.key]: e.target.value }))}
                     style={{ minHeight: "56px", opacity: isAccepted ? 1 : 0.5 }}
@@ -284,7 +374,7 @@ function SearchReviewModal({ results, onAccept, onClose }) {
                 <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: `1px solid #1e1e1e`, display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ fontSize: "9px", color: "#444", fontFamily: CONDENSED, letterSpacing: "0.1em" }}>SOURCE</span>
                   {r.result.source === "inferred" ? (
-                    <span style={{ fontSize: "10px", color: "#aaa", fontFamily: MONO, fontStyle: "italic" }}>~ inferred from organizational context</span>
+                    <span style={{ fontSize: "10px", color: AMBER, fontFamily: MONO, fontStyle: "italic" }}>~ inferred from organizational context</span>
                   ) : (
                     <a href={r.result.source} target="_blank" rel="noopener noreferrer"
                       style={{ fontSize: "10px", color: "#4a9eff", fontFamily: MONO, textDecoration: "none", wordBreak: "break-all" }}
@@ -311,9 +401,18 @@ function SearchReviewModal({ results, onAccept, onClose }) {
 }
 
 // ─── SCREEN 1: DEAL ENTRY ──────────────────────
-function DealScreen({ onComplete }) {
+function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode, codeError, clearCodeError }) {
   const [form, setForm] = useState({ prospect: "", role: "", company: "", opportunity: "" });
   const [errors, setErrors] = useState({});
+  const [codeInput, setCodeInput] = useState("");
+  const [loadingCode, setLoadingCode] = useState(false);
+
+  const submitCode = async () => {
+    if (!codeInput.trim()) return;
+    setLoadingCode(true);
+    await onResumeCode(codeInput);
+    setLoadingCode(false);
+  };
 
   const fields = [
     { key: "prospect",    label: "CONTACT NAME",           textarea: false },
@@ -344,6 +443,44 @@ function DealScreen({ onComplete }) {
           </div>
           <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, marginTop: "10px", lineHeight: 1.6 }}>Build your intel. Walk in masterfully prepared.</div>
         </div>
+
+        {resumeInfo && (
+          <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${GREEN}`, borderRadius: "4px", padding: "16px 18px", marginBottom: "18px", display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: "220px" }}>
+              <div style={{ fontSize: "10px", color: GREEN, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700", marginBottom: "3px" }}>● SAVED MATRIX FOUND</div>
+              <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO }}>{resumeInfo.prospect} · {resumeInfo.company}</div>
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Btn onClick={onResume} style={{ padding: "9px 18px" }}>RESUME →</Btn>
+              <Btn variant="ghost" onClick={onDiscard} style={{ padding: "9px 14px" }}>DISCARD</Btn>
+            </div>
+          </div>
+        )}
+
+        {/* Reopen on any device with a resume code */}
+        <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "4px", padding: "16px 18px", marginBottom: "18px" }}>
+          <div style={{ fontSize: "11px", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "8px" }}>HAVE A CODE? REOPEN YOUR MATRIX</div>
+          <div style={{ display: "flex", gap: "8px", alignItems: "stretch" }}>
+            <input
+              value={codeInput}
+              onChange={e => { setCodeInput(e.target.value.toUpperCase()); if (codeError) clearCodeError(); }}
+              onKeyDown={e => e.key === "Enter" && submitCode()}
+              placeholder="SEMPER-XXXXX"
+              style={{ flex: 1, background: "#0d0d0d", border: `1px solid ${codeError ? "#ff6666" : BORDER}`, borderRadius: "3px", color: "#fff", padding: "10px 12px", fontSize: "12px", fontFamily: MONO, letterSpacing: "0.06em", outline: "none" }}
+              onFocus={e => { e.target.style.borderColor = RED; }}
+              onBlur={e => { e.target.style.borderColor = codeError ? "#ff6666" : BORDER; }}
+            />
+            <Btn onClick={submitCode} disabled={loadingCode || !codeInput.trim()} style={{ padding: "10px 18px" }}>
+              {loadingCode ? "LOADING…" : "REOPEN →"}
+            </Btn>
+          </div>
+          {codeError && (
+            <div style={{ fontSize: "10px", color: "#ff6666", fontFamily: MONO, marginTop: "8px" }}>
+              No Matrix found for that code. Check the code, or start a new one below.
+            </div>
+          )}
+        </div>
+
         <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "4px", padding: "32px 28px" }}>
           <div style={{ fontSize: "14px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.14em", marginBottom: "20px" }}>DEAL CONTEXT</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -400,15 +537,14 @@ function AnalysisLoader() {
 }
 
 // ─── SCREEN 2: MATRIX EDITOR ──────────────────
-function MatrixScreen({ deal, onComplete, onBack }) {
-  const [cells, setCells] = useState(emptyMatrix());
+function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComplete, onBack, code, cloudStatus }) {
   const [focused, setFocused] = useState(null);
+  const [showCodeNote, setShowCodeNote] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [searching, setSearching] = useState(false);
   const [searchProgress, setSearchProgress] = useState(null);
   const [searchResults, setSearchResults] = useState(null);
   const [searchRan, setSearchRan] = useState(false);
-  const [aiSources, setAiSources] = useState({});
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState(null);
   const fileRef = useRef(null);
@@ -426,7 +562,46 @@ function MatrixScreen({ deal, onComplete, onBack }) {
     "NEEDS|RESULTS": `Based on what you know about ${deal.prospect}'s current performance pressures and public commitments as ${deal.role} at ${deal.company}, generate an intelligent hypothesis about what resources, tools, budget, or capabilities they likely need to close the gap between where they are and what they've committed to. Do NOT search the web. Reason from the distance between their current results and their stated goals. Return your hypothesis as: {"found": true, "intel": "Inferred: [your hypothesis]", "source": "inferred", "source_label": "Inferred from role and trajectory"}`,
   };
 
-  // ── AI SEARCH ──────────────────────────────────
+  // Fetch + parse one cell's intel
+  const searchOneCell = async (key, row, col) => {
+    const existing = cells[key].trim();
+    const userContent = CELL_PROMPTS[key] + (existing ? `\n\nNote: The rep already knows this about the cell: "${existing}". Only surface new, additive information not already captured above.` : "");
+    try {
+      const resp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 600,
+          system: SEARCH_SYSTEM_PROMPT,
+          tools: [{ type: "web_search_20250305", name: "web_search" }],
+          messages: [{ role: "user", content: userContent }],
+        }),
+      });
+      const data = await resp.json();
+      const textBlocks = (data.content || []).filter(b => b.type === "text");
+      const lastText = textBlocks[textBlocks.length - 1];
+      if (lastText && lastText.text) {
+        const cleaned = lastText.text
+          .replace(/]*>|<\/antml:cite>/g, "")
+          .replace(/```json|```/g, "")
+          .trim();
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.intel) parsed.intel = parsed.intel.replace(/<[^>]*>/g, "").trim();
+            return { key, row, col, existing, result: parsed };
+          } catch { return { key, row, col, existing, result: { found: false } }; }
+        }
+      }
+      return { key, row, col, existing, result: { found: false } };
+    } catch {
+      return { key, row, col, existing, result: { found: false } };
+    }
+  };
+
+  // ── AI SEARCH — batched 3 at a time so a full room doesn't hit rate limits ──
   const handleSearch = async () => {
     setSearching(true);
     setSearchProgress("Searching public sources...");
@@ -436,63 +611,15 @@ function MatrixScreen({ deal, onComplete, onBack }) {
 
     const results = [];
     let completed = 0;
+    const BATCH = 3;
 
-    await Promise.all(allKeys.map(async ({ key, row, col }) => {
-      const existing = cells[key].trim();
-      const userContent = CELL_PROMPTS[key] + (existing ? `\n\nNote: The rep already knows this about the cell: "${existing}". Only surface new, additive information not already captured above.` : "");
-
-      try {
-        const resp = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-6",
-            max_tokens: 600,
-            system: SEARCH_SYSTEM_PROMPT,
-            tools: [{ type: "web_search_20250305", name: "web_search" }],
-            messages: [{ role: "user", content: userContent }],
-          }),
-        });
-
-        const data = await resp.json();
-
-        // Web search returns multiple content blocks — find the LAST text block
-        // which contains the final JSON response after web search tool use
-        const textBlocks = (data.content || []).filter(b => b.type === "text");
-        const lastText = textBlocks[textBlocks.length - 1];
-
-        if (lastText && lastText.text) {
-          // Clean citation tags injected by web search
-          const cleaned = lastText.text
-            .replace(/]*>|<\/antml:cite>/g, "")
-            .replace(/```json|```/g, "")
-            .trim();
-
-          // Extract JSON — find the first { } block
-          const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            try {
-              const parsed = JSON.parse(jsonMatch[0]);
-              if (parsed.intel) {
-                parsed.intel = parsed.intel.replace(/<[^>]*>/g, "").trim();
-              }
-              results.push({ key, row, col, existing, result: parsed });
-            } catch {
-              results.push({ key, row, col, existing, result: { found: false } });
-            }
-          } else {
-            results.push({ key, row, col, existing, result: { found: false } });
-          }
-        } else {
-          results.push({ key, row, col, existing, result: { found: false } });
-        }
-      } catch {
-        results.push({ key, row, col, existing, result: { found: false } });
-      }
-
-      completed++;
+    for (let i = 0; i < allKeys.length; i += BATCH) {
+      const batch = allKeys.slice(i, i + BATCH);
+      const batchResults = await Promise.all(batch.map(({ key, row, col }) => searchOneCell(key, row, col)));
+      results.push(...batchResults);
+      completed += batch.length;
       setSearchProgress(`Searching... ${completed} of 9 complete`);
-    }));
+    }
 
     setSearching(false);
     setSearchProgress(null);
@@ -520,22 +647,20 @@ function MatrixScreen({ deal, onComplete, onBack }) {
   const handleGenerate = async () => {
     if (filled === 0 || analyzing) return;
     setAnalyzing(true);
-    const matrixText = matrixToText(cells, deal);
+    const matrixText = matrixToText(cells, deal, aiSources);
     try {
       const resp = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-6",
-          max_tokens: 1800,
+          max_tokens: 2600,
           messages: [{ role: "user", content: ANALYSIS_PROMPT(matrixText, deal) }],
         }),
       });
       const data = await resp.json();
-      // Always use the LAST text block — model may emit preamble before the JSON
       const textBlocks = (data.content || []).filter(b => b.type === "text");
       const rawText = textBlocks.length > 0 ? textBlocks[textBlocks.length - 1].text : "";
-      // Strip HTML tags, markdown fences, then extract outermost JSON object
       const stripped = rawText.replace(/<[^>]+>/g, "").replace(/```json|```/gi, "").trim();
       const start = stripped.indexOf("{");
       const end = stripped.lastIndexOf("}");
@@ -544,7 +669,7 @@ function MatrixScreen({ deal, onComplete, onBack }) {
       try { analysis = JSON.parse(raw); } catch { analysis = null; }
       onComplete(cells, matrixText, analysis, aiSources);
     } catch {
-      onComplete(cells, matrixToText(cells, deal), null, aiSources);
+      onComplete(cells, matrixToText(cells, deal, aiSources), null, aiSources);
     }
     setAnalyzing(false);
   };
@@ -611,8 +736,10 @@ function MatrixScreen({ deal, onComplete, onBack }) {
         <div style={{ width: "1px", height: "24px", background: "#333" }} />
         <span style={{ color: RED, fontSize: "15px", fontWeight: "700", fontFamily: CONDENSED, letterSpacing: "0.1em" }}>CONNECTION INTELLIGENCE MATRIX</span>
         <span style={{ color: "#fff", fontSize: "11px", fontFamily: MONO }}>{deal.prospect} · {deal.company}</span>
-        <div style={{ marginLeft: "auto", display: "flex", gap: "10px", alignItems: "center" }}>
-          <span style={{ fontSize: "10px", color: filled === 9 ? "#22c55e" : "#fff", fontFamily: MONO }}>{filled}/9 cells</span>
+        <div style={{ marginLeft: "auto", display: "flex", gap: "12px", alignItems: "center" }}>
+          <CodeChip code={code} status={cloudStatus} />
+          <div style={{ width: "1px", height: "20px", background: "#333" }} />
+          <span style={{ fontSize: "10px", color: filled === 9 ? GREEN : "#fff", fontFamily: MONO }}>{filled}/9 cells</span>
           <button onClick={() => fileRef.current?.click()} disabled={uploading}
             style={{ background: uploading ? "rgba(204,0,0,0.08)" : "#1a1a1a", border: `1px solid ${uploading ? RED : BORDER}`, color: uploading ? RED : "#fff", borderRadius: "3px", padding: "7px 14px", cursor: uploading ? "not-allowed" : "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.3s" }}
             onMouseEnter={e => { if (!uploading) { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = RED; } }}
@@ -626,8 +753,17 @@ function MatrixScreen({ deal, onComplete, onBack }) {
         <div style={{ maxWidth: "1060px" }}>
 
           {uploadMsg && (
-            <div style={{ marginBottom: "14px", padding: "9px 13px", background: uploadMsg.ok ? "rgba(34,197,94,0.08)" : "rgba(204,0,0,0.08)", border: `1px solid ${uploadMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(204,0,0,0.3)"}`, borderRadius: "3px", fontSize: "11px", color: uploadMsg.ok ? "#22c55e" : "#ff6666", fontFamily: MONO }}>
+            <div style={{ marginBottom: "14px", padding: "9px 13px", background: uploadMsg.ok ? "rgba(34,197,94,0.08)" : "rgba(204,0,0,0.08)", border: `1px solid ${uploadMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(204,0,0,0.3)"}`, borderRadius: "3px", fontSize: "11px", color: uploadMsg.ok ? GREEN : "#ff6666", fontFamily: MONO }}>
               {uploadMsg.ok ? "✓ " : "✕ "}{uploadMsg.text}
+            </div>
+          )}
+
+          {showCodeNote && code && (
+            <div style={{ marginBottom: "14px", padding: "10px 14px", background: "#0f0f0f", border: `1px solid ${BORDER}`, borderLeft: `3px solid ${RED}`, borderRadius: "3px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+              <div style={{ fontSize: "11px", color: "#fff", fontFamily: MONO, lineHeight: "1.6" }}>
+                Your work saves automatically. Write down your code <strong style={{ color: RED }}>{code}</strong> to reopen this Matrix on your phone or laptop anytime.
+              </div>
+              <button onClick={() => setShowCodeNote(false)} style={{ background: "transparent", border: "none", color: "#666", fontSize: "16px", cursor: "pointer", lineHeight: 1, flexShrink: 0 }}>×</button>
             </div>
           )}
 
@@ -649,14 +785,17 @@ function MatrixScreen({ deal, onComplete, onBack }) {
                 const isFocused = focused === key;
                 const hasValue = !!cells[key].trim();
                 const hasAiSource = !!aiSources[key];
+                const isInferred = hasAiSource && aiSources[key].source === "inferred";
+                // Inferred cells get a loud amber left border so a guess never reads as a fact.
+                const leftBorder = isInferred ? AMBER : (isFocused ? RED : hasValue ? "#383838" : "#1e1e1e");
                 return (
-                  <div key={key} style={{ background: SURFACE, border: `1px solid ${isFocused ? RED : hasValue ? "#383838" : "#1e1e1e"}`, borderRadius: "3px", padding: "14px 14px 12px 14px", transition: "border-color 0.2s", display: "flex", flexDirection: "column", gap: "6px", minHeight: "130px" }}>
+                  <div key={key} style={{ background: SURFACE, border: `1px solid ${isFocused ? RED : hasValue ? "#383838" : "#1e1e1e"}`, borderLeft: `3px solid ${leftBorder}`, borderRadius: "3px", padding: "14px 14px 12px 14px", transition: "border-color 0.2s", display: "flex", flexDirection: "column", gap: "6px", minHeight: "130px" }}>
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "6px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
                         <div style={{ fontSize: "9px", color: isFocused ? RED : "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", transition: "color 0.2s", textTransform: "uppercase", paddingTop: "2px" }}>
                           {meta.label}
                         </div>
-                        {hasAiSource && aiSources[key].source !== "inferred" && (
+                        {hasAiSource && !isInferred && (
                           <a href={aiSources[key].source} target="_blank" rel="noopener noreferrer"
                             title={`Source: ${aiSources[key].source_label || aiSources[key].source}`}
                             style={{ fontSize: "8px", color: "#4a9eff", fontFamily: MONO, textDecoration: "none", paddingTop: "2px", whiteSpace: "nowrap" }}
@@ -664,8 +803,8 @@ function MatrixScreen({ deal, onComplete, onBack }) {
                             onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
                           >↗ source</a>
                         )}
-                        {hasAiSource && aiSources[key].source === "inferred" && (
-                          <span style={{ fontSize: "8px", color: "#aaa", fontFamily: MONO, paddingTop: "2px", fontStyle: "italic" }}>~ inferred</span>
+                        {isInferred && (
+                          <span style={{ fontSize: "8px", color: AMBER, fontFamily: MONO, paddingTop: "2px", fontWeight: "700", letterSpacing: "0.06em" }}>~ INFERRED · CONFIRM</span>
                         )}
                       </div>
                       <WhatGoesHere description={meta.description} />
@@ -728,18 +867,75 @@ function MatrixScreen({ deal, onComplete, onBack }) {
   );
 }
 
+// ─── SECTION HEADER (shared) ───────────────────
+function SectionTag({ children }) {
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
+      <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>{children}</span>
+    </div>
+  );
+}
+
+const CLASS_META = {
+  OPENING: { color: GREEN, label: "OPENING" },
+  THREAT: { color: RED, label: "THREAT" },
+  VALIDATE: { color: AMBER, label: "VALIDATE" },
+};
+
 // ─── SCREEN 3: ANALYSIS REPORT ─────────────────
-function AnalysisScreen({ deal, analysis, aiSources, onBack, onRedo }) {
+function AnalysisScreen({ deal, analysis, aiSources, cells, code, cloudStatus, onBack, onRedo }) {
   const hasAnalysis = !!analysis;
 
   const exportHTML = useCallback(() => {
     if (!analysis) return;
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Matrix Analysis — ${deal.prospect}</title><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:'IBM Plex Mono',monospace;padding:40px 48px;max-width:1000px;margin:0 auto;line-height:1.6}</style></head><body>
+    const esc = (s) => (s == null ? "" : String(s));
+    const findingsHTML = (analysis.findings || []).map(f => {
+      const c = CLASS_META[f.classification] || { color: RED, label: "" };
+      return `<div style="margin-bottom:20px;">${f.classification ? `<span style="display:inline-block;font-size:9px;font-weight:700;color:#000;background:${c.color};border-radius:2px;padding:2px 8px;letter-spacing:0.14em;font-family:'Barlow Condensed',sans-serif;margin-bottom:7px;">${c.label}</span>` : ""}${f.headline ? `<div style="font-size:11px;font-weight:700;color:${c.color};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.16em;margin:6px 0 7px;">${esc(f.headline)}</div>` : ""}<p style="font-size:13px;color:#ccc;line-height:1.75;">${esc(f.finding)}</p></div>`;
+    }).join("");
+
+    const obj = analysis.objective || {};
+    const objHTML = (obj.who || obj.feels) ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">YOUR NEXT-CALL OBJECTIVE</span></div>
+<p style="font-size:14px;color:#fff;line-height:1.8;margin-bottom:14px;">This conversation succeeds if <strong>${esc(obj.who)}</strong> <span style="color:#22c55e;">FEELS</span> ${esc(obj.feels)}, <span style="color:#22c55e;">SEES HOW</span> ${esc(obj.sees_how)}, and <span style="color:#22c55e;">TAKES STEPS</span> ${esc(obj.takes_steps)}.</p>
+${obj.fallback ? `<p style="font-size:12px;color:#888;line-height:1.7;"><strong style="color:#f59e0b;">FALLBACK:</strong> ${esc(obj.fallback)}</p>` : ""}</div>` : "";
+
+    const op = analysis.opener || {};
+    const openerHTML = op.text ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">OPENING INSIGHT</span></div><p style="font-size:14px;color:#fff;line-height:1.85;font-style:italic;border-left:3px solid #CC0000;padding-left:16px;">"${esc(op.text)}"</p>${op.note ? `<p style="font-size:11px;color:#888;line-height:1.7;margin-top:10px;">${esc(op.note)}</p>` : ""}</div>` : "";
+
+    const gapsHTML = (analysis.gaps || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">INTELLIGENCE GAPS</span></div>${(analysis.gaps || []).map(g => `<div style="border-left:3px solid ${g.severity === "HIGH" ? "#CC0000" : "#f59e0b"};padding-left:14px;margin-bottom:16px;"><div style="font-size:11px;font-weight:700;color:${g.severity === "HIGH" ? "#CC0000" : "#f59e0b"};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:5px;">${esc(g.cell)} — ${esc(g.severity)}</div><div style="font-size:12px;color:#ccc;line-height:1.6;">${esc(g.note)}</div></div>`).join("")}</div>` : "";
+
+    const defenseHTML = (analysis.defense || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">DEFENSE STRATEGY</span></div>${(analysis.defense || []).map(d => `<div style="border-left:3px solid #CC0000;padding-left:14px;margin-bottom:20px;"><div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:6px;">${esc(d.title)}</div><div style="font-size:12px;color:#ccc;line-height:1.65;">${esc(d.body)}</div></div>`).join("")}</div>` : "";
+
+    const iqHTML = (analysis.iq_questions || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">iQ QUESTIONS — USE NEXT CALL</span></div>${(analysis.iq_questions || []).map(q => `<div style="border-left:3px solid #CC0000;padding-left:16px;margin-bottom:20px;">${q.bank ? `<span style="display:inline-block;font-size:9px;font-weight:700;color:#000;background:${q.bank === "VALIDATION" ? "#22c55e" : "#f59e0b"};border-radius:2px;padding:2px 8px;letter-spacing:0.12em;font-family:'Barlow Condensed',sans-serif;margin-bottom:8px;">${esc(q.bank)}</span>` : ""}<div style="font-size:13px;color:#fff;line-height:1.8;font-style:italic;margin:6px 0;">"${esc(q.question)}"</div>${q.timing ? `<div style="font-size:10px;color:#888;">${esc(q.timing)}</div>` : ""}</div>`).join("")}</div>` : "";
+
+    const signalsHTML = ((analysis.watch_for || []).length || (analysis.watch_out || []).length) ? `<div style="margin-bottom:32px;display:grid;grid-template-columns:1fr 1fr;gap:40px;"><div><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:14px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">MOMENTUM SIGNALS</span></div>${(analysis.watch_for || []).map(s => `<div style="font-size:12px;color:#ccc;line-height:1.65;margin-bottom:10px;">● ${esc(s)}</div>`).join("")}</div><div><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:14px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">RESISTANCE SIGNALS</span></div>${(analysis.watch_out || []).map(s => `<div style="font-size:12px;color:#ccc;line-height:1.65;margin-bottom:10px;">● ${esc(s)}</div>`).join("")}</div></div>` : "";
+
+    const actionsHTML = (analysis.next_actions || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">RECOMMENDED NEXT ACTIONS</span></div>${(analysis.next_actions || []).map((a, i) => `<div style="display:flex;gap:14px;margin-bottom:14px;"><div style="font-size:18px;font-weight:900;color:#CC0000;font-family:'Barlow Condensed',sans-serif;">${i + 1}</div><div style="font-size:12px;color:#ccc;line-height:1.7;">${esc(a)}</div></div>`).join("")}</div>` : "";
+
+    const briefingHTML = (Array.isArray(analysis.briefing) ? analysis.briefing : analysis.briefing ? [analysis.briefing] : []).map(p => `<p style="font-size:13px;color:#ccc;line-height:1.85;margin-bottom:18px;font-style:italic;">${esc(p)}</p>`).join("");
+
+    // The Matrix itself — so the downloaded report is a complete record of the rep's intel
+    const gridHTML = cells ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">THE MATRIX</span></div>
+<table style="width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;">
+<tr><td style="width:90px;"></td>${MATRIX_COLS.map(c => `<th style="background:#CC0000;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.12em;padding:8px;text-align:center;border:2px solid #0a0a0a;">${c}</th>`).join("")}</tr>
+${MATRIX_ROWS.map(r => `<tr><th style="background:#CC0000;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.08em;padding:8px;text-align:center;border:2px solid #0a0a0a;">${r}</th>${MATRIX_COLS.map(c => `<td style="background:#141414;color:#ccc;font-size:10px;line-height:1.55;padding:10px;vertical-align:top;border:2px solid #0a0a0a;">${esc(cells[`${r}|${c}`]) || "<span style='color:#555;'>—</span>"}</td>`).join("")}</tr>`).join("")}
+</table></div>` : "";
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Matrix Analysis — ${esc(deal.prospect)}</title><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:'IBM Plex Mono',monospace;padding:40px 48px;max-width:1000px;margin:0 auto;line-height:1.6}@media print{body{background:#fff;color:#000}}</style></head><body>
 <div style="font-size:10px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.18em;margin-bottom:8px;">◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
-<div style="font-size:38px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;line-height:1;">${deal.prospect.toUpperCase()}</div>
-<div style="font-size:13px;color:#fff;font-family:'IBM Plex Mono',monospace;margin-top:6px;margin-bottom:28px;">${deal.role}${deal.company ? ` · ${deal.company}` : ""}${deal.opportunity ? ` · ${deal.opportunity}` : ""}</div>
-${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;padding:10px 16px;margin-bottom:32px;font-size:13px;color:#ccc;font-style:italic;">● ${analysis.matrix_health_note}</div>` : ""}
-${((Array.isArray(analysis.briefing) ? analysis.briefing.length : 0) || (analysis.findings||[]).length) ? `<div style="margin-bottom:32px;"><div style="display:inline-flex;align-items:center;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:20px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">WHAT THE MATRIX IS TELLING YOU</span></div>${(Array.isArray(analysis.briefing)?analysis.briefing:[]).map(p=>`<p style="font-size:13px;color:#ccc;line-height:1.85;margin-bottom:18px;font-style:italic;">${p}</p>`).join("")}${(analysis.findings||[]).map(f=>{const h=typeof f==="object"?f.headline:null;const t=typeof f==="object"?f.finding:f;return `<div style="margin-bottom:20px;">${h?`<div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.16em;margin-bottom:7px;">${h}</div>`:""}<p style="font-size:13px;color:#ccc;line-height:1.75;">${t}</p></div>`;}).join("")}</div>`:""}
+<div style="font-size:38px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;line-height:1;">${esc(deal.prospect).toUpperCase()}</div>
+<div style="font-size:13px;color:#fff;font-family:'IBM Plex Mono',monospace;margin-top:6px;margin-bottom:28px;">${esc(deal.role)}${deal.company ? ` · ${esc(deal.company)}` : ""}${deal.opportunity ? ` · ${esc(deal.opportunity)}` : ""}</div>
+${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;padding:10px 16px;margin-bottom:32px;font-size:13px;color:#ccc;font-style:italic;">● ${esc(analysis.matrix_health_note)}</div>` : ""}
+${gridHTML}
+${(briefingHTML || findingsHTML) ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:20px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">WHAT THE MATRIX IS TELLING YOU</span></div>${briefingHTML}${findingsHTML}</div>` : ""}
+${objHTML}
+${openerHTML}
+${gapsHTML}
+${defenseHTML}
+${iqHTML}
+${signalsHTML}
+${actionsHTML}
+<div style="border-top:1px solid #333;padding-top:20px;font-size:10px;color:#666;">Semper Selling® Connection Intelligence Matrix — Semper Mind © 2026 · ${esc(deal.prospect)} · ${esc(deal.company)}</div>
 </body></html>`;
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
@@ -757,11 +953,13 @@ ${((Array.isArray(analysis.briefing) ? analysis.briefing.length : 0) || (analysi
         <div style={{ width: "1px", height: "24px", background: "#333" }} />
         <span style={{ color: RED, fontSize: "15px", fontWeight: "700", fontFamily: CONDENSED, letterSpacing: "0.1em" }}>MATRIX ANALYSIS</span>
         <span style={{ color: "#fff", fontSize: "11px", fontFamily: MONO }}>{deal.prospect} · {deal.company}</span>
-        <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
+        <div style={{ marginLeft: "auto", display: "flex", gap: "10px", alignItems: "center" }}>
+          <CodeChip code={code} status={cloudStatus} />
+          <div style={{ width: "1px", height: "20px", background: "#333" }} />
           {hasAnalysis && (
             <button onClick={exportHTML}
               style={{ background: "none", border: `1px solid #333`, color: "#888", borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.15s" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "#22c55e"; e.currentTarget.style.color = "#22c55e"; }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = GREEN; e.currentTarget.style.color = GREEN; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#888"; }}
             >↓ EXPORT</button>
           )}
@@ -811,20 +1009,24 @@ ${((Array.isArray(analysis.briefing) ? analysis.briefing.length : 0) || (analysi
             {/* WHAT THE MATRIX IS TELLING YOU */}
             {((Array.isArray(analysis.briefing) ? analysis.briefing.length > 0 : !!analysis.briefing) || (analysis.findings||[]).length > 0) && (
               <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
-                <div style={{ display: "inline-flex", alignItems: "center", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "24px" }}>
-                  <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>WHAT THE MATRIX IS TELLING YOU</span>
-                </div>
+                <SectionTag>WHAT THE MATRIX IS TELLING YOU</SectionTag>
                 {(Array.isArray(analysis.briefing) ? analysis.briefing : analysis.briefing ? [analysis.briefing] : []).map((para, i) => (
                   <p key={i} style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.85", margin: 0, marginBottom: "18px", fontStyle: "italic" }}>{para}</p>
                 ))}
                 {(analysis.findings||[]).length > 0 && (
                   <div style={{ marginTop: "28px", paddingTop: "24px", borderTop: "1px solid #1e1e1e" }}>
-                            {(analysis.findings||[]).map((f, i) => {
+                    {(analysis.findings||[]).map((f, i) => {
+                      const cm = CLASS_META[f.classification] || { color: RED, label: null };
                       const headline = typeof f === "object" ? f.headline : null;
                       const text = typeof f === "object" ? f.finding : f;
                       return (
                         <div key={i} style={{ marginBottom: "22px" }}>
-                          {headline && <div style={{ fontSize: "11px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.16em", marginBottom: "7px" }}>{headline}</div>}
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "7px" }}>
+                            {cm.label && (
+                              <span style={{ fontSize: "9px", fontWeight: "700", color: "#000", background: cm.color, borderRadius: "2px", padding: "2px 8px", letterSpacing: "0.14em", fontFamily: CONDENSED }}>{cm.label}</span>
+                            )}
+                            {headline && <div style={{ fontSize: "11px", fontWeight: "700", color: cm.color, fontFamily: CONDENSED, letterSpacing: "0.16em" }}>{headline}</div>}
+                          </div>
                           <p style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.75", margin: 0 }}>{text}</p>
                         </div>
                       );
@@ -834,21 +1036,49 @@ ${((Array.isArray(analysis.briefing) ? analysis.briefing.length : 0) || (analysi
               </div>
             )}
 
+            {/* YOUR NEXT-CALL OBJECTIVE */}
+            {analysis.objective && (analysis.objective.who || analysis.objective.feels) && (
+              <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
+                <SectionTag>YOUR NEXT-CALL OBJECTIVE</SectionTag>
+                <p style={{ fontSize: "15px", color: "#fff", fontFamily: MONO, lineHeight: "1.9", margin: 0 }}>
+                  This conversation succeeds if <strong style={{ color: "#fff" }}>{analysis.objective.who}</strong>{" "}
+                  <span style={{ color: GREEN, fontWeight: "700" }}>FEELS</span> {analysis.objective.feels},{" "}
+                  <span style={{ color: GREEN, fontWeight: "700" }}>SEES HOW</span> {analysis.objective.sees_how}, and{" "}
+                  <span style={{ color: GREEN, fontWeight: "700" }}>TAKES STEPS</span> {analysis.objective.takes_steps}.
+                </p>
+                {analysis.objective.fallback && (
+                  <div style={{ marginTop: "16px", paddingLeft: "14px", borderLeft: `3px solid ${AMBER}` }}>
+                    <span style={{ fontSize: "10px", color: AMBER, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.14em" }}>FALLBACK — IF PLAN A STALLS</span>
+                    <p style={{ fontSize: "12px", color: "#aaa", fontFamily: MONO, lineHeight: "1.7", marginTop: "6px" }}>{analysis.objective.fallback}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* OPENING INSIGHT */}
+            {analysis.opener && analysis.opener.text && (
+              <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
+                <SectionTag>OPENING INSIGHT</SectionTag>
+                <p style={{ fontSize: "14px", color: "#fff", fontFamily: MONO, lineHeight: "1.9", fontStyle: "italic", paddingLeft: "16px", borderLeft: `3px solid ${RED}`, margin: 0 }}>"{analysis.opener.text}"</p>
+                {analysis.opener.note && (
+                  <p style={{ fontSize: "11px", color: "#888", fontFamily: MONO, lineHeight: "1.7", marginTop: "12px" }}>{analysis.opener.note}</p>
+                )}
+              </div>
+            )}
+
             {/* GAPS + DEFENSE */}
             {((analysis.gaps||[]).length > 0 || (analysis.defense||[]).length > 0) && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
                 {(analysis.gaps||[]).length > 0 && (
                   <div>
-                    <div style={{ display: "inline-flex", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "16px" }}>
-                      <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>INTELLIGENCE GAPS</span>
-                    </div>
+                    <SectionTag>INTELLIGENCE GAPS</SectionTag>
                     <div style={{ fontSize: "10px", color: "#fff", fontFamily: MONO, marginBottom: "14px" }}>
                       <span style={{ borderLeft: `2px solid ${RED}`, paddingLeft: "6px", marginRight: "12px" }}>HIGH — critical to close</span>
-                      <span style={{ borderLeft: "2px solid #f59e0b", paddingLeft: "6px" }}>MEDIUM — worth exploring</span>
+                      <span style={{ borderLeft: `2px solid ${AMBER}`, paddingLeft: "6px" }}>MEDIUM — worth exploring</span>
                     </div>
                     {(analysis.gaps||[]).map((gap, i) => (
-                      <div key={i} style={{ borderLeft: `3px solid ${gap.severity === "HIGH" ? RED : "#f59e0b"}`, paddingLeft: "14px", marginBottom: "16px" }}>
-                        <div style={{ fontSize: "11px", fontWeight: "700", color: gap.severity === "HIGH" ? RED : "#f59e0b", fontFamily: CONDENSED, letterSpacing: "0.12em", marginBottom: "5px" }}>{gap.cell}</div>
+                      <div key={i} style={{ borderLeft: `3px solid ${gap.severity === "HIGH" ? RED : AMBER}`, paddingLeft: "14px", marginBottom: "16px" }}>
+                        <div style={{ fontSize: "11px", fontWeight: "700", color: gap.severity === "HIGH" ? RED : AMBER, fontFamily: CONDENSED, letterSpacing: "0.12em", marginBottom: "5px" }}>{gap.cell}</div>
                         <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.6" }}>{gap.note}</div>
                       </div>
                     ))}
@@ -856,9 +1086,7 @@ ${((Array.isArray(analysis.briefing) ? analysis.briefing.length : 0) || (analysi
                 )}
                 {(analysis.defense||[]).length > 0 && (
                   <div>
-                    <div style={{ display: "inline-flex", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "16px" }}>
-                      <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>DEFENSE STRATEGY</span>
-                    </div>
+                    <SectionTag>DEFENSE STRATEGY</SectionTag>
                     {(analysis.defense||[]).map((d, i) => (
                       <div key={i} style={{ borderLeft: `3px solid ${RED}`, paddingLeft: "14px", marginBottom: "20px" }}>
                         <div style={{ fontSize: "11px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.12em", marginBottom: "6px" }}>{d.title}</div>
@@ -873,14 +1101,17 @@ ${((Array.isArray(analysis.briefing) ? analysis.briefing.length : 0) || (analysi
             {/* iQ QUESTIONS */}
             {(analysis.iq_questions||[]).length > 0 && (
               <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
-                <div style={{ display: "inline-flex", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                  <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>iQ QUESTIONS — USE NEXT CALL</span>
-                </div>
+                <SectionTag>iQ QUESTIONS — USE NEXT CALL</SectionTag>
                 {(analysis.iq_questions||[]).map((q, i) => {
                   const question = typeof q === "object" ? q.question : q;
                   const timing = typeof q === "object" ? q.timing : null;
+                  const bank = typeof q === "object" ? q.bank : null;
+                  const bankColor = bank === "VALIDATION" ? GREEN : AMBER;
                   return (
                     <div key={i} style={{ marginBottom: "22px", paddingLeft: "16px", borderLeft: `3px solid ${RED}` }}>
+                      {bank && (
+                        <span style={{ display: "inline-block", fontSize: "9px", fontWeight: "700", color: "#000", background: bankColor, borderRadius: "2px", padding: "2px 8px", letterSpacing: "0.12em", fontFamily: CONDENSED, marginBottom: "8px" }}>{bank}</span>
+                      )}
                       <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.8", fontStyle: "italic", marginBottom: timing ? "8px" : 0 }}>"{question}"</div>
                       {timing && <div style={{ fontSize: "10px", color: "#888", fontFamily: MONO, lineHeight: "1.6" }}>{timing}</div>}
                     </div>
@@ -894,12 +1125,10 @@ ${((Array.isArray(analysis.briefing) ? analysis.briefing.length : 0) || (analysi
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
                 {(analysis.watch_for||[]).length > 0 && (
                   <div>
-                    <div style={{ display: "inline-flex", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "16px" }}>
-                      <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>MOMENTUM SIGNALS</span>
-                    </div>
+                    <SectionTag>MOMENTUM SIGNALS</SectionTag>
                     {(analysis.watch_for||[]).map((s, i) => (
                       <div key={i} style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
-                        <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e", flexShrink: 0, marginTop: "5px" }} />
+                        <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: GREEN, flexShrink: 0, marginTop: "5px" }} />
                         <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.65" }}>{s}</div>
                       </div>
                     ))}
@@ -907,9 +1136,7 @@ ${((Array.isArray(analysis.briefing) ? analysis.briefing.length : 0) || (analysi
                 )}
                 {(analysis.watch_out||[]).length > 0 && (
                   <div>
-                    <div style={{ display: "inline-flex", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "16px" }}>
-                      <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>RESISTANCE SIGNALS</span>
-                    </div>
+                    <SectionTag>RESISTANCE SIGNALS</SectionTag>
                     {(analysis.watch_out||[]).map((s, i) => (
                       <div key={i} style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
                         <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: RED, flexShrink: 0, marginTop: "5px" }} />
@@ -924,9 +1151,7 @@ ${((Array.isArray(analysis.briefing) ? analysis.briefing.length : 0) || (analysi
             {/* NEXT ACTIONS */}
             {(analysis.next_actions||[]).length > 0 && (
               <div style={{ marginBottom: "36px" }}>
-                <div style={{ display: "inline-flex", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-                  <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>RECOMMENDED NEXT ACTIONS</span>
-                </div>
+                <SectionTag>RECOMMENDED NEXT ACTIONS</SectionTag>
                 {(analysis.next_actions||[]).map((action, i) => (
                   <div key={i} style={{ display: "flex", gap: "14px", marginBottom: "16px", paddingBottom: "16px", borderBottom: i < (analysis.next_actions||[]).length - 1 ? "1px solid #1a1a1a" : "none" }}>
                     <div style={{ fontSize: "18px", fontWeight: "900", color: RED, fontFamily: CONDENSED, flexShrink: 0, lineHeight: 1.2 }}>{i + 1}</div>
@@ -953,13 +1178,100 @@ ${((Array.isArray(analysis.briefing) ? analysis.briefing.length : 0) || (analysi
 export default function App() {
   const [screen, setScreen] = useState("deal");
   const [deal, setDeal] = useState(null);
+  const [cells, setCells] = useState(emptyMatrix);
+  const [aiSources, setAiSources] = useState({});
   const [result, setResult] = useState(null);
+  const [resumeInfo, setResumeInfo] = useState(null);
+  const [hydrated, setHydrated] = useState(false);
+  const [code, setCode] = useState(null);
+  const [cloudStatus, setCloudStatus] = useState("idle"); // idle | saving | cloud | local
+  const [codeError, setCodeError] = useState(false);
+  const saveTimer = useRef(null);
+
+  // On load: check for a saved session and offer to resume.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.deal) setResumeInfo(parsed);
+      }
+    } catch { /* ignore */ }
+    setHydrated(true);
+  }, []);
+
+  // Autosave: instant local save every change, plus a debounced cloud save
+  // under the resume code so the Matrix reopens on any device.
+  useEffect(() => {
+    if (!hydrated || !deal || !code) return;
+    const session = { screen, deal, cells, aiSources, result, code };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    } catch { /* storage full or unavailable — fail quietly */ }
+
+    setCloudStatus("saving");
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      const ok = await cloudSave(code, session);
+      // "cloud" = reopens anywhere · "local" = KV not provisioned yet, this device only
+      setCloudStatus(ok ? "cloud" : "local");
+    }, 1200);
+
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [hydrated, screen, deal, cells, aiSources, result, code]);
+
+  const resumeSession = () => {
+    setDeal(resumeInfo.deal);
+    setCells(resumeInfo.cells || emptyMatrix());
+    setAiSources(resumeInfo.aiSources || {});
+    setResult(resumeInfo.result || null);
+    setCode(resumeInfo.code || genCode());
+    setScreen(resumeInfo.screen && resumeInfo.screen !== "deal" ? resumeInfo.screen : "matrix");
+    setResumeInfo(null);
+  };
+
+  const discardSession = () => {
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+    setResumeInfo(null);
+  };
+
+  const startNewDeal = (d) => {
+    setDeal(d);
+    setCells(emptyMatrix());
+    setAiSources({});
+    setResult(null);
+    setCode(genCode());
+    setScreen("matrix");
+  };
+
+  // Reopen a Matrix from any device using its resume code.
+  const resumeByCode = async (input) => {
+    const clean = input.trim().toUpperCase();
+    const full = clean.startsWith("SEMPER-") ? clean : `SEMPER-${clean}`;
+    const session = await cloudLoad(full);
+    if (!session) { setCodeError(true); return; }
+    setDeal(session.deal);
+    setCells(session.cells || emptyMatrix());
+    setAiSources(session.aiSources || {});
+    setResult(session.result || null);
+    setCode(session.code || full);
+    setResumeInfo(null);
+    setScreen(session.screen && session.screen !== "deal" ? session.screen : "matrix");
+  };
 
   if (screen === "deal") {
     return (
       <div>
         <style>{FONTS}</style>
-        <DealScreen onComplete={d => { setDeal(d); setScreen("matrix"); }} />
+        <DealScreen
+          onComplete={startNewDeal}
+          resumeInfo={resumeInfo}
+          onResume={resumeSession}
+          onDiscard={discardSession}
+          onResumeCode={resumeByCode}
+          codeError={codeError}
+          clearCodeError={() => setCodeError(false)}
+        />
       </div>
     );
   }
@@ -970,9 +1282,15 @@ export default function App() {
         <style>{FONTS}</style>
         <MatrixScreen
           deal={deal}
+          cells={cells}
+          setCells={setCells}
+          aiSources={aiSources}
+          setAiSources={setAiSources}
+          code={code}
+          cloudStatus={cloudStatus}
           onBack={() => setScreen("deal")}
-          onComplete={(cells, matrixText, analysis, aiSources) => {
-            setResult({ cells, matrixText, analysis, aiSources });
+          onComplete={(c, matrixText, analysis, srcs) => {
+            setResult({ cells: c, matrixText, analysis, aiSources: srcs });
             setScreen("analysis");
           }}
         />
@@ -988,6 +1306,9 @@ export default function App() {
           deal={deal}
           analysis={result?.analysis}
           aiSources={result?.aiSources}
+          cells={result?.cells}
+          code={code}
+          cloudStatus={cloudStatus}
           onBack={() => setScreen("matrix")}
           onRedo={() => setScreen("matrix")}
         />
