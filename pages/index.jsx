@@ -46,6 +46,69 @@ const cloudLoad = async (code) => {
   } catch { return null; }
 };
 
+// ─── STREAMING ANALYSIS ────────────────────────
+// The analysis is a long generation. Streaming keeps the connection alive
+// (no 46s function timeout) and lets the loader tick off sections as they land.
+// Ordered to match the JSON schema so progress moves top-to-bottom naturally.
+const ANALYSIS_STAGES = [
+  { key: '"matrix_health"', label: "Reading the terrain" },
+  { key: '"briefing"',      label: "Interpreting the intel" },
+  { key: '"findings"',      label: "Finding cross-cell patterns" },
+  { key: '"gaps"',          label: "Flagging intelligence gaps" },
+  { key: '"defense"',       label: "Building defense strategy" },
+  { key: '"objective"',     label: "Drafting your call objective" },
+  { key: '"opener"',        label: "Writing your opener" },
+  { key: '"iq_questions"',  label: "Loading iQ questions" },
+  { key: '"next_actions"',  label: "Setting next actions" },
+];
+
+// Streams /api/chat, calling onText with the accumulated text as it arrives.
+// Falls back to plain JSON read if the route isn't streaming yet — so the
+// front end works whether or not the chat route has been updated.
+async function streamChat(body, onText) {
+  const resp = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...body, stream: true }),
+  });
+  const ctype = resp.headers.get("content-type") || "";
+
+  // Fallback path: old (non-streaming) route — read the whole JSON at once.
+  if (!resp.body || !ctype.includes("event-stream")) {
+    const data = await resp.json().catch(() => null);
+    const blocks = (data?.content || []).filter(b => b.type === "text");
+    const text = blocks.length ? blocks[blocks.length - 1].text : "";
+    if (text) onText(text);
+    return text;
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let full = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let nl;
+    while ((nl = buffer.indexOf("\n")) >= 0) {
+      const line = buffer.slice(0, nl).trim();
+      buffer = buffer.slice(nl + 1);
+      if (!line.startsWith("data:")) continue;
+      const payload = line.slice(5).trim();
+      if (!payload || payload === "[DONE]") continue;
+      try {
+        const evt = JSON.parse(payload);
+        if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta") {
+          full += evt.delta.text;
+          onText(full);
+        }
+      } catch { /* keepalive or partial line — ignore */ }
+    }
+  }
+  return full;
+}
+
 const MATRIX_COLS = ["ROLE", "REACH", "RESULTS"];
 const MATRIX_ROWS = ["CURRENT STATE", "FUTURE STATE", "NEEDS"];
 
@@ -517,7 +580,7 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
 }
 
 // ─── ANALYSIS LOADER ───────────────────────────
-function AnalysisLoader() {
+function AnalysisLoader({ steps }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.93)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 500 }}>
       <style>{`
@@ -532,6 +595,17 @@ function AnalysisLoader() {
       </div>
       <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.22em", marginBottom: "10px" }}>SEMPER SELLING®</div>
       <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, letterSpacing: "0.06em" }}>Analyzing your intelligence...</div>
+
+      {steps && steps.length > 0 && (
+        <div style={{ marginTop: "30px", display: "flex", flexDirection: "column", gap: "9px", minWidth: "260px" }}>
+          {steps.map((s, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: "11px", opacity: s.done ? 1 : 0.35, transition: "opacity 0.4s" }}>
+              <span style={{ width: "13px", color: s.done ? GREEN : "#555", fontFamily: MONO, fontSize: "11px", textAlign: "center" }}>{s.done ? "✓" : "○"}</span>
+              <span style={{ fontSize: "11px", color: s.done ? "#fff" : "#888", fontFamily: MONO, letterSpacing: "0.03em" }}>{s.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -541,6 +615,7 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
   const [focused, setFocused] = useState(null);
   const [showCodeNote, setShowCodeNote] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeSteps, setAnalyzeSteps] = useState([]);
   const [searching, setSearching] = useState(false);
   const [searchProgress, setSearchProgress] = useState(null);
   const [searchResults, setSearchResults] = useState(null);
@@ -647,25 +722,23 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
   const handleGenerate = async () => {
     if (filled === 0 || analyzing) return;
     setAnalyzing(true);
+    setAnalyzeSteps(ANALYSIS_STAGES.map(s => ({ label: s.label, done: false })));
     const matrixText = matrixToText(cells, deal, aiSources);
     try {
-      const resp = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const full = await streamChat(
+        {
           model: "claude-sonnet-4-6",
           max_tokens: 2600,
           messages: [{ role: "user", content: ANALYSIS_PROMPT(matrixText, deal) }],
-        }),
-      });
-      const data = await resp.json();
-      const textBlocks = (data.content || []).filter(b => b.type === "text");
-      const rawText = textBlocks.length > 0 ? textBlocks[textBlocks.length - 1].text : "";
-      const stripped = rawText.replace(/<[^>]+>/g, "").replace(/```json|```/gi, "").trim();
+        },
+        // As text streams in, light up each stage whose key has appeared.
+        (acc) => setAnalyzeSteps(ANALYSIS_STAGES.map(s => ({ label: s.label, done: acc.includes(s.key) }))),
+      );
+      const stripped = full.replace(/<[^>]+>/g, "").replace(/```json|```/gi, "").trim();
       const start = stripped.indexOf("{");
       const end = stripped.lastIndexOf("}");
       const raw = (start !== -1 && end > start) ? stripped.slice(start, end + 1) : "";
-      let analysis = {};
+      let analysis = null;
       try { analysis = JSON.parse(raw); } catch { analysis = null; }
       onComplete(cells, matrixText, analysis, aiSources);
     } catch {
@@ -724,7 +797,7 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
         @media print { body { background: #fff !important; color: #000 !important; } * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } button, [data-noprint] { display: none !important; } }
       `}</style>
 
-      {analyzing && <AnalysisLoader />}
+      {analyzing && <AnalysisLoader steps={analyzeSteps} />}
 
       {searchResults !== null && (
         <SearchReviewModal results={searchResults} onAccept={handleAcceptResults} onClose={() => setSearchResults(null)} />
