@@ -63,13 +63,13 @@ const ANALYSIS_STAGES = [
 
 // One /api/chat call that returns parsed JSON. Works with a plain, non-streaming
 // chat route — no streaming, no maxDuration changes, no route format to match.
-async function callAnalysis(prompt) {
+async function callAnalysis(prompt, maxTokens = 2000) {
   const resp = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
-      max_tokens: 1500,
+      max_tokens: maxTokens,
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -231,30 +231,46 @@ CLASSIFY EVERY FINDING before anything feeds downstream — this is the core log
 - OPENING = works FOR the rep (a motivated champion, an opening to advance, alignment to exploit).
 - THREAT = works AGAINST the rep (a risk that could stall or kill the deal).
 - VALIDATE = can't tell yet — a hypothesis to confirm or kill on the next call. Anything resting on [INFERRED] intel defaults here.
-A pattern existing does NOT make it a risk. Do not manufacture threats to fill a quota.`;
+A pattern existing does NOT make it a risk. Do not manufacture threats to fill a quota.
+
+VOICE — CRITICAL, APPLIES TO EVERY WORD YOU WRITE:
+This is an intelligence assessment, not a dossier of facts. You are inferring what's happening beneath the surface — so never state your interpretation as fact. Verifiable items pulled straight from the Matrix (their title, a number, a date they signed something) can be stated plainly. But the moment you interpret what those facts MEAN, hedge it — and vary the hedge so it never sounds like a template: "The data suggests…", "The patterns reveal…", "This points to…", "It appears…", "One read of this is…", "The gap between X and Y suggests…", "This likely means…". A rep should feel they're reading a sharp analyst's read they can confirm, not a biography. Write plainly enough that a busy sales rep gets it in one pass and can act on it today — no jargon, no box/pattern numbers, no theory.`;
 
 // CALL 1 of 2 — the READ. Diagnosis half. Smaller + faster than one big call.
 const ANALYSIS_PROMPT_READ = (matrixText, deal) => `${ANALYSIS_CONTEXT(matrixText, deal)}
 
-YOUR JOB: produce the READ of this deal — what the Matrix is telling the rep. Output ONLY these fields:
-- MATRIX_HEALTH: STRONG FOUNDATION / PARTIAL PICTURE / FLYING BLIND. matrix_health_note: one honest sentence on how much weight this analysis can bear.
-- BRIEFING: 1-2 paragraphs. Inference only ("The data suggests...", "The gap between X and Y points to..."). Customer's world only. No advice, no "you should", no box/pattern numbers, never "tension". Specific names/numbers from Matrix. P11 firing = second paragraph on urgency in their world.
-- FINDINGS: 2-3 sharpest cross-cell gaps, each classified OPENING / THREAT / VALIDATE. Headline ALL CAPS max 8 words specific to this deal. Body: data point 1, data point 2, what the gap reveals. 2-3 sentences, no box refs. Most urgent first.
-- GAPS: Empty/thin cells only. HIGH or MEDIUM. Max 4. For NEEDS cells: name the discovery question.
+YOUR JOB: produce the READ of this deal — what the Matrix is telling the rep. Follow the VOICE rule above without exception: this is inference, written as hypothesis, never as fact. Output ONLY these fields:
+- MATRIX_HEALTH: STRONG FOUNDATION / PARTIAL PICTURE / FLYING BLIND. matrix_health_note: one honest sentence on how much weight this read can bear given what's sourced vs. inferred.
+- BRIEFING: 1-2 short paragraphs interpreting what's happening in the customer's world. Lead the interpretation with hedging language ("The data suggests…", "The patterns reveal…", "This points to…") — do not open with a flat declarative like "Dick is a CRO under pressure." Customer's world only. Specific names/numbers from the Matrix, but framed as what they imply, not stated fact. P11 firing = a second short paragraph on the urgency window in their world.
+- FINDINGS: 2-3 sharpest cross-cell gaps, each classified OPENING / THREAT / VALIDATE. Headline ALL CAPS, max 8 words, specific to this deal. Body: 2-3 sentences that name the two data points and then hedge what the gap between them reveals ("This suggests…", "The pattern points to…"). No box refs. Most urgent first.
+- GAPS: the intelligence that's missing and why it costs the rep. Empty/thin cells only, max 4, HIGH or MEDIUM. For each: "note" = plain-language statement of what you don't know and why it matters to the deal. "ask" = ONE question the rep can ask to fill it, built in the iQ style — anchor it in something you DO know from the Matrix, reach toward the missing piece, and where possible touch what's personally at stake for them. Written so the rep can say it out loud as-is.
 
 Return ONLY this JSON, no backticks, no markdown:
-{"matrix_health":"","matrix_health_note":"","briefing":[""],"findings":[{"classification":"","headline":"","finding":""}],"gaps":[{"cell":"","label":"","severity":"","note":""}]}`;
+{"matrix_health":"","matrix_health_note":"","briefing":[""],"findings":[{"classification":"","headline":"","finding":""}],"gaps":[{"cell":"","label":"","severity":"","note":"","ask":""}]}`;
 
 // CALL 2 of 2 — the PLAN. Action half. Runs in parallel with the READ.
 const ANALYSIS_PROMPT_PLAN = (matrixText, deal) => `${ANALYSIS_CONTEXT(matrixText, deal)}
 
-YOUR JOB: produce the PLAN for the rep's next call. First, silently identify the THREAT / OPENING / VALIDATE findings and the HIGH gaps yourself using the rules above. Then output ONLY these action fields, built from that internal read:
-- DEFENSE: Build ONLY from THREAT findings and HIGH gaps. Max 3. Specific scenario that kills the deal + one countermove the rep can do in 5 business days. Title ALL CAPS. If there are no THREATs and no HIGH gaps, return an empty array — do not invent risks.
-- OBJECTIVE: One customer-centric call objective. FEELS ← a Current State cell (make them feel understood). SEES HOW ← the sharpest finding's insight. TAKES STEPS ← the countermove from the top THREAT (or, if no threats, the move that presses the top OPENING). fallback: the minimum viable win if the primary step stalls in the call.
-- OPENER: One opening insight, three parts as natural speech — unexpected point → personally relevant → a question that makes them think. Built from the highest-reliability cells. In "note": if Future State cells are empty/thin so the opener can't be truly specific, say so and name which cells to fill.
-- iQ QUESTIONS: Exactly 3, each banked. VALIDATION = full iQ (named Current Reality + named Future State + personal impact — never operational) testing a finding; at least one. DISCOVERY = a question filling the single most blocking empty cell; at least one. One natural sentence each, different data per question. Early/Mid/Late timing on each.
-- WATCH_FOR / WATCH_OUT: Exactly 2 each. Observable only. Tied to this person's intel.
-- NEXT_ACTIONS: Exactly 3. What, to whom, by when + cost of inaction. Never "prepare questions."
+YOUR JOB: produce the PLAN for the rep's next call. First, silently identify the THREAT / OPENING / VALIDATE findings and the HIGH gaps yourself using the rules above. Then output ONLY these action fields, each written plainly enough that the rep can execute it today:
+
+- DEFENSE: Build ONLY from THREAT findings and HIGH gaps. Max 3. Each: a specific scenario that could stall or kill the deal (hedged — "The risk here is…", "This could mean…") + one countermove the rep can take in the next 5 business days. Title ALL CAPS. If there are no THREATs and no HIGH gaps, return an empty array — do not invent risks.
+
+- OBJECTIVE (Setting a Clear Objective): one customer-centered objective for the next call, in this exact shape. who = the person. feels = what they should FEEL by the end (drawn from a Current State reality — make them feel understood). sees_how = the shift in how they SEE their situation (from the sharpest finding). takes_steps = the concrete STEP they agree to (the countermove from the top THREAT, or if no threats, the move that presses the top OPENING). fallback = the minimum viable win if that step stalls mid-call.
+
+- OPENER (Command Attention with Insight): one opening the rep can say out loud, built in three moves — (1) LEAD WITH THE UNEXPECTED: a surprising stat, emerging trend, or new challenge from THEIR world; (2) PERSONALIZED RELEVANCE: tie it directly to their department, responsibility, legacy, or budget; (3) END WITH A QUESTION that makes them think about impact, readiness, risk, or opportunity. Put the full spoken opener in "text". In "note": if Future State intel is thin so the opener can't be truly specific to this person, say so plainly and name which cells to fill to sharpen it.
+
+- iQ QUESTIONS: exactly 3, each a TRUE Insight Question built with the iQ Formula — ONE Current Reality + ONE Future State + ONE Personal Impact. Rules, non-negotiable:
+  • Current Reality = one thing true for them NOW (a pressure, metric, constraint, or relationship from the Current State row). Exactly one — never stack two.
+  • Future State = one thing they're moving TOWARD (an ambition, goal, or public commitment from the Future State row). Exactly one.
+  • Personal Impact = what it costs THEM personally if the gap doesn't close — career, reputation, legacy, positioning. NEVER operational or financial ("efficiency", "cost savings" are banned here).
+  • The question lives ENTIRELY in the customer's world. Never name a solution, product, or what they "need." If a solution assumption sneaks in, it's not an iQ question — rewrite it.
+  • Build the language in three varied moves so no two questions sound alike: OPEN (anchor current reality): Considering / Given that / In light of / As you reflect on / Based on what you've seen with… → CONNECT (link to future state, where the tension lives): while also / at the same time that / as you're also / combined with / while simultaneously… → CLOSE (invite reflection on personal stake): what concerns you most about / how confident are you / what would it mean if / what has this revealed about / what's become clear about…
+  • Bank each: VALIDATION (tests a finding you believe is true) or DISCOVERY (opens something you can't yet see). At least one of each. Give Early/Mid/Late timing.
+  GOOD (follow this shape): "Given that you're personally signing county-level contracts, while positioning Kofile as one scaled platform across the combined HF Group units, what concerns you most about how much of that integration is riding on you specifically?"
+  NOT an iQ (do NOT produce this — operational, no personal stake, names a need): "What are your biggest integration challenges and what tools would help?"
+
+- WATCH_FOR / WATCH_OUT: exactly 2 each. Observable signals only, tied to this person's intel.
+- NEXT_ACTIONS: exactly 3. What, to whom, by when + the cost of not doing it. Never "prepare questions."
 
 Return ONLY this JSON, no backticks, no markdown:
 {"defense":[{"title":"","body":""}],"objective":{"who":"","feels":"","sees_how":"","takes_steps":"","fallback":""},"opener":{"text":"","note":""},"iq_questions":[{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""}],"watch_for":["",""],"watch_out":["",""],"next_actions":["","",""]}`;
@@ -724,8 +740,8 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
       // Two smaller calls, in parallel. Wall time ≈ the slower half, not the sum
       // — and neither half is big enough to approach the timeout.
       const [readPart, planPart] = await Promise.all([
-        callAnalysis(ANALYSIS_PROMPT_READ(matrixText, deal)),
-        callAnalysis(ANALYSIS_PROMPT_PLAN(matrixText, deal)),
+        callAnalysis(ANALYSIS_PROMPT_READ(matrixText, deal), 1800),
+        callAnalysis(ANALYSIS_PROMPT_PLAN(matrixText, deal), 2600),
       ]);
       clearInterval(ticker);
       setAnalyzeSteps(ANALYSIS_STAGES.map(s => ({ label: s.label, done: true })));
@@ -968,7 +984,7 @@ ${obj.fallback ? `<p style="font-size:12px;color:#888;line-height:1.7;"><strong 
     const op = analysis.opener || {};
     const openerHTML = op.text ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">OPENING INSIGHT</span></div><p style="font-size:14px;color:#fff;line-height:1.85;font-style:italic;border-left:3px solid #CC0000;padding-left:16px;">"${esc(op.text)}"</p>${op.note ? `<p style="font-size:11px;color:#888;line-height:1.7;margin-top:10px;">${esc(op.note)}</p>` : ""}</div>` : "";
 
-    const gapsHTML = (analysis.gaps || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">INTELLIGENCE GAPS</span></div>${(analysis.gaps || []).map(g => `<div style="border-left:3px solid ${g.severity === "HIGH" ? "#CC0000" : "#f59e0b"};padding-left:14px;margin-bottom:16px;"><div style="font-size:11px;font-weight:700;color:${g.severity === "HIGH" ? "#CC0000" : "#f59e0b"};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:5px;">${esc(g.cell)} — ${esc(g.severity)}</div><div style="font-size:12px;color:#ccc;line-height:1.6;">${esc(g.note)}</div></div>`).join("")}</div>` : "";
+    const gapsHTML = (analysis.gaps || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">INTELLIGENCE GAPS</span></div>${(analysis.gaps || []).map(g => `<div style="border-left:3px solid ${g.severity === "HIGH" ? "#CC0000" : "#f59e0b"};padding-left:14px;margin-bottom:16px;"><div style="font-size:11px;font-weight:700;color:${g.severity === "HIGH" ? "#CC0000" : "#f59e0b"};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:5px;">${esc(g.cell)} — ${esc(g.severity)}</div><div style="font-size:12px;color:#ccc;line-height:1.6;">${esc(g.note)}</div>${g.ask ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #222;"><span style="font-size:9px;color:#22c55e;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;font-weight:700;">ASK</span><div style="font-size:12px;color:#fff;line-height:1.65;font-style:italic;margin-top:3px;">"${esc(g.ask)}"</div></div>` : ""}</div>`).join("")}</div>` : "";
 
     const defenseHTML = (analysis.defense || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">DEFENSE STRATEGY</span></div>${(analysis.defense || []).map(d => `<div style="border-left:3px solid #CC0000;padding-left:14px;margin-bottom:20px;"><div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:6px;">${esc(d.title)}</div><div style="font-size:12px;color:#ccc;line-height:1.65;">${esc(d.body)}</div></div>`).join("")}</div>` : "";
 
@@ -1146,6 +1162,12 @@ ${actionsHTML}
                       <div key={i} style={{ borderLeft: `3px solid ${gap.severity === "HIGH" ? RED : AMBER}`, paddingLeft: "14px", marginBottom: "16px" }}>
                         <div style={{ fontSize: "11px", fontWeight: "700", color: gap.severity === "HIGH" ? RED : AMBER, fontFamily: CONDENSED, letterSpacing: "0.12em", marginBottom: "5px" }}>{gap.cell}</div>
                         <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.6" }}>{gap.note}</div>
+                        {gap.ask && (
+                          <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #1e1e1e" }}>
+                            <span style={{ fontSize: "9px", color: GREEN, fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", display: "block", marginBottom: "3px" }}>ASK</span>
+                            <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.65", fontStyle: "italic" }}>"{gap.ask}"</div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
