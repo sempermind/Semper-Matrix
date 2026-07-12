@@ -203,7 +203,13 @@ When you find nothing at all:
 // library, and the classification rule. Sent with each of the two parallel calls.
 const ANALYSIS_CONTEXT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine. Senior sales strategist. Find cross-cell gaps that reveal what's actually happening in this deal beneath the surface. A finding that restates one cell is not a finding.
 
-Deal: ${deal.prospect} (${deal.role} @ ${deal.company})${deal.opportunity ? ` | ${deal.opportunity}` : ""}
+Deal: ${deal.prospect} (${deal.role} @ ${deal.company})
+
+WHAT THE REP SELLS — CONTEXT ONLY, to sharpen your read:
+${deal.repCompany ? `The rep works for: ${deal.repCompany}.` : "The rep's company is not specified."}
+${deal.opportunity ? `In this deal they are selling: ${deal.opportunity}.` : "What they're selling in this deal is not specified — reason about their needs generically."}
+Use this ONLY to (a) sharpen the NEEDS read — pinpoint the specific gap in the customer's world where this rep can add value — and (b) make the Opener, Objective, Defense, and questions relevant to that value.
+GUARDRAIL — ABSOLUTE: the OUTPUT stays entirely in the CUSTOMER's world. Never name or describe the rep's product, company, or solution in any briefing, finding, gap, question, opener, or objective. Never say what the customer "needs to buy," never pitch. You think about the rep's value privately to aim your analysis; you never write about it. iQ questions and gap questions name no solution, ever.
 
 ${matrixText}
 
@@ -245,7 +251,7 @@ Build the language in three varied moves so no two questions sound alike:
   OPEN (anchor current reality): Considering / Given that / In light of / As you reflect on / Based on what you've seen with…
   CONNECT (link to future state, where the tension lives): while also / at the same time that / as you're also / combined with / while simultaneously…
   CLOSE (invite reflection on personal stake): what concerns you most about / how confident are you / what would it mean if / what has this revealed about / what's become clear about…
-One clause per component — keep the whole question to a single natural sentence.`;
+One clause per component — keep the whole question to a single natural sentence under ~30 words, short enough to say out loud on a call without the buyer losing the thread.`;
 
 // CALL 1 of 2 — the READ. Diagnosis half. Smaller + faster than one big call.
 const ANALYSIS_PROMPT_READ = (matrixText, deal) => `${ANALYSIS_CONTEXT(matrixText, deal)}
@@ -254,7 +260,7 @@ YOUR JOB: produce the READ of this deal — what the Matrix is telling the rep. 
 - MATRIX_HEALTH: STRONG FOUNDATION / PARTIAL PICTURE / FLYING BLIND. matrix_health_note: ONE plain sentence written FOR the sales rep, in their own language — what they've got a solid read on, what's still dark, and the practical implication for the deal. Do NOT talk about "rows," "cells," "sourced vs. inferred," "dimensions," or "conclusions being pushed" — that's analyst talk. Sales talk only. Tone to match: "You've got a clear picture of what he owns and the pressure he's under, but you're blind on who influences him internally — confirm his coalition before you build the deal around him."
 - BRIEFING: 1-2 short paragraphs interpreting what's happening in the customer's world. Lead the interpretation with hedging language ("The data suggests…", "The patterns reveal…", "This points to…") — do not open with a flat declarative like "Dick is a CRO under pressure." Customer's world only. Specific names/numbers from the Matrix, but framed as what they imply, not stated fact. P11 firing = a second short paragraph on the urgency window in their world.
 - FINDINGS: 2-3 sharpest cross-cell gaps, each classified LEVERAGE / THREAT / VALIDATE. Headline ALL CAPS, max 8 words, specific to this deal. Body: 2-3 sentences that name the two data points and then hedge what the gap between them reveals ("This suggests…", "The pattern points to…"). No box refs. Most urgent first.
-- GAPS: the intelligence that's missing and why it costs the rep. Empty/thin cells only, max 4, HIGH or MEDIUM. For each: "note" = plain-language statement of what you don't know and why it matters to the deal. "ask" = ONE question the rep can say out loud to fill it, built with the INSIGHT QUESTION CONSTRUCTION above — anchor it in something you DO know (their current reality), connect toward where they're heading, and probe the missing piece. Do not label it "iQ." One natural sentence.
+- GAPS: the intelligence that's missing and why it costs the rep. Empty/thin cells only, max 4, HIGH or MEDIUM. For each: "cell" = the plain-English name of the missing area (e.g., "Influence Network", "Relationship Strategy", "Public Commitments", "Missing Support") — NEVER a box number like "Box 2". "note" = plain-language statement of what you don't know and why it matters to the deal. "ask" = ONE question the rep can say out loud to fill it, built with the INSIGHT QUESTION CONSTRUCTION above — anchor it in something you DO know (their current reality), connect toward where they're heading, and probe the missing piece. Do not label it "iQ." Keep it under ~30 words so it's easy to say on a call.
 
 Return ONLY this JSON, no backticks, no markdown:
 {"matrix_health":"","matrix_health_note":"","briefing":[""],"findings":[{"classification":"","headline":"","finding":""}],"gaps":[{"cell":"","label":"","severity":"","note":"","ask":""}]}`;
@@ -264,11 +270,11 @@ const ANALYSIS_PROMPT_PLAN = (matrixText, deal) => `${ANALYSIS_CONTEXT(matrixTex
 
 YOUR JOB: produce the PLAN for the rep's next call. First, silently identify the THREAT / LEVERAGE / VALIDATE findings and the HIGH gaps yourself using the rules above. Then output ONLY these action fields, each written plainly enough that the rep can execute it today:
 
-- DEFENSE: Build ONLY from THREAT findings and HIGH gaps. Max 3. Each: a specific scenario that could stall or kill the deal (hedged — "The risk here is…", "This could mean…") + one countermove the rep can take in the next 5 business days. Title ALL CAPS. If there are no THREATs and no HIGH gaps, return an empty array — do not invent risks.
+- DEFENSE: Build ONLY from THREAT findings and HIGH gaps. Max 3. Each: a specific scenario that could stall or kill the deal (hedged — "The risk here is…", "This could mean…") + one countermove the rep can make on the next call to get ahead of it. Do not assign specific days or deadlines. Title ALL CAPS. If there are no THREATs and no HIGH gaps, return an empty array — do not invent risks.
 
 - OBJECTIVE (Setting a Clear Objective): one customer-centered objective for the next call. Fill each part as ONE short, specific, concrete clause — tight, no em-dashes, no nested qualifiers, no run-ons. Match this example's style and length exactly:
   "This conversation will be successful if the Supply Chain Director FEELS confident about achieving 12% duty optimization targets, SEES HOW unified customs management accelerates their VP positioning timeline, and TAKES STEPS to conduct a comprehensive customs spend analysis across all EU operations."
-  who = their role or first name, short (e.g., "the Supply Chain Director" or "Dick"). feels = one crisp clause (~8-14 words) on what they FEEL by the end, tied to a real current-state pressure. sees_how = one crisp clause on the shift in how they SEE their situation. takes_steps = one crisp clause naming the concrete step they agree to. Each clause starts lowercase after its label word. If any clause runs longer than ~14 words or uses a dash, cut it down.
+  who = their role or first name, short (e.g., "the Supply Chain Director" or "Dick"). feels = one crisp clause (~8-14 words) on what they FEEL by the end, tied to a real current-state pressure. sees_how = one crisp clause on the shift in how they SEE their situation. takes_steps = one crisp clause naming the concrete step they agree to. Each clause starts lowercase after its label word. If any clause runs longer than ~14 words or uses a dash, cut it down. fallback = one short clause (same tight style) naming the minimum viable win if that step stalls mid-call — keep it under ~14 words, no run-ons.
 
 - OPENER (Command Attention with Insight): one opening the rep can say out loud, built in three moves — (1) LEAD WITH THE UNEXPECTED: a surprising stat, emerging trend, or new challenge from THEIR world; (2) PERSONALIZED RELEVANCE: tie it directly to their department, responsibility, legacy, or budget; (3) END WITH A QUESTION that makes them think about impact, readiness, risk, or opportunity. Put the full spoken opener in "text". In "note": if Future State intel is thin so the opener can't be truly specific to this person, say so plainly and name which cells to fill to sharpen it.
 
@@ -277,7 +283,7 @@ YOUR JOB: produce the PLAN for the rep's next call. First, silently identify the
   NOT an insight question (do NOT produce this — operational, no personal stake, names a need): "What are your biggest integration challenges and what tools would help?"
 
 - WATCH_FOR / WATCH_OUT: exactly 2 each. Observable signals only, tied to this person's intel.
-- NEXT_ACTIONS: exactly 3. What, to whom, by when + the cost of not doing it. Never "prepare questions."
+- NEXT_ACTIONS: exactly 3. Each is a clear recommendation the rep should act on before the next conversation, written for a professional who owns their own timing — do NOT assign specific days, deadlines, or "within X business days." State the recommendation plainly, then the rationale: why it matters and what it protects or unlocks. Never "prepare questions."
 
 Return ONLY this JSON, no backticks, no markdown:
 {"defense":[{"title":"","body":""}],"objective":{"who":"","feels":"","sees_how":"","takes_steps":"","fallback":""},"opener":{"text":"","note":""},"iq_questions":[{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""}],"watch_for":["",""],"watch_out":["",""],"next_actions":["","",""]}`;
@@ -475,10 +481,18 @@ function SearchReviewModal({ results, onAccept, onClose }) {
 
 // ─── SCREEN 1: DEAL ENTRY ──────────────────────
 function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode, codeError, clearCodeError }) {
-  const [form, setForm] = useState({ prospect: "", role: "", company: "", opportunity: "" });
+  const [form, setForm] = useState({ prospect: "", role: "", company: "", repCompany: "", opportunity: "" });
   const [errors, setErrors] = useState({});
   const [codeInput, setCodeInput] = useState("");
   const [loadingCode, setLoadingCode] = useState(false);
+
+  // Your company rarely changes deal to deal — pre-fill it from last time.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("semper_rep_company");
+      if (saved) setForm(p => ({ ...p, repCompany: saved }));
+    } catch { /* ignore */ }
+  }, []);
 
   const submitCode = async () => {
     if (!codeInput.trim()) return;
@@ -488,16 +502,18 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
   };
 
   const fields = [
-    { key: "prospect",    label: "CONTACT NAME",           textarea: false },
-    { key: "role",        label: "TITLE / ROLE",           textarea: false },
-    { key: "company",     label: "COMPANY",                textarea: false },
-    { key: "opportunity", label: "OPPORTUNITY (optional)", textarea: true  },
+    { key: "prospect",    label: "CONTACT NAME",  textarea: false },
+    { key: "role",        label: "TITLE / ROLE",  textarea: false },
+    { key: "company",     label: "THEIR COMPANY", textarea: false },
+    { key: "repCompany",  label: "YOUR COMPANY",  textarea: false, placeholder: "The company you work for" },
+    { key: "opportunity", label: "WHAT YOU'RE SELLING THEM", textarea: true, placeholder: "What you're selling in this deal + the outcome it drives — e.g., records digitization for their EU operations, cutting retrieval time and compliance risk" },
   ];
 
   const handleSubmit = () => {
     const errs = {};
-    ["prospect", "role", "company"].forEach(k => { if (!form[k].trim()) errs[k] = true; });
+    ["prospect", "role", "company", "repCompany"].forEach(k => { if (!form[k].trim()) errs[k] = true; });
     if (Object.keys(errs).length) { setErrors(errs); return; }
+    try { localStorage.setItem("semper_rep_company", form.repCompany.trim()); } catch { /* ignore */ }
     onComplete(form);
   };
 
@@ -564,12 +580,14 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
                 </label>
                 {f.textarea ? (
                   <textarea value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} rows={2}
+                    placeholder={f.placeholder || ""}
                     style={{ width: "100%", background: "#0d0d0d", border: `1px solid ${BORDER}`, borderLeft: `3px solid ${BORDER}`, borderRadius: "3px", color: "#fff", padding: "10px 12px", fontSize: "12px", fontFamily: MONO, resize: "none", outline: "none", transition: "all 0.2s" }}
                     onFocus={e => { e.target.style.borderColor = RED; e.target.style.borderLeftColor = RED; }}
                     onBlur={e => { e.target.style.borderColor = BORDER; e.target.style.borderLeftColor = BORDER; }}
                   />
                 ) : (
                   <input value={form[f.key]}
+                    placeholder={f.placeholder || ""}
                     onChange={e => { setForm(p => ({ ...p, [f.key]: e.target.value })); setErrors(p => ({ ...p, [f.key]: false })); }}
                     onKeyDown={e => e.key === "Enter" && handleSubmit()}
                     style={{ width: "100%", background: "#0d0d0d", border: `1px solid ${errors[f.key] ? "#ff6666" : BORDER}`, borderLeft: `3px solid ${errors[f.key] ? "#ff6666" : BORDER}`, borderRadius: "3px", color: "#fff", padding: "10px 12px", fontSize: "12px", fontFamily: MONO, outline: "none", transition: "all 0.2s" }}
@@ -959,8 +977,8 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
 // ─── SECTION HEADER (shared) ───────────────────
 function SectionTag({ children }) {
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-      <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>{children}</span>
+    <div style={{ display: "inline-flex", alignItems: "center", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "7px 16px", marginBottom: "20px" }}>
+      <span style={{ color: "#000", fontSize: "15px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.16em" }}>{children}</span>
     </div>
   );
 }
@@ -984,27 +1002,27 @@ function AnalysisScreen({ deal, analysis, aiSources, cells, code, cloudStatus, o
     }).join("");
 
     const obj = analysis.objective || {};
-    const objHTML = (obj.who || obj.feels) ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">YOUR NEXT-CALL OBJECTIVE</span></div>
+    const objHTML = (obj.who || obj.feels) ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">YOUR NEXT-CALL OBJECTIVE</span></div>
 <p style="font-size:14px;color:#fff;line-height:1.8;margin-bottom:14px;">This conversation will be successful if <strong>${esc(obj.who)}</strong> <span style="color:#22c55e;">FEELS</span> ${esc(obj.feels)}, <span style="color:#22c55e;">SEES HOW</span> ${esc(obj.sees_how)}, and <span style="color:#22c55e;">TAKES STEPS</span> ${esc(obj.takes_steps)}.</p>
 ${obj.fallback ? `<p style="font-size:12px;color:#888;line-height:1.7;"><strong style="color:#f59e0b;">FALLBACK:</strong> ${esc(obj.fallback)}</p>` : ""}</div>` : "";
 
     const op = analysis.opener || {};
-    const openerHTML = op.text ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">OPENING INSIGHT</span></div><p style="font-size:14px;color:#fff;line-height:1.85;font-style:italic;border-left:3px solid #CC0000;padding-left:16px;">"${esc(op.text)}"</p>${op.note ? `<p style="font-size:11px;color:#888;line-height:1.7;margin-top:10px;">${esc(op.note)}</p>` : ""}</div>` : "";
+    const openerHTML = op.text ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">OPENING INSIGHT</span></div><p style="font-size:14px;color:#fff;line-height:1.85;font-style:italic;border-left:3px solid #CC0000;padding-left:16px;">"${esc(op.text)}"</p>${op.note ? `<p style="font-size:11px;color:#888;line-height:1.7;margin-top:10px;">${esc(op.note)}</p>` : ""}</div>` : "";
 
-    const gapsHTML = (analysis.gaps || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">INTELLIGENCE GAPS</span></div>${(analysis.gaps || []).map(g => `<div style="border-left:3px solid ${g.severity === "HIGH" ? "#CC0000" : "#f59e0b"};padding-left:14px;margin-bottom:16px;"><div style="font-size:11px;font-weight:700;color:${g.severity === "HIGH" ? "#CC0000" : "#f59e0b"};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:5px;">${esc(g.cell)} — ${esc(g.severity)}</div><div style="font-size:12px;color:#ccc;line-height:1.6;">${esc(g.note)}</div>${g.ask ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #222;"><span style="font-size:9px;color:#22c55e;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;font-weight:700;">ASK</span><div style="font-size:12px;color:#fff;line-height:1.65;font-style:italic;margin-top:3px;">"${esc(g.ask)}"</div></div>` : ""}</div>`).join("")}</div>` : "";
+    const gapsHTML = (analysis.gaps || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">INTELLIGENCE GAPS</span></div>${(analysis.gaps || []).map(g => `<div style="border-left:3px solid ${g.severity === "HIGH" ? "#CC0000" : "#f59e0b"};padding-left:14px;margin-bottom:16px;"><div style="font-size:11px;font-weight:700;color:${g.severity === "HIGH" ? "#CC0000" : "#f59e0b"};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:5px;">${esc(g.cell)} — ${esc(g.severity)}</div><div style="font-size:12px;color:#ccc;line-height:1.6;">${esc(g.note)}</div>${g.ask ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #222;"><span style="font-size:9px;color:#22c55e;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;font-weight:700;">ASK</span><div style="font-size:12px;color:#fff;line-height:1.65;font-style:italic;margin-top:3px;">"${esc(g.ask)}"</div></div>` : ""}</div>`).join("")}</div>` : "";
 
-    const defenseHTML = (analysis.defense || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">DEFENSE STRATEGY</span></div>${(analysis.defense || []).map(d => `<div style="border-left:3px solid #CC0000;padding-left:14px;margin-bottom:20px;"><div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:6px;">${esc(d.title)}</div><div style="font-size:12px;color:#ccc;line-height:1.65;">${esc(d.body)}</div></div>`).join("")}</div>` : "";
+    const defenseHTML = (analysis.defense || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">DEFENSE STRATEGY</span></div>${(analysis.defense || []).map(d => `<div style="border-left:3px solid #CC0000;padding-left:14px;margin-bottom:20px;"><div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:6px;">${esc(d.title)}</div><div style="font-size:12px;color:#ccc;line-height:1.65;">${esc(d.body)}</div></div>`).join("")}</div>` : "";
 
-    const iqHTML = (analysis.iq_questions || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">iQ QUESTIONS — USE NEXT CALL</span></div>${(analysis.iq_questions || []).map(q => `<div style="border-left:3px solid #CC0000;padding-left:16px;margin-bottom:20px;">${q.bank ? `<span style="display:inline-block;font-size:9px;font-weight:700;color:#000;background:${q.bank === "VALIDATION" ? "#22c55e" : "#f59e0b"};border-radius:2px;padding:2px 8px;letter-spacing:0.12em;font-family:'Barlow Condensed',sans-serif;margin-bottom:8px;">${esc(q.bank)}</span>` : ""}<div style="font-size:13px;color:#fff;line-height:1.8;font-style:italic;margin:6px 0;">"${esc(q.question)}"</div>${q.timing ? `<div style="font-size:10px;color:#888;">${esc(q.timing)}</div>` : ""}</div>`).join("")}</div>` : "";
+    const iqHTML = (analysis.iq_questions || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">iQ QUESTIONS — USE NEXT CALL</span></div>${(analysis.iq_questions || []).map(q => `<div style="border-left:3px solid #CC0000;padding-left:16px;margin-bottom:20px;">${q.bank ? `<span style="display:inline-block;font-size:9px;font-weight:700;color:#000;background:${q.bank === "VALIDATION" ? "#22c55e" : "#f59e0b"};border-radius:2px;padding:2px 8px;letter-spacing:0.12em;font-family:'Barlow Condensed',sans-serif;margin-bottom:8px;">${esc(q.bank)}</span>` : ""}<div style="font-size:13px;color:#fff;line-height:1.8;font-style:italic;margin:6px 0;">"${esc(q.question)}"</div>${q.timing ? `<div style="font-size:10px;color:#888;">${esc(q.timing)}</div>` : ""}</div>`).join("")}</div>` : "";
 
-    const signalsHTML = ((analysis.watch_for || []).length || (analysis.watch_out || []).length) ? `<div style="margin-bottom:32px;display:grid;grid-template-columns:1fr 1fr;gap:40px;"><div><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:14px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">MOMENTUM SIGNALS</span></div>${(analysis.watch_for || []).map(s => `<div style="font-size:12px;color:#ccc;line-height:1.65;margin-bottom:10px;">● ${esc(s)}</div>`).join("")}</div><div><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:14px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">RESISTANCE SIGNALS</span></div>${(analysis.watch_out || []).map(s => `<div style="font-size:12px;color:#ccc;line-height:1.65;margin-bottom:10px;">● ${esc(s)}</div>`).join("")}</div></div>` : "";
+    const signalsHTML = ((analysis.watch_for || []).length || (analysis.watch_out || []).length) ? `<div style="margin-bottom:32px;display:grid;grid-template-columns:1fr 1fr;gap:40px;"><div><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:14px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">MOMENTUM SIGNALS</span></div>${(analysis.watch_for || []).map(s => `<div style="font-size:12px;color:#ccc;line-height:1.65;margin-bottom:10px;">● ${esc(s)}</div>`).join("")}</div><div><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:14px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">RESISTANCE SIGNALS</span></div>${(analysis.watch_out || []).map(s => `<div style="font-size:12px;color:#ccc;line-height:1.65;margin-bottom:10px;">● ${esc(s)}</div>`).join("")}</div></div>` : "";
 
-    const actionsHTML = (analysis.next_actions || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">RECOMMENDED NEXT ACTIONS</span></div>${(analysis.next_actions || []).map((a, i) => `<div style="display:flex;gap:14px;margin-bottom:14px;"><div style="font-size:18px;font-weight:900;color:#CC0000;font-family:'Barlow Condensed',sans-serif;">${i + 1}</div><div style="font-size:12px;color:#ccc;line-height:1.7;">${esc(a)}</div></div>`).join("")}</div>` : "";
+    const actionsHTML = (analysis.next_actions || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">RECOMMENDED NEXT ACTIONS</span></div>${(analysis.next_actions || []).map((a, i) => `<div style="display:flex;gap:14px;margin-bottom:14px;"><div style="font-size:18px;font-weight:900;color:#CC0000;font-family:'Barlow Condensed',sans-serif;">${i + 1}</div><div style="font-size:12px;color:#ccc;line-height:1.7;">${esc(a)}</div></div>`).join("")}</div>` : "";
 
     const briefingHTML = (Array.isArray(analysis.briefing) ? analysis.briefing : analysis.briefing ? [analysis.briefing] : []).map(p => `<p style="font-size:13px;color:#ccc;line-height:1.85;margin-bottom:18px;font-style:italic;">${esc(p)}</p>`).join("");
 
     // The Matrix itself — so the downloaded report is a complete record of the rep's intel
-    const gridHTML = cells ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">THE MATRIX</span></div>
+    const gridHTML = cells ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">THE MATRIX</span></div>
 <table style="width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;">
 <tr><td style="width:90px;"></td>${MATRIX_COLS.map(c => `<th style="background:#CC0000;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.12em;padding:8px;text-align:center;border:2px solid #0a0a0a;">${c}</th>`).join("")}</tr>
 ${MATRIX_ROWS.map(r => `<tr><th style="background:#CC0000;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.08em;padding:8px;text-align:center;border:2px solid #0a0a0a;">${r}</th>${MATRIX_COLS.map(c => `<td style="background:#141414;color:#ccc;font-size:10px;line-height:1.55;padding:10px;vertical-align:top;border:2px solid #0a0a0a;">${esc(cells[`${r}|${c}`]) || "<span style='color:#555;'>—</span>"}</td>`).join("")}</tr>`).join("")}
@@ -1016,7 +1034,7 @@ ${MATRIX_ROWS.map(r => `<tr><th style="background:#CC0000;color:#fff;font-family
 <div style="font-size:13px;color:#fff;font-family:'IBM Plex Mono',monospace;margin-top:6px;margin-bottom:28px;">${esc(deal.role)}${deal.company ? ` · ${esc(deal.company)}` : ""}${deal.opportunity ? ` · ${esc(deal.opportunity)}` : ""}</div>
 ${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;padding:10px 16px;margin-bottom:32px;font-size:13px;color:#ccc;font-style:italic;">● ${esc(analysis.matrix_health_note)}</div>` : ""}
 ${gridHTML}
-${(briefingHTML || findingsHTML) ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:20px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">WHAT THE MATRIX IS TELLING YOU</span></div>${briefingHTML}${findingsHTML}</div>` : ""}
+${(briefingHTML || findingsHTML) ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:20px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">WHAT THE MATRIX IS TELLING YOU</span></div>${briefingHTML}${findingsHTML}</div>` : ""}
 ${objHTML}
 ${openerHTML}
 ${gapsHTML}
