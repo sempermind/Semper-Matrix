@@ -282,7 +282,7 @@ YOUR JOB: produce the PLAN for the rep's next call. First, silently identify the
 
 - OPENER (Command Attention with Insight): one opening the rep can say out loud, built in three moves — (1) LEAD WITH THE UNEXPECTED: a surprising stat, emerging trend, or new challenge from THEIR world; (2) PERSONALIZED RELEVANCE: tie it directly to their department, responsibility, legacy, or budget; (3) END WITH A QUESTION that makes them think about impact, readiness, risk, or opportunity. Put the full spoken opener in "text". In "note": if Future State intel is thin so the opener can't be truly specific to this person, say so plainly and name which cells to fill to sharpen it.
 
-- iQ QUESTIONS: exactly 3, each a true insight question built with the INSIGHT QUESTION CONSTRUCTION above. EVERY question MUST contain all three components — ONE Current Reality AND ONE Future State AND ONE Personal Impact. Before you finalize each question, check it: can you point to the current reality, the future state, AND the personal stake inside the sentence? If any one of the three is missing, the question is INVALID — rewrite it until all three are present. A question that only names a current pressure, or only asks about the future, is NOT an insight question. Bank each: VALIDATION (tests a finding you believe is true) or DISCOVERY (opens something you can't yet see). At least one of each. Give Early/Mid/Late timing.
+- iQ QUESTIONS: exactly 3, each a true insight question built with the INSIGHT QUESTION CONSTRUCTION above. EVERY question MUST contain all three components — ONE Current Reality AND ONE Future State AND ONE Personal Impact. Before you finalize each question, check it: can you point to the current reality, the future state, AND the personal stake inside the sentence? If any one of the three is missing, the question is INVALID — rewrite it until all three are present. A question that only names a current pressure, or only asks about the future, is NOT an insight question. Bank each: VALIDATION (tests a finding you believe is true) or DISCOVERY (opens something you can't yet see). At least one of each. Give Early/Mid/Late timing. For each question also give "listen_for": one short line (under ~20 words) naming what a CONFIRMING answer sounds like versus what would KILL your read — so the rep listens like an analyst, not a scriptreader.
   GOOD (follow this shape): "Given that you're personally signing county-level contracts, while positioning Kofile as one scaled platform across the combined HF Group units, what concerns you most about how much of that integration is riding on you specifically?"
   NOT an insight question (do NOT produce this — operational, no personal stake, names a need): "What are your biggest integration challenges and what tools would help?"
 
@@ -290,7 +290,7 @@ YOUR JOB: produce the PLAN for the rep's next call. First, silently identify the
 - NEXT_ACTIONS: exactly 3. Each is a clear recommendation the rep should act on before the next conversation, written for a professional who owns their own timing — do NOT assign specific days, deadlines, or "within X business days." State the recommendation plainly, then the rationale: why it matters and what it protects or unlocks. Never "prepare questions."
 
 Return ONLY this JSON, no backticks, no markdown:
-{"defense":[{"title":"","body":""}],"objective":{"who":"","feels":"","sees_how":"","takes_steps":"","fallback":""},"opener":{"text":"","note":""},"iq_questions":[{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""}],"watch_for":["",""],"watch_out":["",""],"next_actions":["","",""]}`;
+{"defense":[{"title":"","body":""}],"objective":{"who":"","feels":"","sees_how":"","takes_steps":"","fallback":""},"opener":{"text":"","note":""},"iq_questions":[{"bank":"","question":"","timing":"","listen_for":""},{"bank":"","question":"","timing":"","listen_for":""},{"bank":"","question":"","timing":"","listen_for":""}],"watch_for":["",""],"watch_out":["",""],"next_actions":["","",""]}`;
 
 // ─── SHARED BUTTON ─────────────────────────────
 function Btn({ children, onClick, disabled, variant, style = {} }) {
@@ -643,7 +643,7 @@ function AnalysisLoader({ steps }) {
 }
 
 // ─── SCREEN 2: MATRIX EDITOR ──────────────────
-function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComplete, onBack, code, cloudStatus }) {
+function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources, onComplete, onBack, code, cloudStatus }) {
   const [focused, setFocused] = useState(null);
   const [showCodeNote, setShowCodeNote] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
@@ -654,9 +654,22 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
   const [searchRan, setSearchRan] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState(null);
+  const [oppNudge, setOppNudge] = useState(false);        // soft "what are you selling?" nudge
+  const [oppDraft, setOppDraft] = useState("");
+  const [showUpdate, setShowUpdate] = useState(false);    // update-from-call modal
+  const [callNotes, setCallNotes] = useState("");
+  const [updating, setUpdating] = useState(false);
+  const [updateMsg, setUpdateMsg] = useState(null);
   const fileRef = useRef(null);
 
   // Cell prompts — what to search for in each cell
+  // NEEDS cells are inferred (not web-searched). Anchor that inference to what the
+  // rep actually sells so the hypothesised need is the gap their value fills —
+  // described as the CUSTOMER's need, never as a product or pitch.
+  const needsRepContext = (deal.repCompany || deal.opportunity)
+    ? ` The rep works for ${deal.repCompany || "their company"}${deal.opportunity ? ` and in this deal is selling: ${deal.opportunity}.` : "."} Anchor your hypothesis to the specific gap this rep's value could fill in ${deal.prospect}'s world — but state it as the customer's own need, in the customer's world. Never name the rep's product, company, or solution, and never phrase it as something to buy.`
+    : "";
+
   const CELL_PROMPTS = {
     "CURRENT STATE|ROLE": `Search for ${deal.prospect}'s current role, title, and decision-making authority at ${deal.company}. What decisions can they make independently? What requires sign-off above them? Look for their LinkedIn profile, company bio, press releases, or any public source confirming their scope and authority.`,
     "CURRENT STATE|REACH": `Who does ${deal.prospect} (${deal.role} at ${deal.company}) publicly interact with, influence, or report to? Search for ${deal.prospect} by name first. Look for LinkedIn activity, board memberships, advisory roles, conference panels, co-authored content, quotes in press releases, or any public mention of who they work with or report to. Also search for "${deal.prospect} ${deal.company}" together to find organizational mentions.`,
@@ -664,9 +677,9 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
     "FUTURE STATE|ROLE": `What is ${deal.prospect}'s career trajectory at ${deal.company} or in their industry? Look for recent promotions, expanded responsibilities, new titles, speaking engagements, industry awards, board appointments, or signals about where they are heading professionally.`,
     "FUTURE STATE|REACH": `What new professional relationships or networks is ${deal.prospect} at ${deal.company} actively building? Look for recent conference appearances, new board or advisory roles, industry association involvement, new partnerships announced, or any activity suggesting deliberate relationship expansion.`,
     "FUTURE STATE|RESULTS": `What public commitments, stated goals, or strategic promises has ${deal.prospect} at ${deal.company} made? Look for quotes in press releases, earnings calls, investor presentations, interviews, conference keynotes, or LinkedIn posts where they personally committed to specific outcomes or targets.`,
-    "NEEDS|ROLE": `Based on what you know about ${deal.prospect}'s current role as ${deal.role} at ${deal.company} and where they appear to be heading professionally, generate an intelligent hypothesis about what authority, skills, or capabilities they are likely missing right now. Do NOT search the web. Reason from the gap between their current position and their apparent ambitions. What would someone in this role and on this trajectory typically need that they don't yet have? Return your hypothesis as: {"found": true, "intel": "Inferred: [your hypothesis]", "source": "inferred", "source_label": "Inferred from role and trajectory"}`,
-    "NEEDS|REACH": `Based on what you know about ${deal.prospect}'s current influence network and where they are building relationships, generate an intelligent hypothesis about whose support or buy-in they likely need but don't yet have. Do NOT search the web. Reason from the gap between their current relationships and the alliances someone at their level pursuing their apparent goals would need. Return your hypothesis as: {"found": true, "intel": "Inferred: [your hypothesis]", "source": "inferred", "source_label": "Inferred from role and trajectory"}`,
-    "NEEDS|RESULTS": `Based on what you know about ${deal.prospect}'s current performance pressures and public commitments as ${deal.role} at ${deal.company}, generate an intelligent hypothesis about what resources, tools, budget, or capabilities they likely need to close the gap between where they are and what they've committed to. Do NOT search the web. Reason from the distance between their current results and their stated goals. Return your hypothesis as: {"found": true, "intel": "Inferred: [your hypothesis]", "source": "inferred", "source_label": "Inferred from role and trajectory"}`,
+    "NEEDS|ROLE": `Based on what you know about ${deal.prospect}'s current role as ${deal.role} at ${deal.company} and where they appear to be heading professionally, generate an intelligent hypothesis about what authority, skills, or capabilities they are likely missing right now. Do NOT search the web. Reason from the gap between their current position and their apparent ambitions. What would someone in this role and on this trajectory typically need that they don't yet have?${needsRepContext} Return your hypothesis as: {"found": true, "intel": "Inferred: [your hypothesis]", "source": "inferred", "source_label": "Inferred from role and trajectory"}`,
+    "NEEDS|REACH": `Based on what you know about ${deal.prospect}'s current influence network and where they are building relationships, generate an intelligent hypothesis about whose support or buy-in they likely need but don't yet have. Do NOT search the web. Reason from the gap between their current relationships and the alliances someone at their level pursuing their apparent goals would need.${needsRepContext} Return your hypothesis as: {"found": true, "intel": "Inferred: [your hypothesis]", "source": "inferred", "source_label": "Inferred from role and trajectory"}`,
+    "NEEDS|RESULTS": `Based on what you know about ${deal.prospect}'s current performance pressures and public commitments as ${deal.role} at ${deal.company}, generate an intelligent hypothesis about what resources, tools, budget, or capabilities they likely need to close the gap between where they are and what they've committed to. Do NOT search the web. Reason from the distance between their current results and their stated goals.${needsRepContext} Return your hypothesis as: {"found": true, "intel": "Inferred: [your hypothesis]", "source": "inferred", "source_label": "Inferred from role and trajectory"}`,
   };
 
   // Fetch + parse one cell's intel
@@ -753,9 +766,19 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
 
   const handleGenerate = async () => {
     if (filled === 0 || analyzing) return;
+    // Soft nudge (once): if they never said what they're selling, the analysis stays
+    // generic. Surface it, but never block. oppNudge latches so we never loop.
+    if (!deal.opportunity?.trim() && !oppNudge) { setOppNudge(true); return; }
+    runAnalysis(deal);
+  };
+
+  // Core analysis run — takes an explicit deal so the nudge's "add & continue"
+  // can pass the just-typed opportunity without waiting for state to settle.
+  const runAnalysis = async (effectiveDeal) => {
+    if (analyzing) return;
     setAnalyzing(true);
     setAnalyzeSteps(ANALYSIS_STAGES.map(s => ({ label: s.label, done: false })));
-    const matrixText = matrixToText(cells, deal, aiSources);
+    const matrixText = matrixToText(cells, effectiveDeal, aiSources);
 
     // Gentle timed progress so the bars always feel alive. Advances up to the
     // second-to-last stage; the real completions finish the rest.
@@ -769,8 +792,8 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
       // Two smaller calls, in parallel. Wall time ≈ the slower half, not the sum
       // — and neither half is big enough to approach the timeout.
       const [readPart, planPart] = await Promise.all([
-        callAnalysis(ANALYSIS_PROMPT_READ(matrixText, deal), 1800),
-        callAnalysis(ANALYSIS_PROMPT_PLAN(matrixText, deal), 2600),
+        callAnalysis(ANALYSIS_PROMPT_READ(matrixText, effectiveDeal), 1800),
+        callAnalysis(ANALYSIS_PROMPT_PLAN(matrixText, effectiveDeal), 2600),
       ]);
       clearInterval(ticker);
       setAnalyzeSteps(ANALYSIS_STAGES.map(s => ({ label: s.label, done: true })));
@@ -780,9 +803,65 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
       onComplete(cells, matrixText, analysis, aiSources);
     } catch {
       clearInterval(ticker);
-      onComplete(cells, matrixToText(cells, deal, aiSources), null, aiSources);
+      onComplete(cells, matrixToText(cells, effectiveDeal, aiSources), null, aiSources);
     }
     setAnalyzing(false);
+  };
+
+  // ── UPDATE FROM CALL ───────────────────────────
+  // Rep pastes what they learned; AI sorts it into the right cells and appends
+  // (as reliable rep intel), so they can re-run the analysis without hunting cells.
+  const handleUpdateFromCall = async () => {
+    const notes = callNotes.trim();
+    if (!notes || updating) return;
+    setUpdating(true);
+    setUpdateMsg(null);
+    const current = matrixToText(cells, deal, aiSources);
+    const prompt = `A sales rep just finished a call and wrote what they learned. Sort ONLY the genuinely new information into the 9 Connection Intelligence Matrix cells. Do not repeat anything already present. Keys are exactly: "CURRENT STATE|ROLE","CURRENT STATE|REACH","CURRENT STATE|RESULTS","FUTURE STATE|ROLE","FUTURE STATE|REACH","FUTURE STATE|RESULTS","NEEDS|ROLE","NEEDS|REACH","NEEDS|RESULTS".
+
+CURRENT MATRIX:
+${current}
+
+CALL NOTES:
+${notes}
+
+Return ONLY valid JSON with just the cells that have NEW intel to append — concise phrasing, no preamble: {"CURRENT STATE|ROLE":"","...":""}. Omit cells with nothing new.`;
+    try {
+      const resp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, messages: [{ role: "user", content: prompt }] }),
+      });
+      const data = await resp.json();
+      const raw = (data.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim();
+      const start = raw.indexOf("{"), end = raw.lastIndexOf("}");
+      const parsed = JSON.parse(start !== -1 && end > start ? raw.slice(start, end + 1) : "{}");
+      let count = 0;
+      setCells(prev => {
+        const next = { ...prev };
+        Object.entries(parsed).forEach(([k, v]) => {
+          if (next[k] !== undefined && v && v.trim()) {
+            const existing = next[k].trim();
+            next[k] = existing ? `${existing}\n\n${v.trim()}` : v.trim();
+            count++;
+          }
+        });
+        return next;
+      });
+      // Call intel is the rep's own — clear any "inferred" flag on updated cells so it reads as reliable.
+      setAiSources(prev => {
+        const next = { ...prev };
+        Object.keys(parsed).forEach(k => { if (parsed[k] && parsed[k].trim()) delete next[k]; });
+        return next;
+      });
+      setUpdateMsg(count > 0
+        ? { ok: true, text: `${count} ${count === 1 ? "cell" : "cells"} updated from your notes. Review the grid, then re-generate your analysis.` }
+        : { ok: false, text: "Nothing new to add — that intel already appears to be in your Matrix." });
+      if (count > 0) { setCallNotes(""); setShowUpdate(false); }
+    } catch {
+      setUpdateMsg({ ok: false, text: "Couldn't process those notes. Try again or edit the cells directly." });
+    }
+    setUpdating(false);
   };
 
   // ── IMAGE UPLOAD ───────────────────────────────
@@ -837,6 +916,35 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
 
       {analyzing && <AnalysisLoader steps={analyzeSteps} />}
 
+      {showUpdate && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 900, padding: "20px" }}>
+          <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderTop: `2px solid ${RED}`, borderRadius: "6px", width: "100%", maxWidth: "560px", padding: "24px" }}>
+            <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700", marginBottom: "4px" }}>UPDATE FROM CALL</div>
+            <div style={{ fontSize: "18px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.04em", marginBottom: "10px" }}>What did you learn?</div>
+            <div style={{ fontSize: "11px", color: "#aaa", fontFamily: MONO, lineHeight: "1.6", marginBottom: "14px" }}>
+              Paste your call notes or type what's new. It gets sorted into the right cells automatically — then re-generate your analysis.
+            </div>
+            <textarea value={callNotes} onChange={e => setCallNotes(e.target.value)} rows={6}
+              placeholder="e.g., She confirmed the CFO signs off on anything over $250k. Board presentation moved to Q3. She's gunning for the VP Ops role."
+              style={{ width: "100%", background: "#0d0d0d", border: `1px solid ${BORDER}`, borderRadius: "3px", color: "#fff", padding: "12px", fontSize: "12px", fontFamily: MONO, lineHeight: "1.6", resize: "vertical", outline: "none" }}
+              onFocus={e => e.target.style.borderColor = RED}
+              onBlur={e => e.target.style.borderColor = BORDER}
+            />
+            {updateMsg && (
+              <div style={{ marginTop: "10px", fontSize: "11px", color: updateMsg.ok ? GREEN : "#ff6666", fontFamily: MONO, lineHeight: "1.5" }}>
+                {updateMsg.ok ? "✓ " : "✕ "}{updateMsg.text}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+              <Btn onClick={handleUpdateFromCall} disabled={!callNotes.trim() || updating} style={{ minWidth: "180px" }}>
+                {updating ? "[ Sorting your notes... ]" : "SORT INTO MATRIX →"}
+              </Btn>
+              <Btn variant="ghost" onClick={() => { setShowUpdate(false); setUpdateMsg(null); }}>CLOSE</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
       {searchResults !== null && (
         <SearchReviewModal results={searchResults} onAccept={handleAcceptResults} onClose={() => setSearchResults(null)} />
       )}
@@ -851,6 +959,11 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
           <CodeChip code={code} status={cloudStatus} />
           <div style={{ width: "1px", height: "20px", background: "#333" }} />
           <span style={{ fontSize: "10px", color: filled === 9 ? GREEN : "#fff", fontFamily: MONO }}>{filled}/9 cells</span>
+          <button onClick={() => { setShowUpdate(true); setUpdateMsg(null); }}
+            style={{ background: "#1a1a1a", border: `1px solid ${BORDER}`, color: "#fff", borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.3s" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "#4a9eff"; e.currentTarget.style.color = "#4a9eff"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = "#fff"; }}
+          >⟳ UPDATE FROM CALL</button>
           <button onClick={() => fileRef.current?.click()} disabled={uploading}
             style={{ background: uploading ? "rgba(204,0,0,0.08)" : "#1a1a1a", border: `1px solid ${uploading ? RED : BORDER}`, color: uploading ? RED : "#fff", borderRadius: "3px", padding: "7px 14px", cursor: uploading ? "not-allowed" : "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.3s" }}
             onMouseEnter={e => { if (!uploading) { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = RED; } }}
@@ -866,6 +979,12 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
           {uploadMsg && (
             <div style={{ marginBottom: "14px", padding: "9px 13px", background: uploadMsg.ok ? "rgba(34,197,94,0.08)" : "rgba(204,0,0,0.08)", border: `1px solid ${uploadMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(204,0,0,0.3)"}`, borderRadius: "3px", fontSize: "11px", color: uploadMsg.ok ? GREEN : "#ff6666", fontFamily: MONO }}>
               {uploadMsg.ok ? "✓ " : "✕ "}{uploadMsg.text}
+            </div>
+          )}
+
+          {updateMsg && updateMsg.ok && !showUpdate && (
+            <div style={{ marginBottom: "14px", padding: "9px 13px", background: "rgba(34,197,94,0.08)", border: `1px solid rgba(34,197,94,0.3)`, borderRadius: "3px", fontSize: "11px", color: GREEN, fontFamily: MONO }}>
+              ✓ {updateMsg.text}
             </div>
           )}
 
@@ -961,6 +1080,26 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
               </button>
             </div>
 
+            {oppNudge && !deal.opportunity?.trim() && !analyzing && (
+              <div style={{ marginBottom: "12px", padding: "12px 14px", background: "rgba(245,158,11,0.06)", border: `1px solid rgba(245,158,11,0.35)`, borderRadius: "4px" }}>
+                <div style={{ fontSize: "11px", color: AMBER, fontFamily: MONO, lineHeight: "1.6", marginBottom: "8px" }}>
+                  You haven't said what you're selling them. The analysis will still run, but it stays generic — it can't pinpoint where you add value. Add it here to sharpen it, or generate anyway.
+                </div>
+                <div style={{ display: "flex", gap: "8px", alignItems: "stretch", flexWrap: "wrap" }}>
+                  <input value={oppDraft} onChange={e => setOppDraft(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter" && oppDraft.trim()) { const merged = { ...deal, opportunity: oppDraft.trim() }; setDeal(merged); runAnalysis(merged); } }}
+                    placeholder="What you're selling them + the outcome it drives"
+                    style={{ flex: 1, minWidth: "240px", background: "#0d0d0d", border: `1px solid ${BORDER}`, borderRadius: "3px", color: "#fff", padding: "9px 12px", fontSize: "12px", fontFamily: MONO, outline: "none" }}
+                    onFocus={e => e.target.style.borderColor = AMBER}
+                    onBlur={e => e.target.style.borderColor = BORDER}
+                  />
+                  <Btn onClick={() => { if (oppDraft.trim()) { const merged = { ...deal, opportunity: oppDraft.trim() }; setDeal(merged); runAnalysis(merged); } else { runAnalysis(deal); } }} style={{ padding: "9px 16px" }}>
+                    {oppDraft.trim() ? "ADD & CONTINUE →" : "GENERATE ANYWAY →"}
+                  </Btn>
+                </div>
+              </div>
+            )}
+
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
               <Btn onClick={handleGenerate} disabled={filled === 0 || analyzing} style={{ minWidth: "300px" }}>
                 {analyzing ? "[ Analyzing your intelligence... ]" : "GENERATE MATRIX ANALYSIS →"}
@@ -996,6 +1135,7 @@ const CLASS_META = {
 // ─── SCREEN 3: ANALYSIS REPORT ─────────────────
 function AnalysisScreen({ deal, analysis, aiSources, cells, code, cloudStatus, onBack, onRedo }) {
   const hasAnalysis = !!analysis;
+  const [showMatrix, setShowMatrix] = useState(false);
 
   const exportHTML = useCallback(() => {
     if (!analysis) return;
@@ -1017,7 +1157,7 @@ ${obj.fallback ? `<p style="font-size:12px;color:#888;line-height:1.7;"><strong 
 
     const defenseHTML = (analysis.defense || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">DEFENSE STRATEGY</span></div>${(analysis.defense || []).map(d => `<div style="border-left:3px solid #CC0000;padding-left:14px;margin-bottom:20px;"><div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:6px;">${esc((d.title||"").toUpperCase())}</div><div style="font-size:12px;color:#ccc;line-height:1.65;">${esc(d.body)}</div></div>`).join("")}</div>` : "";
 
-    const iqHTML = (analysis.iq_questions || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">iQ QUESTIONS — USE NEXT CALL</span></div>${(analysis.iq_questions || []).map(q => `<div style="border-left:3px solid #CC0000;padding-left:16px;margin-bottom:20px;">${q.bank ? `<span style="display:inline-block;font-size:9px;font-weight:700;color:#000;background:${q.bank === "VALIDATION" ? "#22c55e" : "#f59e0b"};border-radius:2px;padding:2px 8px;letter-spacing:0.12em;font-family:'Barlow Condensed',sans-serif;margin-bottom:8px;">${esc(q.bank)}</span>` : ""}<div style="font-size:13px;color:#fff;line-height:1.8;font-style:italic;margin:6px 0;">"${esc(q.question)}"</div>${q.timing ? `<div style="font-size:10px;color:#888;">${esc(q.timing)}</div>` : ""}</div>`).join("")}</div>` : "";
+    const iqHTML = (analysis.iq_questions || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">iQ QUESTIONS — USE NEXT CALL</span></div>${(analysis.iq_questions || []).map(q => `<div style="border-left:3px solid #CC0000;padding-left:16px;margin-bottom:20px;">${q.bank ? `<span style="display:inline-block;font-size:9px;font-weight:700;color:#000;background:${q.bank === "VALIDATION" ? "#22c55e" : "#f59e0b"};border-radius:2px;padding:2px 8px;letter-spacing:0.12em;font-family:'Barlow Condensed',sans-serif;margin-bottom:8px;">${esc(q.bank)}</span>` : ""}<div style="font-size:13px;color:#fff;line-height:1.8;font-style:italic;margin:6px 0;">"${esc(q.question)}"</div>${q.listen_for ? `<div style="font-size:10px;color:#9fb8a0;margin:2px 0 4px;"><span style="color:#22c55e;font-weight:700;">Listen for:</span> ${esc(q.listen_for)}</div>` : ""}${q.timing ? `<div style="font-size:10px;color:#888;">${esc(q.timing)}</div>` : ""}</div>`).join("")}</div>` : "";
 
     const signalsHTML = ((analysis.watch_for || []).length || (analysis.watch_out || []).length) ? `<div style="margin-bottom:32px;display:grid;grid-template-columns:1fr 1fr;gap:40px;"><div><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:14px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">MOMENTUM SIGNALS</span></div>${(analysis.watch_for || []).map(s => `<div style="font-size:12px;color:#ccc;line-height:1.65;margin-bottom:10px;">● ${esc(s)}</div>`).join("")}</div><div><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:14px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">RESISTANCE SIGNALS</span></div>${(analysis.watch_out || []).map(s => `<div style="font-size:12px;color:#ccc;line-height:1.65;margin-bottom:10px;">● ${esc(s)}</div>`).join("")}</div></div>` : "";
 
@@ -1108,6 +1248,40 @@ ${actionsHTML}
           </div>
         ) : (
           <div>
+
+            {/* Collapsible source Matrix — check a finding against the cell without leaving */}
+            {cells && (
+              <div style={{ marginBottom: "28px" }}>
+                <button onClick={() => setShowMatrix(v => !v)}
+                  style={{ background: "transparent", border: `1px solid ${BORDER}`, borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.14em", color: "#aaa", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = "#fff"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = "#aaa"; }}
+                >{showMatrix ? "▲ HIDE THE MATRIX" : "▼ SHOW THE MATRIX"}</button>
+                {showMatrix && (
+                  <div style={{ marginTop: "14px", overflowX: "auto" }}>
+                    <div style={{ minWidth: "640px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr", gap: "4px", marginBottom: "4px" }}>
+                        <div />
+                        {MATRIX_COLS.map(col => (
+                          <div key={col} style={{ background: RED, borderRadius: "2px", padding: "6px", textAlign: "center", fontSize: "11px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.12em" }}>{col}</div>
+                        ))}
+                      </div>
+                      {MATRIX_ROWS.map(row => (
+                        <div key={row} style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr", gap: "4px", marginBottom: "4px" }}>
+                          <div style={{ background: RED, borderRadius: "2px", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px", textAlign: "center", fontSize: "10px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.08em", lineHeight: 1.3 }}>{row}</div>
+                          {MATRIX_COLS.map(col => {
+                            const v = (cells[`${row}|${col}`] || "").trim();
+                            return (
+                              <div key={col} style={{ background: SURFACE, border: `1px solid ${v ? "#2a2a2a" : "#181818"}`, borderRadius: "2px", padding: "8px 10px", fontSize: "10px", color: v ? "#ddd" : "#555", fontFamily: MONO, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{v || "—"}</div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Matrix Health */}
             {analysis.matrix_health_note && (
@@ -1223,13 +1397,19 @@ ${actionsHTML}
                   const question = typeof q === "object" ? q.question : q;
                   const timing = typeof q === "object" ? q.timing : null;
                   const bank = typeof q === "object" ? q.bank : null;
+                  const listenFor = typeof q === "object" ? q.listen_for : null;
                   const bankColor = bank === "VALIDATION" ? GREEN : AMBER;
                   return (
                     <div key={i} style={{ marginBottom: "22px", paddingLeft: "16px", borderLeft: `3px solid ${RED}` }}>
                       {bank && (
                         <span style={{ display: "inline-block", fontSize: "9px", fontWeight: "700", color: "#000", background: bankColor, borderRadius: "2px", padding: "2px 8px", letterSpacing: "0.12em", fontFamily: CONDENSED, marginBottom: "8px" }}>{bank}</span>
                       )}
-                      <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.8", fontStyle: "italic", marginBottom: timing ? "8px" : 0 }}>"{question}"</div>
+                      <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.8", fontStyle: "italic", marginBottom: (listenFor || timing) ? "8px" : 0 }}>"{question}"</div>
+                      {listenFor && (
+                        <div style={{ fontSize: "10px", color: "#9fb8a0", fontFamily: MONO, lineHeight: "1.6", marginBottom: timing ? "4px" : 0 }}>
+                          <span style={{ color: GREEN, fontWeight: "700" }}>Listen for:</span> {listenFor}
+                        </div>
+                      )}
                       {timing && <div style={{ fontSize: "10px", color: "#888", fontFamily: MONO, lineHeight: "1.6" }}>{timing}</div>}
                     </div>
                   );
@@ -1399,6 +1579,7 @@ export default function App() {
         <style>{FONTS}</style>
         <MatrixScreen
           deal={deal}
+          setDeal={setDeal}
           cells={cells}
           setCells={setCells}
           aiSources={aiSources}
