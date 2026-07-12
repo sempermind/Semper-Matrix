@@ -209,7 +209,7 @@ ${matrixText}
 
 INTEL RELIABILITY — cells are tagged:
 - [SOURCED] and [REP INTEL] = reliable. State conclusions from these plainly.
-- [INFERRED] = an AI hypothesis, not confirmed. Hedge anything resting on it, and lean toward classifying such findings VALIDATE (needs confirming) rather than OPENING or THREAT.
+- [INFERRED] = an AI hypothesis, not confirmed. Hedge anything resting on it, and lean toward classifying such findings VALIDATE (needs confirming) rather than LEVERAGE or THREAT.
 
 PATTERNS — run each, skip if relevant boxes are empty or thin:
 P1 Box1+2: Authority vs influence gap. High authority+thin network=can't mobilize. Low authority+strong network=more powerful than title.
@@ -228,22 +228,33 @@ P13 Box1+2+3: Full CURRENT STATE row — comfortable+entrenched vs pressured+nee
 P14 Box3+6+9: Full RESULTS column — current pressure → committed future → execution cost. Clearest commercial picture.
 
 CLASSIFY EVERY FINDING before anything feeds downstream — this is the core logic:
-- OPENING = works FOR the rep (a motivated champion, an opening to advance, alignment to exploit).
+- LEVERAGE = works FOR the rep (a motivated champion, an opening to advance, alignment to press on).
 - THREAT = works AGAINST the rep (a risk that could stall or kill the deal).
 - VALIDATE = can't tell yet — a hypothesis to confirm or kill on the next call. Anything resting on [INFERRED] intel defaults here.
 A pattern existing does NOT make it a risk. Do not manufacture threats to fill a quota.
 
 VOICE — CRITICAL, APPLIES TO EVERY WORD YOU WRITE:
-This is an intelligence assessment, not a dossier of facts. You are inferring what's happening beneath the surface — so never state your interpretation as fact. Verifiable items pulled straight from the Matrix (their title, a number, a date they signed something) can be stated plainly. But the moment you interpret what those facts MEAN, hedge it — and vary the hedge so it never sounds like a template: "The data suggests…", "The patterns reveal…", "This points to…", "It appears…", "One read of this is…", "The gap between X and Y suggests…", "This likely means…". A rep should feel they're reading a sharp analyst's read they can confirm, not a biography. Write plainly enough that a busy sales rep gets it in one pass and can act on it today — no jargon, no box/pattern numbers, no theory.`;
+This is an intelligence assessment, not a dossier of facts. You are inferring what's happening beneath the surface — so never state your interpretation as fact. Verifiable items pulled straight from the Matrix (their title, a number, a date they signed something) can be stated plainly. But the moment you interpret what those facts MEAN, hedge it — and vary the hedge so it never sounds like a template: "The data suggests…", "The patterns reveal…", "This points to…", "It appears…", "One read of this is…", "The gap between X and Y suggests…", "This likely means…". A rep should feel they're reading a sharp analyst's read they can confirm, not a biography. Write plainly enough that a busy sales rep gets it in one pass and can act on it today — no jargon, no box/pattern numbers, no theory.
+
+INSIGHT QUESTION CONSTRUCTION — used for BOTH the iQ Questions section AND the "ask" question inside each Intelligence Gap. Never label these as "iQ" in the output; they just read as sharp questions.
+A true insight question holds ONE Current Reality + ONE Future State + ONE Personal Impact, and lives ENTIRELY in the customer's world — never name a solution, product, or what they "need."
+- Current Reality: one thing true for them now (a pressure, metric, constraint, or relationship). Exactly one — never stack two.
+- Future State: one thing they're moving toward (an ambition, goal, or public commitment). Exactly one.
+- Personal Impact: what it costs THEM personally — career, reputation, legacy, positioning. NEVER operational or financial ("efficiency", "cost savings" are banned here).
+Build the language in three varied moves so no two questions sound alike:
+  OPEN (anchor current reality): Considering / Given that / In light of / As you reflect on / Based on what you've seen with…
+  CONNECT (link to future state, where the tension lives): while also / at the same time that / as you're also / combined with / while simultaneously…
+  CLOSE (invite reflection on personal stake): what concerns you most about / how confident are you / what would it mean if / what has this revealed about / what's become clear about…
+One clause per component — keep the whole question to a single natural sentence.`;
 
 // CALL 1 of 2 — the READ. Diagnosis half. Smaller + faster than one big call.
 const ANALYSIS_PROMPT_READ = (matrixText, deal) => `${ANALYSIS_CONTEXT(matrixText, deal)}
 
 YOUR JOB: produce the READ of this deal — what the Matrix is telling the rep. Follow the VOICE rule above without exception: this is inference, written as hypothesis, never as fact. Output ONLY these fields:
-- MATRIX_HEALTH: STRONG FOUNDATION / PARTIAL PICTURE / FLYING BLIND. matrix_health_note: one honest sentence on how much weight this read can bear given what's sourced vs. inferred.
+- MATRIX_HEALTH: STRONG FOUNDATION / PARTIAL PICTURE / FLYING BLIND. matrix_health_note: ONE plain sentence written FOR the sales rep, in their own language — what they've got a solid read on, what's still dark, and the practical implication for the deal. Do NOT talk about "rows," "cells," "sourced vs. inferred," "dimensions," or "conclusions being pushed" — that's analyst talk. Sales talk only. Tone to match: "You've got a clear picture of what he owns and the pressure he's under, but you're blind on who influences him internally — confirm his coalition before you build the deal around him."
 - BRIEFING: 1-2 short paragraphs interpreting what's happening in the customer's world. Lead the interpretation with hedging language ("The data suggests…", "The patterns reveal…", "This points to…") — do not open with a flat declarative like "Dick is a CRO under pressure." Customer's world only. Specific names/numbers from the Matrix, but framed as what they imply, not stated fact. P11 firing = a second short paragraph on the urgency window in their world.
-- FINDINGS: 2-3 sharpest cross-cell gaps, each classified OPENING / THREAT / VALIDATE. Headline ALL CAPS, max 8 words, specific to this deal. Body: 2-3 sentences that name the two data points and then hedge what the gap between them reveals ("This suggests…", "The pattern points to…"). No box refs. Most urgent first.
-- GAPS: the intelligence that's missing and why it costs the rep. Empty/thin cells only, max 4, HIGH or MEDIUM. For each: "note" = plain-language statement of what you don't know and why it matters to the deal. "ask" = ONE question the rep can ask to fill it, built in the iQ style — anchor it in something you DO know from the Matrix, reach toward the missing piece, and where possible touch what's personally at stake for them. Written so the rep can say it out loud as-is.
+- FINDINGS: 2-3 sharpest cross-cell gaps, each classified LEVERAGE / THREAT / VALIDATE. Headline ALL CAPS, max 8 words, specific to this deal. Body: 2-3 sentences that name the two data points and then hedge what the gap between them reveals ("This suggests…", "The pattern points to…"). No box refs. Most urgent first.
+- GAPS: the intelligence that's missing and why it costs the rep. Empty/thin cells only, max 4, HIGH or MEDIUM. For each: "note" = plain-language statement of what you don't know and why it matters to the deal. "ask" = ONE question the rep can say out loud to fill it, built with the INSIGHT QUESTION CONSTRUCTION above — anchor it in something you DO know (their current reality), connect toward where they're heading, and probe the missing piece. Do not label it "iQ." One natural sentence.
 
 Return ONLY this JSON, no backticks, no markdown:
 {"matrix_health":"","matrix_health_note":"","briefing":[""],"findings":[{"classification":"","headline":"","finding":""}],"gaps":[{"cell":"","label":"","severity":"","note":"","ask":""}]}`;
@@ -251,23 +262,19 @@ Return ONLY this JSON, no backticks, no markdown:
 // CALL 2 of 2 — the PLAN. Action half. Runs in parallel with the READ.
 const ANALYSIS_PROMPT_PLAN = (matrixText, deal) => `${ANALYSIS_CONTEXT(matrixText, deal)}
 
-YOUR JOB: produce the PLAN for the rep's next call. First, silently identify the THREAT / OPENING / VALIDATE findings and the HIGH gaps yourself using the rules above. Then output ONLY these action fields, each written plainly enough that the rep can execute it today:
+YOUR JOB: produce the PLAN for the rep's next call. First, silently identify the THREAT / LEVERAGE / VALIDATE findings and the HIGH gaps yourself using the rules above. Then output ONLY these action fields, each written plainly enough that the rep can execute it today:
 
 - DEFENSE: Build ONLY from THREAT findings and HIGH gaps. Max 3. Each: a specific scenario that could stall or kill the deal (hedged — "The risk here is…", "This could mean…") + one countermove the rep can take in the next 5 business days. Title ALL CAPS. If there are no THREATs and no HIGH gaps, return an empty array — do not invent risks.
 
-- OBJECTIVE (Setting a Clear Objective): one customer-centered objective for the next call, in this exact shape. who = the person. feels = what they should FEEL by the end (drawn from a Current State reality — make them feel understood). sees_how = the shift in how they SEE their situation (from the sharpest finding). takes_steps = the concrete STEP they agree to (the countermove from the top THREAT, or if no threats, the move that presses the top OPENING). fallback = the minimum viable win if that step stalls mid-call.
+- OBJECTIVE (Setting a Clear Objective): one customer-centered objective for the next call. Fill each part as ONE short, specific, concrete clause — tight, no em-dashes, no nested qualifiers, no run-ons. Match this example's style and length exactly:
+  "This conversation will be successful if the Supply Chain Director FEELS confident about achieving 12% duty optimization targets, SEES HOW unified customs management accelerates their VP positioning timeline, and TAKES STEPS to conduct a comprehensive customs spend analysis across all EU operations."
+  who = their role or first name, short (e.g., "the Supply Chain Director" or "Dick"). feels = one crisp clause (~8-14 words) on what they FEEL by the end, tied to a real current-state pressure. sees_how = one crisp clause on the shift in how they SEE their situation. takes_steps = one crisp clause naming the concrete step they agree to. Each clause starts lowercase after its label word. If any clause runs longer than ~14 words or uses a dash, cut it down.
 
 - OPENER (Command Attention with Insight): one opening the rep can say out loud, built in three moves — (1) LEAD WITH THE UNEXPECTED: a surprising stat, emerging trend, or new challenge from THEIR world; (2) PERSONALIZED RELEVANCE: tie it directly to their department, responsibility, legacy, or budget; (3) END WITH A QUESTION that makes them think about impact, readiness, risk, or opportunity. Put the full spoken opener in "text". In "note": if Future State intel is thin so the opener can't be truly specific to this person, say so plainly and name which cells to fill to sharpen it.
 
-- iQ QUESTIONS: exactly 3, each a TRUE Insight Question built with the iQ Formula — ONE Current Reality + ONE Future State + ONE Personal Impact. Rules, non-negotiable:
-  • Current Reality = one thing true for them NOW (a pressure, metric, constraint, or relationship from the Current State row). Exactly one — never stack two.
-  • Future State = one thing they're moving TOWARD (an ambition, goal, or public commitment from the Future State row). Exactly one.
-  • Personal Impact = what it costs THEM personally if the gap doesn't close — career, reputation, legacy, positioning. NEVER operational or financial ("efficiency", "cost savings" are banned here).
-  • The question lives ENTIRELY in the customer's world. Never name a solution, product, or what they "need." If a solution assumption sneaks in, it's not an iQ question — rewrite it.
-  • Build the language in three varied moves so no two questions sound alike: OPEN (anchor current reality): Considering / Given that / In light of / As you reflect on / Based on what you've seen with… → CONNECT (link to future state, where the tension lives): while also / at the same time that / as you're also / combined with / while simultaneously… → CLOSE (invite reflection on personal stake): what concerns you most about / how confident are you / what would it mean if / what has this revealed about / what's become clear about…
-  • Bank each: VALIDATION (tests a finding you believe is true) or DISCOVERY (opens something you can't yet see). At least one of each. Give Early/Mid/Late timing.
+- iQ QUESTIONS: exactly 3, each a true insight question built with the INSIGHT QUESTION CONSTRUCTION above (ONE Current Reality + ONE Future State + ONE Personal Impact, entirely in their world, three varied language moves). Bank each: VALIDATION (tests a finding you believe is true) or DISCOVERY (opens something you can't yet see). At least one of each. Give Early/Mid/Late timing.
   GOOD (follow this shape): "Given that you're personally signing county-level contracts, while positioning Kofile as one scaled platform across the combined HF Group units, what concerns you most about how much of that integration is riding on you specifically?"
-  NOT an iQ (do NOT produce this — operational, no personal stake, names a need): "What are your biggest integration challenges and what tools would help?"
+  NOT an insight question (do NOT produce this — operational, no personal stake, names a need): "What are your biggest integration challenges and what tools would help?"
 
 - WATCH_FOR / WATCH_OUT: exactly 2 each. Observable signals only, tied to this person's intel.
 - NEXT_ACTIONS: exactly 3. What, to whom, by when + the cost of not doing it. Never "prepare questions."
@@ -959,7 +966,7 @@ function SectionTag({ children }) {
 }
 
 const CLASS_META = {
-  OPENING: { color: GREEN, label: "OPENING" },
+  LEVERAGE: { color: GREEN, label: "LEVERAGE" },
   THREAT: { color: RED, label: "THREAT" },
   VALIDATE: { color: AMBER, label: "VALIDATE" },
 };
@@ -978,7 +985,7 @@ function AnalysisScreen({ deal, analysis, aiSources, cells, code, cloudStatus, o
 
     const obj = analysis.objective || {};
     const objHTML = (obj.who || obj.feels) ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">YOUR NEXT-CALL OBJECTIVE</span></div>
-<p style="font-size:14px;color:#fff;line-height:1.8;margin-bottom:14px;">This conversation succeeds if <strong>${esc(obj.who)}</strong> <span style="color:#22c55e;">FEELS</span> ${esc(obj.feels)}, <span style="color:#22c55e;">SEES HOW</span> ${esc(obj.sees_how)}, and <span style="color:#22c55e;">TAKES STEPS</span> ${esc(obj.takes_steps)}.</p>
+<p style="font-size:14px;color:#fff;line-height:1.8;margin-bottom:14px;">This conversation will be successful if <strong>${esc(obj.who)}</strong> <span style="color:#22c55e;">FEELS</span> ${esc(obj.feels)}, <span style="color:#22c55e;">SEES HOW</span> ${esc(obj.sees_how)}, and <span style="color:#22c55e;">TAKES STEPS</span> ${esc(obj.takes_steps)}.</p>
 ${obj.fallback ? `<p style="font-size:12px;color:#888;line-height:1.7;"><strong style="color:#f59e0b;">FALLBACK:</strong> ${esc(obj.fallback)}</p>` : ""}</div>` : "";
 
     const op = analysis.opener || {};
@@ -1123,7 +1130,7 @@ ${actionsHTML}
               <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
                 <SectionTag>YOUR NEXT-CALL OBJECTIVE</SectionTag>
                 <p style={{ fontSize: "15px", color: "#fff", fontFamily: MONO, lineHeight: "1.9", margin: 0 }}>
-                  This conversation succeeds if <strong style={{ color: "#fff" }}>{analysis.objective.who}</strong>{" "}
+                  This conversation will be successful if <strong style={{ color: "#fff" }}>{analysis.objective.who}</strong>{" "}
                   <span style={{ color: GREEN, fontWeight: "700" }}>FEELS</span> {analysis.objective.feels},{" "}
                   <span style={{ color: GREEN, fontWeight: "700" }}>SEES HOW</span> {analysis.objective.sees_how}, and{" "}
                   <span style={{ color: GREEN, fontWeight: "700" }}>TAKES STEPS</span> {analysis.objective.takes_steps}.
