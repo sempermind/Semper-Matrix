@@ -521,7 +521,7 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
           <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${GREEN}`, borderRadius: "4px", padding: "16px 18px", marginBottom: "18px", display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: "220px" }}>
               <div style={{ fontSize: "10px", color: GREEN, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700", marginBottom: "3px" }}>● SAVED MATRIX FOUND</div>
-              <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO }}>{resumeInfo.prospect} · {resumeInfo.company}</div>
+              <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO }}>{resumeInfo.deal?.prospect}{resumeInfo.deal?.company ? ` · ${resumeInfo.deal.company}` : ""}</div>
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
               <Btn onClick={onResume} style={{ padding: "9px 18px" }}>RESUME →</Btn>
@@ -603,7 +603,7 @@ function AnalysisLoader({ steps }) {
         <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar2 1.1s ease-in-out infinite", animationDelay: "0.18s" }} />
         <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar3 1.1s ease-in-out infinite", animationDelay: "0.36s" }} />
       </div>
-      <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.22em", marginBottom: "10px" }}>SEMPER SELLING®</div>
+      <div style={{ fontSize: "22px", color: RED, fontFamily: CONDENSED, fontWeight: "900", letterSpacing: "0.14em", marginBottom: "10px" }}>SEMPER SELLING®</div>
       <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, letterSpacing: "0.06em" }}>Analyzing your intelligence...</div>
 
       {steps && steps.length > 0 && (
@@ -879,8 +879,8 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
                 const leftBorder = isInferred ? AMBER : (isFocused ? RED : hasValue ? "#383838" : "#1e1e1e");
                 return (
                   <div key={key} style={{ background: SURFACE, border: `1px solid ${isFocused ? RED : hasValue ? "#383838" : "#1e1e1e"}`, borderLeft: `3px solid ${leftBorder}`, borderRadius: "3px", padding: "14px 14px 12px 14px", transition: "border-color 0.2s", display: "flex", flexDirection: "column", gap: "6px", minHeight: "130px" }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "6px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "6px", flexWrap: "wrap", rowGap: "5px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", rowGap: "3px", minWidth: 0, flex: "1 1 auto" }}>
                         <div style={{ fontSize: "9px", color: isFocused ? RED : "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", transition: "color 0.2s", textTransform: "uppercase", paddingTop: "2px" }}>
                           {meta.label}
                         </div>
@@ -1011,7 +1011,7 @@ ${MATRIX_ROWS.map(r => `<tr><th style="background:#CC0000;color:#fff;font-family
 </table></div>` : "";
 
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Matrix Analysis — ${esc(deal.prospect)}</title><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:'IBM Plex Mono',monospace;padding:40px 48px;max-width:1000px;margin:0 auto;line-height:1.6}@media print{body{background:#fff;color:#000}}</style></head><body>
-<div style="font-size:10px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.18em;margin-bottom:8px;">◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
+<div style="font-size:13px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.18em;margin-bottom:8px;">CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
 <div style="font-size:38px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;line-height:1;">${esc(deal.prospect).toUpperCase()}</div>
 <div style="font-size:13px;color:#fff;font-family:'IBM Plex Mono',monospace;margin-top:6px;margin-bottom:28px;">${esc(deal.role)}${deal.company ? ` · ${esc(deal.company)}` : ""}${deal.opportunity ? ` · ${esc(deal.opportunity)}` : ""}</div>
 ${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;padding:10px 16px;margin-bottom:32px;font-size:13px;color:#ccc;font-style:italic;">● ${esc(analysis.matrix_health_note)}</div>` : ""}
@@ -1070,7 +1070,7 @@ ${actionsHTML}
       <div style={{ flex: 1, padding: "40px 48px", overflowY: "auto", maxWidth: "1000px", width: "100%" }}>
 
         {/* Report header */}
-        <div style={{ marginBottom: "8px", fontSize: "10px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.18em" }}>◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
+        <div style={{ marginBottom: "8px", fontSize: "13px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.18em" }}>CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
         <div style={{ fontSize: "42px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.04em", lineHeight: 1, marginBottom: "10px" }}>{deal.prospect.toUpperCase()}</div>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
           <div style={{ width: "3px", height: "16px", background: RED, borderRadius: "1px", flexShrink: 0 }} />
