@@ -656,10 +656,6 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
   const [uploadMsg, setUploadMsg] = useState(null);
   const [oppNudge, setOppNudge] = useState(false);        // soft "what are you selling?" nudge
   const [oppDraft, setOppDraft] = useState("");
-  const [showUpdate, setShowUpdate] = useState(false);    // update-from-call modal
-  const [callNotes, setCallNotes] = useState("");
-  const [updating, setUpdating] = useState(false);
-  const [updateMsg, setUpdateMsg] = useState(null);
   const fileRef = useRef(null);
 
   // Cell prompts — what to search for in each cell
@@ -808,62 +804,6 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
     setAnalyzing(false);
   };
 
-  // ── UPDATE FROM CALL ───────────────────────────
-  // Rep pastes what they learned; AI sorts it into the right cells and appends
-  // (as reliable rep intel), so they can re-run the analysis without hunting cells.
-  const handleUpdateFromCall = async () => {
-    const notes = callNotes.trim();
-    if (!notes || updating) return;
-    setUpdating(true);
-    setUpdateMsg(null);
-    const current = matrixToText(cells, deal, aiSources);
-    const prompt = `A sales rep just finished a call and wrote what they learned. Sort ONLY the genuinely new information into the 9 Connection Intelligence Matrix cells. Do not repeat anything already present. Keys are exactly: "CURRENT STATE|ROLE","CURRENT STATE|REACH","CURRENT STATE|RESULTS","FUTURE STATE|ROLE","FUTURE STATE|REACH","FUTURE STATE|RESULTS","NEEDS|ROLE","NEEDS|REACH","NEEDS|RESULTS".
-
-CURRENT MATRIX:
-${current}
-
-CALL NOTES:
-${notes}
-
-Return ONLY valid JSON with just the cells that have NEW intel to append — concise phrasing, no preamble: {"CURRENT STATE|ROLE":"","...":""}. Omit cells with nothing new.`;
-    try {
-      const resp = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, messages: [{ role: "user", content: prompt }] }),
-      });
-      const data = await resp.json();
-      const raw = (data.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim();
-      const start = raw.indexOf("{"), end = raw.lastIndexOf("}");
-      const parsed = JSON.parse(start !== -1 && end > start ? raw.slice(start, end + 1) : "{}");
-      let count = 0;
-      setCells(prev => {
-        const next = { ...prev };
-        Object.entries(parsed).forEach(([k, v]) => {
-          if (next[k] !== undefined && v && v.trim()) {
-            const existing = next[k].trim();
-            next[k] = existing ? `${existing}\n\n${v.trim()}` : v.trim();
-            count++;
-          }
-        });
-        return next;
-      });
-      // Call intel is the rep's own — clear any "inferred" flag on updated cells so it reads as reliable.
-      setAiSources(prev => {
-        const next = { ...prev };
-        Object.keys(parsed).forEach(k => { if (parsed[k] && parsed[k].trim()) delete next[k]; });
-        return next;
-      });
-      setUpdateMsg(count > 0
-        ? { ok: true, text: `${count} ${count === 1 ? "cell" : "cells"} updated from your notes. Review the grid, then re-generate your analysis.` }
-        : { ok: false, text: "Nothing new to add — that intel already appears to be in your Matrix." });
-      if (count > 0) { setCallNotes(""); setShowUpdate(false); }
-    } catch {
-      setUpdateMsg({ ok: false, text: "Couldn't process those notes. Try again or edit the cells directly." });
-    }
-    setUpdating(false);
-  };
-
   // ── IMAGE UPLOAD ───────────────────────────────
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -916,35 +856,6 @@ Return ONLY valid JSON with just the cells that have NEW intel to append — con
 
       {analyzing && <AnalysisLoader steps={analyzeSteps} />}
 
-      {showUpdate && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 900, padding: "20px" }}>
-          <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderTop: `2px solid ${RED}`, borderRadius: "6px", width: "100%", maxWidth: "560px", padding: "24px" }}>
-            <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700", marginBottom: "4px" }}>UPDATE FROM CALL</div>
-            <div style={{ fontSize: "18px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.04em", marginBottom: "10px" }}>What did you learn?</div>
-            <div style={{ fontSize: "11px", color: "#aaa", fontFamily: MONO, lineHeight: "1.6", marginBottom: "14px" }}>
-              Paste your call notes or type what's new. It gets sorted into the right cells automatically — then re-generate your analysis.
-            </div>
-            <textarea value={callNotes} onChange={e => setCallNotes(e.target.value)} rows={6}
-              placeholder="e.g., She confirmed the CFO signs off on anything over $250k. Board presentation moved to Q3. She's gunning for the VP Ops role."
-              style={{ width: "100%", background: "#0d0d0d", border: `1px solid ${BORDER}`, borderRadius: "3px", color: "#fff", padding: "12px", fontSize: "12px", fontFamily: MONO, lineHeight: "1.6", resize: "vertical", outline: "none" }}
-              onFocus={e => e.target.style.borderColor = RED}
-              onBlur={e => e.target.style.borderColor = BORDER}
-            />
-            {updateMsg && (
-              <div style={{ marginTop: "10px", fontSize: "11px", color: updateMsg.ok ? GREEN : "#ff6666", fontFamily: MONO, lineHeight: "1.5" }}>
-                {updateMsg.ok ? "✓ " : "✕ "}{updateMsg.text}
-              </div>
-            )}
-            <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
-              <Btn onClick={handleUpdateFromCall} disabled={!callNotes.trim() || updating} style={{ minWidth: "180px" }}>
-                {updating ? "[ Sorting your notes... ]" : "SORT INTO MATRIX →"}
-              </Btn>
-              <Btn variant="ghost" onClick={() => { setShowUpdate(false); setUpdateMsg(null); }}>CLOSE</Btn>
-            </div>
-          </div>
-        </div>
-      )}
-
       {searchResults !== null && (
         <SearchReviewModal results={searchResults} onAccept={handleAcceptResults} onClose={() => setSearchResults(null)} />
       )}
@@ -959,11 +870,6 @@ Return ONLY valid JSON with just the cells that have NEW intel to append — con
           <CodeChip code={code} status={cloudStatus} />
           <div style={{ width: "1px", height: "20px", background: "#333" }} />
           <span style={{ fontSize: "10px", color: filled === 9 ? GREEN : "#fff", fontFamily: MONO }}>{filled}/9 cells</span>
-          <button onClick={() => { setShowUpdate(true); setUpdateMsg(null); }}
-            style={{ background: "#1a1a1a", border: `1px solid ${BORDER}`, color: "#fff", borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.3s" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "#4a9eff"; e.currentTarget.style.color = "#4a9eff"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = "#fff"; }}
-          >⟳ UPDATE FROM CALL</button>
           <button onClick={() => fileRef.current?.click()} disabled={uploading}
             style={{ background: uploading ? "rgba(204,0,0,0.08)" : "#1a1a1a", border: `1px solid ${uploading ? RED : BORDER}`, color: uploading ? RED : "#fff", borderRadius: "3px", padding: "7px 14px", cursor: uploading ? "not-allowed" : "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", transition: "all 0.3s" }}
             onMouseEnter={e => { if (!uploading) { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = RED; } }}
@@ -979,12 +885,6 @@ Return ONLY valid JSON with just the cells that have NEW intel to append — con
           {uploadMsg && (
             <div style={{ marginBottom: "14px", padding: "9px 13px", background: uploadMsg.ok ? "rgba(34,197,94,0.08)" : "rgba(204,0,0,0.08)", border: `1px solid ${uploadMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(204,0,0,0.3)"}`, borderRadius: "3px", fontSize: "11px", color: uploadMsg.ok ? GREEN : "#ff6666", fontFamily: MONO }}>
               {uploadMsg.ok ? "✓ " : "✕ "}{uploadMsg.text}
-            </div>
-          )}
-
-          {updateMsg && updateMsg.ok && !showUpdate && (
-            <div style={{ marginBottom: "14px", padding: "9px 13px", background: "rgba(34,197,94,0.08)", border: `1px solid rgba(34,197,94,0.3)`, borderRadius: "3px", fontSize: "11px", color: GREEN, fontFamily: MONO }}>
-              ✓ {updateMsg.text}
             </div>
           )}
 
@@ -1037,7 +937,21 @@ Return ONLY valid JSON with just the cells that have NEW intel to append — con
                           <span style={{ fontSize: "8px", color: AMBER, fontFamily: MONO, paddingTop: "2px", fontWeight: "700", letterSpacing: "0.06em" }}>~ INFERRED · CONFIRM</span>
                         )}
                       </div>
-                      <WhatGoesHere description={meta.description} />
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                        {hasValue && (
+                          <button
+                            onClick={() => {
+                              setCells(prev => ({ ...prev, [key]: "" }));
+                              setAiSources(prev => { const n = { ...prev }; delete n[key]; return n; });
+                            }}
+                            title="Clear this cell"
+                            style={{ background: "transparent", border: `1px solid ${BORDER}`, borderRadius: "2px", padding: "1px 6px", cursor: "pointer", fontSize: "9px", color: "#777", fontFamily: MONO, lineHeight: 1.4, transition: "all 0.15s" }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = RED; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = "#777"; }}
+                          >✕ clear</button>
+                        )}
+                        <WhatGoesHere description={meta.description} />
+                      </div>
                     </div>
 
                     <textarea className="matrix-cell" value={cells[key]}
@@ -1200,7 +1114,7 @@ ${actionsHTML}
 
       {/* Header */}
       <div style={{ padding: "14px 28px", borderBottom: `1px solid ${BORDER}`, background: SURFACE, display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-        <Btn variant="ghost" onClick={onBack} style={{ padding: "6px 12px", fontSize: "11px" }}>← BACK</Btn>
+        <Btn onClick={onBack} style={{ padding: "6px 14px", fontSize: "11px" }}>✎ EDIT MATRIX</Btn>
         <div style={{ width: "1px", height: "24px", background: "#333" }} />
         <span style={{ color: RED, fontSize: "15px", fontWeight: "700", fontFamily: CONDENSED, letterSpacing: "0.1em" }}>MATRIX ANALYSIS</span>
         <span style={{ color: "#fff", fontSize: "11px", fontFamily: MONO }}>{deal.prospect} · {deal.company}</span>
