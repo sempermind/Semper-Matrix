@@ -1230,6 +1230,7 @@ ${actionsHTML}
             )}
 
             {/* SIGNALS */}
+            {((analysis.watch_for||[]).length > 0 || (analysis.watch_out||[]).length > 0) && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
                 {(analysis.watch_for||[]).length > 0 && (
                   <div>
