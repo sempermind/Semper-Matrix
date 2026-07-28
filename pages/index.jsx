@@ -63,13 +63,13 @@ const ANALYSIS_STAGES = [
 
 // One /api/chat call that returns parsed JSON. Works with a plain, non-streaming
 // chat route — no streaming, no maxDuration changes, no route format to match.
-async function callAnalysis(prompt) {
+async function callAnalysis(prompt, maxTokens = 2000) {
   const resp = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
-      max_tokens: 1500,
+      max_tokens: maxTokens,
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -203,13 +203,19 @@ When you find nothing at all:
 // library, and the classification rule. Sent with each of the two parallel calls.
 const ANALYSIS_CONTEXT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine. Senior sales strategist. Find cross-cell gaps that reveal what's actually happening in this deal beneath the surface. A finding that restates one cell is not a finding.
 
-Deal: ${deal.prospect} (${deal.role} @ ${deal.company})${deal.opportunity ? ` | ${deal.opportunity}` : ""}
+Deal: ${deal.prospect} (${deal.role} @ ${deal.company})
+
+WHAT THE REP SELLS — CONTEXT ONLY, to sharpen your read:
+${deal.repCompany ? `The rep works for: ${deal.repCompany}.` : "The rep's company is not specified."}
+${deal.opportunity ? `In this deal they are selling: ${deal.opportunity}.` : "What they're selling in this deal is not specified — reason about their needs generically."}
+Use this ONLY to (a) sharpen the NEEDS read — pinpoint the specific gap in the customer's world where this rep can add value — and (b) make the Opener, Objective, Defense, and questions relevant to that value.
+GUARDRAIL — ABSOLUTE: the OUTPUT stays entirely in the CUSTOMER's world. Never name or describe the rep's product, company, or solution in any briefing, finding, gap, question, opener, or objective. Never say what the customer "needs to buy," never pitch. You think about the rep's value privately to aim your analysis; you never write about it. iQ questions and gap questions name no solution, ever.
 
 ${matrixText}
 
 INTEL RELIABILITY — cells are tagged:
 - [SOURCED] and [REP INTEL] = reliable. State conclusions from these plainly.
-- [INFERRED] = an AI hypothesis, not confirmed. Hedge anything resting on it, and lean toward classifying such findings VALIDATE (needs confirming) rather than OPENING or THREAT.
+- [INFERRED] = an AI hypothesis, not confirmed. Hedge anything resting on it, and lean toward classifying such findings VALIDATE (needs confirming) rather than LEVERAGE or THREAT.
 
 PATTERNS — run each, skip if relevant boxes are empty or thin:
 P1 Box1+2: Authority vs influence gap. High authority+thin network=can't mobilize. Low authority+strong network=more powerful than title.
@@ -228,36 +234,63 @@ P13 Box1+2+3: Full CURRENT STATE row — comfortable+entrenched vs pressured+nee
 P14 Box3+6+9: Full RESULTS column — current pressure → committed future → execution cost. Clearest commercial picture.
 
 CLASSIFY EVERY FINDING before anything feeds downstream — this is the core logic:
-- OPENING = works FOR the rep (a motivated champion, an opening to advance, alignment to exploit).
+- LEVERAGE = works FOR the rep (a motivated champion, an opening to advance, alignment to press on).
 - THREAT = works AGAINST the rep (a risk that could stall or kill the deal).
 - VALIDATE = can't tell yet — a hypothesis to confirm or kill on the next call. Anything resting on [INFERRED] intel defaults here.
-A pattern existing does NOT make it a risk. Do not manufacture threats to fill a quota.`;
+A pattern existing does NOT make it a risk. Do not manufacture threats to fill a quota.
+
+VOICE — CRITICAL, APPLIES TO EVERY WORD YOU WRITE:
+This is an intelligence assessment, not a dossier of facts. You are inferring what's happening beneath the surface — so never state your interpretation as fact. Verifiable items pulled straight from the Matrix (their title, a number, a date they signed something) can be stated plainly. But the moment you interpret what those facts MEAN, hedge it — and vary the hedge so it never sounds like a template: "The data suggests…", "The patterns reveal…", "This points to…", "It appears…", "One read of this is…", "The gap between X and Y suggests…", "This likely means…". A rep should feel they're reading a sharp analyst's read they can confirm, not a biography. Write plainly enough that a busy sales rep gets it in one pass and can act on it today — no jargon, no box/pattern numbers, no theory.
+
+INSIGHT QUESTION CONSTRUCTION — used for BOTH the iQ Questions section AND the "ask" question inside each Intelligence Gap. Never label these as "iQ" in the output; they just read as sharp questions.
+A true insight question holds ONE Current Reality + ONE Future State + ONE Personal Impact, and lives ENTIRELY in the customer's world — never name a solution, product, or what they "need."
+- Current Reality: one thing true for them now (a pressure, metric, constraint, or relationship). Exactly one — never stack two.
+- Future State: one thing they're moving toward (an ambition, goal, or public commitment). Exactly one.
+- Personal Impact: what it costs THEM personally — career, reputation, legacy, positioning. NEVER operational or financial ("efficiency", "cost savings" are banned here).
+Build the language in three varied moves so no two questions sound alike:
+  OPEN (anchor current reality): Considering / Given that / In light of / As you reflect on / Based on what you've seen with…
+  CONNECT (link to future state, where the tension lives): while also / at the same time that / as you're also / combined with / while simultaneously…
+  CLOSE (invite reflection on personal stake): what concerns you most about / how confident are you / what would it mean if / what has this revealed about / what's become clear about…
+One clause per component — keep the whole question to a single natural sentence under ~30 words, short enough to say out loud on a call without the buyer losing the thread.`;
 
 // CALL 1 of 2 — the READ. Diagnosis half. Smaller + faster than one big call.
 const ANALYSIS_PROMPT_READ = (matrixText, deal) => `${ANALYSIS_CONTEXT(matrixText, deal)}
 
-YOUR JOB: produce the READ of this deal — what the Matrix is telling the rep. Output ONLY these fields:
-- MATRIX_HEALTH: STRONG FOUNDATION / PARTIAL PICTURE / FLYING BLIND. matrix_health_note: one honest sentence on how much weight this analysis can bear.
-- BRIEFING: 1-2 paragraphs. Inference only ("The data suggests...", "The gap between X and Y points to..."). Customer's world only. No advice, no "you should", no box/pattern numbers, never "tension". Specific names/numbers from Matrix. P11 firing = second paragraph on urgency in their world.
-- FINDINGS: 2-3 sharpest cross-cell gaps, each classified OPENING / THREAT / VALIDATE. Headline ALL CAPS max 8 words specific to this deal. Body: data point 1, data point 2, what the gap reveals. 2-3 sentences, no box refs. Most urgent first.
-- GAPS: Empty/thin cells only. HIGH or MEDIUM. Max 4. For NEEDS cells: name the discovery question.
+YOUR JOB: produce the READ of this deal — what the Matrix is telling the rep. Follow the VOICE rule above without exception: this is inference, written as hypothesis, never as fact. Output ONLY these fields:
+- MATRIX_HEALTH: STRONG FOUNDATION / PARTIAL PICTURE / FLYING BLIND. matrix_health_note: ONE plain sentence written FOR the sales rep, in their own language — what they've got a solid read on, what's still dark, and the practical implication for the deal. Do NOT talk about "rows," "cells," "sourced vs. inferred," "dimensions," or "conclusions being pushed" — that's analyst talk. Sales talk only. Tone to match: "You've got a clear picture of what he owns and the pressure he's under, but you're blind on who influences him internally — confirm his coalition before you build the deal around him."
+- BRIEFING: 1-2 short paragraphs interpreting what's happening in the customer's world. Lead the interpretation with hedging language ("The data suggests…", "The patterns reveal…", "This points to…") — do not open with a flat declarative like "Dick is a CRO under pressure." Customer's world only. Specific names/numbers from the Matrix, but framed as what they imply, not stated fact. P11 firing = a second short paragraph on the urgency window in their world.
+- FINDINGS: 2-3 sharpest cross-cell gaps, each classified LEVERAGE / THREAT / VALIDATE. Headline ALL CAPS, max 8 words, specific to this deal. Body: 2-3 sentences that name the two data points and then hedge what the gap between them reveals ("This suggests…", "The pattern points to…"). No box refs. Most urgent first.
+- GAPS: the intelligence that's missing and why it costs the rep. Empty/thin cells only, max 4, HIGH or MEDIUM. For each: "cell" = the plain-English name of the missing area (e.g., "Influence Network", "Relationship Strategy", "Public Commitments", "Missing Support") — NEVER a box number like "Box 2". "note" = plain-language statement of what you don't know and why it matters to the deal. "ask" = ONE question the rep can say out loud to fill it, built with the INSIGHT QUESTION CONSTRUCTION above — anchor it in something you DO know (their current reality), connect toward where they're heading, and probe the missing piece. Do not label it "iQ." Keep it under ~30 words so it's easy to say on a call.
 
 Return ONLY this JSON, no backticks, no markdown:
-{"matrix_health":"","matrix_health_note":"","briefing":[""],"findings":[{"classification":"","headline":"","finding":""}],"gaps":[{"cell":"","label":"","severity":"","note":""}]}`;
+{"matrix_health":"","matrix_health_note":"","briefing":[""],"findings":[{"classification":"","headline":"","finding":""}],"gaps":[{"cell":"","label":"","severity":"","note":"","ask":""}]}`;
 
 // CALL 2 of 2 — the PLAN. Action half. Runs in parallel with the READ.
 const ANALYSIS_PROMPT_PLAN = (matrixText, deal) => `${ANALYSIS_CONTEXT(matrixText, deal)}
 
-YOUR JOB: produce the PLAN for the rep's next call. First, silently identify the THREAT / OPENING / VALIDATE findings and the HIGH gaps yourself using the rules above. Then output ONLY these action fields, built from that internal read:
-- DEFENSE: Build ONLY from THREAT findings and HIGH gaps. Max 3. Specific scenario that kills the deal + one countermove the rep can do in 5 business days. Title ALL CAPS. If there are no THREATs and no HIGH gaps, return an empty array — do not invent risks.
-- OBJECTIVE: One customer-centric call objective. FEELS ← a Current State cell (make them feel understood). SEES HOW ← the sharpest finding's insight. TAKES STEPS ← the countermove from the top THREAT (or, if no threats, the move that presses the top OPENING). fallback: the minimum viable win if the primary step stalls in the call.
-- OPENER: One opening insight, three parts as natural speech — unexpected point → personally relevant → a question that makes them think. Built from the highest-reliability cells. In "note": if Future State cells are empty/thin so the opener can't be truly specific, say so and name which cells to fill.
-- iQ QUESTIONS: Exactly 3, each banked. VALIDATION = full iQ (named Current Reality + named Future State + personal impact — never operational) testing a finding; at least one. DISCOVERY = a question filling the single most blocking empty cell; at least one. One natural sentence each, different data per question. Early/Mid/Late timing on each.
-- WATCH_FOR / WATCH_OUT: Exactly 2 each. Observable only. Tied to this person's intel.
-- NEXT_ACTIONS: Exactly 3. What, to whom, by when + cost of inaction. Never "prepare questions."
+YOUR JOB: produce the PLAN for the rep's next call. First, silently identify the THREAT / LEVERAGE / VALIDATE findings and the HIGH gaps yourself using the rules above. Then output ONLY these action fields, each written plainly enough that the rep can execute it today:
+
+- DEFENSE: Build ONLY from THREAT findings and HIGH gaps. Max 3. Each: a specific scenario that could stall or kill the deal (hedged — "The risk here is…", "This could mean…") + one countermove the rep can make on the next call to get ahead of it. Do not assign specific days or deadlines. Title ALL CAPS. If there are no THREATs and no HIGH gaps, return an empty array — do not invent risks.
+
+- OBJECTIVE (Setting a Clear Objective): one customer-centered objective for the next call. Fill each part as ONE short, specific, concrete clause — tight, no em-dashes, no nested qualifiers, no run-ons. Match this example's style and length exactly:
+  "This conversation will be successful if the Supply Chain Director FEELS confident about achieving 12% duty optimization targets, SEES HOW unified customs management accelerates their VP positioning timeline, and TAKES STEPS to conduct a comprehensive customs spend analysis across all EU operations."
+  who = their role or first name, short (e.g., "the Supply Chain Director" or "Dick"). Each clause must read GRAMMATICALLY when it follows its label word — read the whole sentence aloud to check:
+  feels = follows the word "FEELS", so start with a feeling word: "confident that…", "reassured that…", "clear on…". (Right: "FEELS confident that his team's gaps are solvable." Wrong: "FEELS understood as someone who…")
+  sees_how = follows "SEES HOW", so start with the thing they realize: "closing those gaps accelerates the career arc he's on". (Right: "SEES HOW closing those gaps accelerates his timeline.")
+  takes_steps = follows "TAKES STEPS", so it MUST start with "to" + a verb: "to bring in the two stakeholders whose buy-in he needs". NEVER start it with "agrees to" or a conjugated verb. (Right: "TAKES STEPS to bring in the two stakeholders…". Wrong: "TAKES STEPS agrees to include…")
+  Keep each clause ~8-14 words, no em-dashes, no nested qualifiers. fallback = the minimum outcome if that step stalls — one short clause (under ~14 words) stating what they still agree to or share, phrased as an actual outcome, NOT a description of what to name. (Right: "he shares which revenue target he personally owns this year." Wrong: "names the pressure he's accountable for.")
+
+- OPENER (Command Attention with Insight): one opening the rep can say out loud, built in three moves — (1) LEAD WITH THE UNEXPECTED: a surprising stat, emerging trend, or new challenge from THEIR world; (2) PERSONALIZED RELEVANCE: tie it directly to their department, responsibility, legacy, or budget; (3) END WITH A QUESTION that makes them think about impact, readiness, risk, or opportunity. Put the full spoken opener in "text". In "note": if Future State intel is thin so the opener can't be truly specific to this person, say so plainly and name which cells to fill to sharpen it.
+
+- iQ QUESTIONS: exactly 3, each a true insight question built with the INSIGHT QUESTION CONSTRUCTION above. EVERY question MUST contain all three components — ONE Current Reality AND ONE Future State AND ONE Personal Impact. Before you finalize each question, check it: can you point to the current reality, the future state, AND the personal stake inside the sentence? If any one of the three is missing, the question is INVALID — rewrite it until all three are present. A question that only names a current pressure, or only asks about the future, is NOT an insight question. Bank each: VALIDATION (tests a finding you believe is true) or DISCOVERY (opens something you can't yet see). At least one of each. Give Early/Mid/Late timing. For each question also give "listen_for": one short line (under ~20 words) naming what a CONFIRMING answer sounds like versus what would KILL your read — so the rep listens like an analyst, not a scriptreader.
+  GOOD (follow this shape): "Given that you're personally signing county-level contracts, while positioning Kofile as one scaled platform across the combined HF Group units, what concerns you most about how much of that integration is riding on you specifically?"
+  NOT an insight question (do NOT produce this — operational, no personal stake, names a need): "What are your biggest integration challenges and what tools would help?"
+
+- WATCH_FOR / WATCH_OUT: exactly 2 each. Observable signals only, tied to this person's intel.
+- NEXT_ACTIONS: exactly 3. Each is a clear recommendation the rep should act on before the next conversation, written for a professional who owns their own timing — do NOT assign specific days, deadlines, or "within X business days." State the recommendation plainly, then the rationale: why it matters and what it protects or unlocks. Never "prepare questions."
 
 Return ONLY this JSON, no backticks, no markdown:
-{"defense":[{"title":"","body":""}],"objective":{"who":"","feels":"","sees_how":"","takes_steps":"","fallback":""},"opener":{"text":"","note":""},"iq_questions":[{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""}],"watch_for":["",""],"watch_out":["",""],"next_actions":["","",""]}`;
+{"defense":[{"title":"","body":""}],"objective":{"who":"","feels":"","sees_how":"","takes_steps":"","fallback":""},"opener":{"text":"","note":""},"iq_questions":[{"bank":"","question":"","timing":"","listen_for":""},{"bank":"","question":"","timing":"","listen_for":""},{"bank":"","question":"","timing":"","listen_for":""}],"watch_for":["",""],"watch_out":["",""],"next_actions":["","",""]}`;
 
 // ─── SHARED BUTTON ─────────────────────────────
 function Btn({ children, onClick, disabled, variant, style = {} }) {
@@ -452,10 +485,18 @@ function SearchReviewModal({ results, onAccept, onClose }) {
 
 // ─── SCREEN 1: DEAL ENTRY ──────────────────────
 function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode, codeError, clearCodeError }) {
-  const [form, setForm] = useState({ prospect: "", role: "", company: "", opportunity: "" });
+  const [form, setForm] = useState({ prospect: "", role: "", company: "", repCompany: "", opportunity: "" });
   const [errors, setErrors] = useState({});
   const [codeInput, setCodeInput] = useState("");
   const [loadingCode, setLoadingCode] = useState(false);
+
+  // Your company rarely changes deal to deal — pre-fill it from last time.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("semper_rep_company");
+      if (saved) setForm(p => ({ ...p, repCompany: saved }));
+    } catch { /* ignore */ }
+  }, []);
 
   const submitCode = async () => {
     if (!codeInput.trim()) return;
@@ -465,16 +506,18 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
   };
 
   const fields = [
-    { key: "prospect",    label: "CONTACT NAME",           textarea: false },
-    { key: "role",        label: "TITLE / ROLE",           textarea: false },
-    { key: "company",     label: "COMPANY",                textarea: false },
-    { key: "opportunity", label: "OPPORTUNITY (optional)", textarea: true  },
+    { key: "prospect",    label: "CONTACT NAME",  textarea: false },
+    { key: "role",        label: "TITLE / ROLE",  textarea: false },
+    { key: "company",     label: "THEIR COMPANY", textarea: false },
+    { key: "repCompany",  label: "YOUR COMPANY",  textarea: false, placeholder: "The company you work for" },
+    { key: "opportunity", label: "WHAT YOU'RE SELLING THEM", textarea: true, placeholder: "What you're selling in this deal + the outcome it drives — e.g., records digitization for their EU operations, cutting retrieval time and compliance risk" },
   ];
 
   const handleSubmit = () => {
     const errs = {};
-    ["prospect", "role", "company"].forEach(k => { if (!form[k].trim()) errs[k] = true; });
+    ["prospect", "role", "company", "repCompany"].forEach(k => { if (!form[k].trim()) errs[k] = true; });
     if (Object.keys(errs).length) { setErrors(errs); return; }
+    try { localStorage.setItem("semper_rep_company", form.repCompany.trim()); } catch { /* ignore */ }
     onComplete(form);
   };
 
@@ -498,7 +541,7 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
           <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${GREEN}`, borderRadius: "4px", padding: "16px 18px", marginBottom: "18px", display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: "220px" }}>
               <div style={{ fontSize: "10px", color: GREEN, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700", marginBottom: "3px" }}>● SAVED MATRIX FOUND</div>
-              <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO }}>{resumeInfo.prospect} · {resumeInfo.company}</div>
+              <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO }}>{resumeInfo.deal?.prospect}{resumeInfo.deal?.company ? ` · ${resumeInfo.deal.company}` : ""}</div>
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
               <Btn onClick={onResume} style={{ padding: "9px 18px" }}>RESUME →</Btn>
@@ -541,12 +584,14 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
                 </label>
                 {f.textarea ? (
                   <textarea value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} rows={2}
+                    placeholder={f.placeholder || ""}
                     style={{ width: "100%", background: "#0d0d0d", border: `1px solid ${BORDER}`, borderLeft: `3px solid ${BORDER}`, borderRadius: "3px", color: "#fff", padding: "10px 12px", fontSize: "12px", fontFamily: MONO, resize: "none", outline: "none", transition: "all 0.2s" }}
                     onFocus={e => { e.target.style.borderColor = RED; e.target.style.borderLeftColor = RED; }}
                     onBlur={e => { e.target.style.borderColor = BORDER; e.target.style.borderLeftColor = BORDER; }}
                   />
                 ) : (
                   <input value={form[f.key]}
+                    placeholder={f.placeholder || ""}
                     onChange={e => { setForm(p => ({ ...p, [f.key]: e.target.value })); setErrors(p => ({ ...p, [f.key]: false })); }}
                     onKeyDown={e => e.key === "Enter" && handleSubmit()}
                     style={{ width: "100%", background: "#0d0d0d", border: `1px solid ${errors[f.key] ? "#ff6666" : BORDER}`, borderLeft: `3px solid ${errors[f.key] ? "#ff6666" : BORDER}`, borderRadius: "3px", color: "#fff", padding: "10px 12px", fontSize: "12px", fontFamily: MONO, outline: "none", transition: "all 0.2s" }}
@@ -580,7 +625,7 @@ function AnalysisLoader({ steps }) {
         <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar2 1.1s ease-in-out infinite", animationDelay: "0.18s" }} />
         <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar3 1.1s ease-in-out infinite", animationDelay: "0.36s" }} />
       </div>
-      <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.22em", marginBottom: "10px" }}>SEMPER SELLING®</div>
+      <div style={{ fontSize: "22px", color: RED, fontFamily: CONDENSED, fontWeight: "900", letterSpacing: "0.14em", marginBottom: "10px" }}>SEMPER SELLING®</div>
       <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, letterSpacing: "0.06em" }}>Analyzing your intelligence...</div>
 
       {steps && steps.length > 0 && (
@@ -598,7 +643,7 @@ function AnalysisLoader({ steps }) {
 }
 
 // ─── SCREEN 2: MATRIX EDITOR ──────────────────
-function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComplete, onBack, code, cloudStatus }) {
+function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources, onComplete, onBack, code, cloudStatus }) {
   const [focused, setFocused] = useState(null);
   const [showCodeNote, setShowCodeNote] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
@@ -609,9 +654,18 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
   const [searchRan, setSearchRan] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState(null);
+  const [oppNudge, setOppNudge] = useState(false);        // soft "what are you selling?" nudge
+  const [oppDraft, setOppDraft] = useState("");
   const fileRef = useRef(null);
 
   // Cell prompts — what to search for in each cell
+  // NEEDS cells are inferred (not web-searched). Anchor that inference to what the
+  // rep actually sells so the hypothesised need is the gap their value fills —
+  // described as the CUSTOMER's need, never as a product or pitch.
+  const needsRepContext = (deal.repCompany || deal.opportunity)
+    ? ` The rep works for ${deal.repCompany || "their company"}${deal.opportunity ? ` and in this deal is selling: ${deal.opportunity}.` : "."} Anchor your hypothesis to the specific gap this rep's value could fill in ${deal.prospect}'s world — but state it as the customer's own need, in the customer's world. Never name the rep's product, company, or solution, and never phrase it as something to buy.`
+    : "";
+
   const CELL_PROMPTS = {
     "CURRENT STATE|ROLE": `Search for ${deal.prospect}'s current role, title, and decision-making authority at ${deal.company}. What decisions can they make independently? What requires sign-off above them? Look for their LinkedIn profile, company bio, press releases, or any public source confirming their scope and authority.`,
     "CURRENT STATE|REACH": `Who does ${deal.prospect} (${deal.role} at ${deal.company}) publicly interact with, influence, or report to? Search for ${deal.prospect} by name first. Look for LinkedIn activity, board memberships, advisory roles, conference panels, co-authored content, quotes in press releases, or any public mention of who they work with or report to. Also search for "${deal.prospect} ${deal.company}" together to find organizational mentions.`,
@@ -619,9 +673,9 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
     "FUTURE STATE|ROLE": `What is ${deal.prospect}'s career trajectory at ${deal.company} or in their industry? Look for recent promotions, expanded responsibilities, new titles, speaking engagements, industry awards, board appointments, or signals about where they are heading professionally.`,
     "FUTURE STATE|REACH": `What new professional relationships or networks is ${deal.prospect} at ${deal.company} actively building? Look for recent conference appearances, new board or advisory roles, industry association involvement, new partnerships announced, or any activity suggesting deliberate relationship expansion.`,
     "FUTURE STATE|RESULTS": `What public commitments, stated goals, or strategic promises has ${deal.prospect} at ${deal.company} made? Look for quotes in press releases, earnings calls, investor presentations, interviews, conference keynotes, or LinkedIn posts where they personally committed to specific outcomes or targets.`,
-    "NEEDS|ROLE": `Based on what you know about ${deal.prospect}'s current role as ${deal.role} at ${deal.company} and where they appear to be heading professionally, generate an intelligent hypothesis about what authority, skills, or capabilities they are likely missing right now. Do NOT search the web. Reason from the gap between their current position and their apparent ambitions. What would someone in this role and on this trajectory typically need that they don't yet have? Return your hypothesis as: {"found": true, "intel": "Inferred: [your hypothesis]", "source": "inferred", "source_label": "Inferred from role and trajectory"}`,
-    "NEEDS|REACH": `Based on what you know about ${deal.prospect}'s current influence network and where they are building relationships, generate an intelligent hypothesis about whose support or buy-in they likely need but don't yet have. Do NOT search the web. Reason from the gap between their current relationships and the alliances someone at their level pursuing their apparent goals would need. Return your hypothesis as: {"found": true, "intel": "Inferred: [your hypothesis]", "source": "inferred", "source_label": "Inferred from role and trajectory"}`,
-    "NEEDS|RESULTS": `Based on what you know about ${deal.prospect}'s current performance pressures and public commitments as ${deal.role} at ${deal.company}, generate an intelligent hypothesis about what resources, tools, budget, or capabilities they likely need to close the gap between where they are and what they've committed to. Do NOT search the web. Reason from the distance between their current results and their stated goals. Return your hypothesis as: {"found": true, "intel": "Inferred: [your hypothesis]", "source": "inferred", "source_label": "Inferred from role and trajectory"}`,
+    "NEEDS|ROLE": `Based on what you know about ${deal.prospect}'s current role as ${deal.role} at ${deal.company} and where they appear to be heading professionally, generate an intelligent hypothesis about what authority, skills, or capabilities they are likely missing right now. Do NOT search the web. Reason from the gap between their current position and their apparent ambitions. What would someone in this role and on this trajectory typically need that they don't yet have?${needsRepContext} Return your hypothesis as: {"found": true, "intel": "Inferred: [your hypothesis]", "source": "inferred", "source_label": "Inferred from role and trajectory"}`,
+    "NEEDS|REACH": `Based on what you know about ${deal.prospect}'s current influence network and where they are building relationships, generate an intelligent hypothesis about whose support or buy-in they likely need but don't yet have. Do NOT search the web. Reason from the gap between their current relationships and the alliances someone at their level pursuing their apparent goals would need.${needsRepContext} Return your hypothesis as: {"found": true, "intel": "Inferred: [your hypothesis]", "source": "inferred", "source_label": "Inferred from role and trajectory"}`,
+    "NEEDS|RESULTS": `Based on what you know about ${deal.prospect}'s current performance pressures and public commitments as ${deal.role} at ${deal.company}, generate an intelligent hypothesis about what resources, tools, budget, or capabilities they likely need to close the gap between where they are and what they've committed to. Do NOT search the web. Reason from the distance between their current results and their stated goals.${needsRepContext} Return your hypothesis as: {"found": true, "intel": "Inferred: [your hypothesis]", "source": "inferred", "source_label": "Inferred from role and trajectory"}`,
   };
 
   // Fetch + parse one cell's intel
@@ -708,9 +762,19 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
 
   const handleGenerate = async () => {
     if (filled === 0 || analyzing) return;
+    // Soft nudge (once): if they never said what they're selling, the analysis stays
+    // generic. Surface it, but never block. oppNudge latches so we never loop.
+    if (!deal.opportunity?.trim() && !oppNudge) { setOppNudge(true); return; }
+    runAnalysis(deal);
+  };
+
+  // Core analysis run — takes an explicit deal so the nudge's "add & continue"
+  // can pass the just-typed opportunity without waiting for state to settle.
+  const runAnalysis = async (effectiveDeal) => {
+    if (analyzing) return;
     setAnalyzing(true);
     setAnalyzeSteps(ANALYSIS_STAGES.map(s => ({ label: s.label, done: false })));
-    const matrixText = matrixToText(cells, deal, aiSources);
+    const matrixText = matrixToText(cells, effectiveDeal, aiSources);
 
     // Gentle timed progress so the bars always feel alive. Advances up to the
     // second-to-last stage; the real completions finish the rest.
@@ -724,8 +788,8 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
       // Two smaller calls, in parallel. Wall time ≈ the slower half, not the sum
       // — and neither half is big enough to approach the timeout.
       const [readPart, planPart] = await Promise.all([
-        callAnalysis(ANALYSIS_PROMPT_READ(matrixText, deal)),
-        callAnalysis(ANALYSIS_PROMPT_PLAN(matrixText, deal)),
+        callAnalysis(ANALYSIS_PROMPT_READ(matrixText, effectiveDeal), 1800),
+        callAnalysis(ANALYSIS_PROMPT_PLAN(matrixText, effectiveDeal), 2600),
       ]);
       clearInterval(ticker);
       setAnalyzeSteps(ANALYSIS_STAGES.map(s => ({ label: s.label, done: true })));
@@ -735,7 +799,7 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
       onComplete(cells, matrixText, analysis, aiSources);
     } catch {
       clearInterval(ticker);
-      onComplete(cells, matrixToText(cells, deal, aiSources), null, aiSources);
+      onComplete(cells, matrixToText(cells, effectiveDeal, aiSources), null, aiSources);
     }
     setAnalyzing(false);
   };
@@ -856,8 +920,8 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
                 const leftBorder = isInferred ? AMBER : (isFocused ? RED : hasValue ? "#383838" : "#1e1e1e");
                 return (
                   <div key={key} style={{ background: SURFACE, border: `1px solid ${isFocused ? RED : hasValue ? "#383838" : "#1e1e1e"}`, borderLeft: `3px solid ${leftBorder}`, borderRadius: "3px", padding: "14px 14px 12px 14px", transition: "border-color 0.2s", display: "flex", flexDirection: "column", gap: "6px", minHeight: "130px" }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "6px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "6px", flexWrap: "wrap", rowGap: "5px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", rowGap: "3px", minWidth: 0, flex: "1 1 auto" }}>
                         <div style={{ fontSize: "9px", color: isFocused ? RED : "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", transition: "color 0.2s", textTransform: "uppercase", paddingTop: "2px" }}>
                           {meta.label}
                         </div>
@@ -873,7 +937,21 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
                           <span style={{ fontSize: "8px", color: AMBER, fontFamily: MONO, paddingTop: "2px", fontWeight: "700", letterSpacing: "0.06em" }}>~ INFERRED · CONFIRM</span>
                         )}
                       </div>
-                      <WhatGoesHere description={meta.description} />
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                        {hasValue && (
+                          <button
+                            onClick={() => {
+                              setCells(prev => ({ ...prev, [key]: "" }));
+                              setAiSources(prev => { const n = { ...prev }; delete n[key]; return n; });
+                            }}
+                            title="Clear this cell"
+                            style={{ background: "transparent", border: `1px solid ${BORDER}`, borderRadius: "2px", padding: "1px 6px", cursor: "pointer", fontSize: "9px", color: "#777", fontFamily: MONO, lineHeight: 1.4, transition: "all 0.15s" }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = RED; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = "#777"; }}
+                          >✕ clear</button>
+                        )}
+                        <WhatGoesHere description={meta.description} />
+                      </div>
                     </div>
 
                     <textarea className="matrix-cell" value={cells[key]}
@@ -916,6 +994,26 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
               </button>
             </div>
 
+            {oppNudge && !deal.opportunity?.trim() && !analyzing && (
+              <div style={{ marginBottom: "12px", padding: "12px 14px", background: "rgba(245,158,11,0.06)", border: `1px solid rgba(245,158,11,0.35)`, borderRadius: "4px" }}>
+                <div style={{ fontSize: "11px", color: AMBER, fontFamily: MONO, lineHeight: "1.6", marginBottom: "8px" }}>
+                  You haven't said what you're selling them. The analysis will still run, but it stays generic — it can't pinpoint where you add value. Add it here to sharpen it, or generate anyway.
+                </div>
+                <div style={{ display: "flex", gap: "8px", alignItems: "stretch", flexWrap: "wrap" }}>
+                  <input value={oppDraft} onChange={e => setOppDraft(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter" && oppDraft.trim()) { const merged = { ...deal, opportunity: oppDraft.trim() }; setDeal(merged); runAnalysis(merged); } }}
+                    placeholder="What you're selling them + the outcome it drives"
+                    style={{ flex: 1, minWidth: "240px", background: "#0d0d0d", border: `1px solid ${BORDER}`, borderRadius: "3px", color: "#fff", padding: "9px 12px", fontSize: "12px", fontFamily: MONO, outline: "none" }}
+                    onFocus={e => e.target.style.borderColor = AMBER}
+                    onBlur={e => e.target.style.borderColor = BORDER}
+                  />
+                  <Btn onClick={() => { if (oppDraft.trim()) { const merged = { ...deal, opportunity: oppDraft.trim() }; setDeal(merged); runAnalysis(merged); } else { runAnalysis(deal); } }} style={{ padding: "9px 16px" }}>
+                    {oppDraft.trim() ? "ADD & CONTINUE →" : "GENERATE ANYWAY →"}
+                  </Btn>
+                </div>
+              </div>
+            )}
+
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
               <Btn onClick={handleGenerate} disabled={filled === 0 || analyzing} style={{ minWidth: "300px" }}>
                 {analyzing ? "[ Analyzing your intelligence... ]" : "GENERATE MATRIX ANALYSIS →"}
@@ -936,14 +1034,14 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
 // ─── SECTION HEADER (shared) ───────────────────
 function SectionTag({ children }) {
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "5px 14px", marginBottom: "20px" }}>
-      <span style={{ color: "#000", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.18em" }}>{children}</span>
+    <div style={{ display: "inline-flex", alignItems: "center", background: "#fff", border: `1px solid ${RED}`, borderRadius: "3px", padding: "7px 16px", marginBottom: "20px" }}>
+      <span style={{ color: "#000", fontSize: "15px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.16em" }}>{children}</span>
     </div>
   );
 }
 
 const CLASS_META = {
-  OPENING: { color: GREEN, label: "OPENING" },
+  LEVERAGE: { color: GREEN, label: "LEVERAGE" },
   THREAT: { color: RED, label: "THREAT" },
   VALIDATE: { color: AMBER, label: "VALIDATE" },
 };
@@ -951,49 +1049,50 @@ const CLASS_META = {
 // ─── SCREEN 3: ANALYSIS REPORT ─────────────────
 function AnalysisScreen({ deal, analysis, aiSources, cells, code, cloudStatus, onBack, onRedo }) {
   const hasAnalysis = !!analysis;
+  const [showMatrix, setShowMatrix] = useState(false);
 
   const exportHTML = useCallback(() => {
     if (!analysis) return;
     const esc = (s) => (s == null ? "" : String(s));
     const findingsHTML = (analysis.findings || []).map(f => {
       const c = CLASS_META[f.classification] || { color: RED, label: "" };
-      return `<div style="margin-bottom:20px;">${f.classification ? `<span style="display:inline-block;font-size:9px;font-weight:700;color:#000;background:${c.color};border-radius:2px;padding:2px 8px;letter-spacing:0.14em;font-family:'Barlow Condensed',sans-serif;margin-bottom:7px;">${c.label}</span>` : ""}${f.headline ? `<div style="font-size:11px;font-weight:700;color:${c.color};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.16em;margin:6px 0 7px;">${esc(f.headline)}</div>` : ""}<p style="font-size:13px;color:#ccc;line-height:1.75;">${esc(f.finding)}</p></div>`;
+      return `<div style="margin-bottom:20px;">${f.classification ? `<span style="display:inline-block;font-size:9px;font-weight:700;color:#000;background:${c.color};border-radius:2px;padding:2px 8px;letter-spacing:0.14em;font-family:'Barlow Condensed',sans-serif;margin-bottom:7px;">${c.label}</span>` : ""}${f.headline ? `<div style="font-size:11px;font-weight:700;color:${c.color};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.16em;margin:6px 0 7px;">${esc((f.headline||"").toUpperCase())}</div>` : ""}<p style="font-size:13px;color:#ccc;line-height:1.75;">${esc(f.finding)}</p></div>`;
     }).join("");
 
     const obj = analysis.objective || {};
-    const objHTML = (obj.who || obj.feels) ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">YOUR NEXT-CALL OBJECTIVE</span></div>
-<p style="font-size:14px;color:#fff;line-height:1.8;margin-bottom:14px;">This conversation succeeds if <strong>${esc(obj.who)}</strong> <span style="color:#22c55e;">FEELS</span> ${esc(obj.feels)}, <span style="color:#22c55e;">SEES HOW</span> ${esc(obj.sees_how)}, and <span style="color:#22c55e;">TAKES STEPS</span> ${esc(obj.takes_steps)}.</p>
+    const objHTML = (obj.who || obj.feels) ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">POSSIBLE NEXT-CALL OBJECTIVE</span></div>
+<p style="font-size:14px;color:#fff;line-height:1.8;margin-bottom:14px;">This conversation will be successful if <strong>${esc(obj.who)}</strong> <span style="color:#22c55e;">FEELS</span> ${esc(obj.feels)}, <span style="color:#22c55e;">SEES HOW</span> ${esc(obj.sees_how)}, and <span style="color:#22c55e;">TAKES STEPS</span> ${esc(obj.takes_steps)}.</p>
 ${obj.fallback ? `<p style="font-size:12px;color:#888;line-height:1.7;"><strong style="color:#f59e0b;">FALLBACK:</strong> ${esc(obj.fallback)}</p>` : ""}</div>` : "";
 
     const op = analysis.opener || {};
-    const openerHTML = op.text ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">OPENING INSIGHT</span></div><p style="font-size:14px;color:#fff;line-height:1.85;font-style:italic;border-left:3px solid #CC0000;padding-left:16px;">"${esc(op.text)}"</p>${op.note ? `<p style="font-size:11px;color:#888;line-height:1.7;margin-top:10px;">${esc(op.note)}</p>` : ""}</div>` : "";
+    const openerHTML = op.text ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">OPENING INSIGHT</span></div><p style="font-size:14px;color:#fff;line-height:1.85;font-style:italic;border-left:3px solid #CC0000;padding-left:16px;">"${esc(op.text)}"</p>${op.note ? `<p style="font-size:11px;color:#888;line-height:1.7;margin-top:10px;">${esc(op.note)}</p>` : ""}</div>` : "";
 
-    const gapsHTML = (analysis.gaps || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">INTELLIGENCE GAPS</span></div>${(analysis.gaps || []).map(g => `<div style="border-left:3px solid ${g.severity === "HIGH" ? "#CC0000" : "#f59e0b"};padding-left:14px;margin-bottom:16px;"><div style="font-size:11px;font-weight:700;color:${g.severity === "HIGH" ? "#CC0000" : "#f59e0b"};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:5px;">${esc(g.cell)} — ${esc(g.severity)}</div><div style="font-size:12px;color:#ccc;line-height:1.6;">${esc(g.note)}</div></div>`).join("")}</div>` : "";
+    const gapsHTML = (analysis.gaps || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">INTELLIGENCE GAPS</span></div>${(analysis.gaps || []).map(g => `<div style="border-left:3px solid ${g.severity === "HIGH" ? "#CC0000" : "#f59e0b"};padding-left:14px;margin-bottom:16px;"><div style="font-size:11px;font-weight:700;color:${g.severity === "HIGH" ? "#CC0000" : "#f59e0b"};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:5px;">${esc((g.cell || "").toUpperCase())} — ${esc(g.severity)}</div><div style="font-size:12px;color:#ccc;line-height:1.6;">${esc(g.note)}</div>${g.ask ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #222;"><span style="font-size:9px;color:#22c55e;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;font-weight:700;">ASK</span><div style="font-size:12px;color:#fff;line-height:1.65;font-style:italic;margin-top:3px;">"${esc(g.ask)}"</div></div>` : ""}</div>`).join("")}</div>` : "";
 
-    const defenseHTML = (analysis.defense || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">DEFENSE STRATEGY</span></div>${(analysis.defense || []).map(d => `<div style="border-left:3px solid #CC0000;padding-left:14px;margin-bottom:20px;"><div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:6px;">${esc(d.title)}</div><div style="font-size:12px;color:#ccc;line-height:1.65;">${esc(d.body)}</div></div>`).join("")}</div>` : "";
+    const defenseHTML = (analysis.defense || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">DEFENSE STRATEGY</span></div>${(analysis.defense || []).map(d => `<div style="border-left:3px solid #CC0000;padding-left:14px;margin-bottom:20px;"><div style="font-size:11px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;margin-bottom:6px;">${esc((d.title||"").toUpperCase())}</div><div style="font-size:12px;color:#ccc;line-height:1.65;">${esc(d.body)}</div></div>`).join("")}</div>` : "";
 
-    const iqHTML = (analysis.iq_questions || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">iQ QUESTIONS — USE NEXT CALL</span></div>${(analysis.iq_questions || []).map(q => `<div style="border-left:3px solid #CC0000;padding-left:16px;margin-bottom:20px;">${q.bank ? `<span style="display:inline-block;font-size:9px;font-weight:700;color:#000;background:${q.bank === "VALIDATION" ? "#22c55e" : "#f59e0b"};border-radius:2px;padding:2px 8px;letter-spacing:0.12em;font-family:'Barlow Condensed',sans-serif;margin-bottom:8px;">${esc(q.bank)}</span>` : ""}<div style="font-size:13px;color:#fff;line-height:1.8;font-style:italic;margin:6px 0;">"${esc(q.question)}"</div>${q.timing ? `<div style="font-size:10px;color:#888;">${esc(q.timing)}</div>` : ""}</div>`).join("")}</div>` : "";
+    const iqHTML = (analysis.iq_questions || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">iQ QUESTIONS — USE NEXT CALL</span></div>${(analysis.iq_questions || []).map(q => `<div style="border-left:3px solid #CC0000;padding-left:16px;margin-bottom:20px;">${q.bank ? `<span style="display:inline-block;font-size:9px;font-weight:700;color:#000;background:${q.bank === "VALIDATION" ? "#22c55e" : "#f59e0b"};border-radius:2px;padding:2px 8px;letter-spacing:0.12em;font-family:'Barlow Condensed',sans-serif;margin-bottom:8px;">${esc(q.bank)}</span>` : ""}<div style="font-size:13px;color:#fff;line-height:1.8;font-style:italic;margin:6px 0;">"${esc(q.question)}"</div>${q.listen_for ? `<div style="font-size:10px;color:#9fb8a0;margin:2px 0 4px;"><span style="color:#22c55e;font-weight:700;">Listen for:</span> ${esc(q.listen_for)}</div>` : ""}${q.timing ? `<div style="font-size:10px;color:#888;">${esc(q.timing)}</div>` : ""}</div>`).join("")}</div>` : "";
 
-    const signalsHTML = ((analysis.watch_for || []).length || (analysis.watch_out || []).length) ? `<div style="margin-bottom:32px;display:grid;grid-template-columns:1fr 1fr;gap:40px;"><div><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:14px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">MOMENTUM SIGNALS</span></div>${(analysis.watch_for || []).map(s => `<div style="font-size:12px;color:#ccc;line-height:1.65;margin-bottom:10px;">● ${esc(s)}</div>`).join("")}</div><div><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:14px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">RESISTANCE SIGNALS</span></div>${(analysis.watch_out || []).map(s => `<div style="font-size:12px;color:#ccc;line-height:1.65;margin-bottom:10px;">● ${esc(s)}</div>`).join("")}</div></div>` : "";
+    const signalsHTML = ((analysis.watch_for || []).length || (analysis.watch_out || []).length) ? `<div style="margin-bottom:32px;display:grid;grid-template-columns:1fr 1fr;gap:40px;"><div><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:14px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">MOMENTUM SIGNALS</span></div>${(analysis.watch_for || []).map(s => `<div style="font-size:12px;color:#ccc;line-height:1.65;margin-bottom:10px;">● ${esc(s)}</div>`).join("")}</div><div><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:14px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">RESISTANCE SIGNALS</span></div>${(analysis.watch_out || []).map(s => `<div style="font-size:12px;color:#ccc;line-height:1.65;margin-bottom:10px;">● ${esc(s)}</div>`).join("")}</div></div>` : "";
 
-    const actionsHTML = (analysis.next_actions || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">RECOMMENDED NEXT ACTIONS</span></div>${(analysis.next_actions || []).map((a, i) => `<div style="display:flex;gap:14px;margin-bottom:14px;"><div style="font-size:18px;font-weight:900;color:#CC0000;font-family:'Barlow Condensed',sans-serif;">${i + 1}</div><div style="font-size:12px;color:#ccc;line-height:1.7;">${esc(a)}</div></div>`).join("")}</div>` : "";
+    const actionsHTML = (analysis.next_actions || []).length ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">RECOMMENDED NEXT ACTIONS</span></div>${(analysis.next_actions || []).map((a, i) => `<div style="display:flex;gap:14px;margin-bottom:14px;"><div style="font-size:18px;font-weight:900;color:#CC0000;font-family:'Barlow Condensed',sans-serif;">${i + 1}</div><div style="font-size:12px;color:#ccc;line-height:1.7;">${esc(a)}</div></div>`).join("")}</div>` : "";
 
     const briefingHTML = (Array.isArray(analysis.briefing) ? analysis.briefing : analysis.briefing ? [analysis.briefing] : []).map(p => `<p style="font-size:13px;color:#ccc;line-height:1.85;margin-bottom:18px;font-style:italic;">${esc(p)}</p>`).join("");
 
     // The Matrix itself — so the downloaded report is a complete record of the rep's intel
-    const gridHTML = cells ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">THE MATRIX</span></div>
+    const gridHTML = cells ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">THE MATRIX</span></div>
 <table style="width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;">
 <tr><td style="width:90px;"></td>${MATRIX_COLS.map(c => `<th style="background:#CC0000;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.12em;padding:8px;text-align:center;border:2px solid #0a0a0a;">${c}</th>`).join("")}</tr>
 ${MATRIX_ROWS.map(r => `<tr><th style="background:#CC0000;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.08em;padding:8px;text-align:center;border:2px solid #0a0a0a;">${r}</th>${MATRIX_COLS.map(c => `<td style="background:#141414;color:#ccc;font-size:10px;line-height:1.55;padding:10px;vertical-align:top;border:2px solid #0a0a0a;">${esc(cells[`${r}|${c}`]) || "<span style='color:#555;'>—</span>"}</td>`).join("")}</tr>`).join("")}
 </table></div>` : "";
 
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Matrix Analysis — ${esc(deal.prospect)}</title><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:'IBM Plex Mono',monospace;padding:40px 48px;max-width:1000px;margin:0 auto;line-height:1.6}@media print{body{background:#fff;color:#000}}</style></head><body>
-<div style="font-size:10px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.18em;margin-bottom:8px;">◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
+<div style="font-size:13px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.18em;margin-bottom:8px;">CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
 <div style="font-size:38px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;line-height:1;">${esc(deal.prospect).toUpperCase()}</div>
 <div style="font-size:13px;color:#fff;font-family:'IBM Plex Mono',monospace;margin-top:6px;margin-bottom:28px;">${esc(deal.role)}${deal.company ? ` · ${esc(deal.company)}` : ""}${deal.opportunity ? ` · ${esc(deal.opportunity)}` : ""}</div>
 ${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;padding:10px 16px;margin-bottom:32px;font-size:13px;color:#ccc;font-style:italic;">● ${esc(analysis.matrix_health_note)}</div>` : ""}
 ${gridHTML}
-${(briefingHTML || findingsHTML) ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:20px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">WHAT THE MATRIX IS TELLING YOU</span></div>${briefingHTML}${findingsHTML}</div>` : ""}
+${(briefingHTML || findingsHTML) ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:20px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">WHAT THE MATRIX IS TELLING YOU</span></div>${briefingHTML}${findingsHTML}</div>` : ""}
 ${objHTML}
 ${openerHTML}
 ${gapsHTML}
@@ -1015,7 +1114,7 @@ ${actionsHTML}
 
       {/* Header */}
       <div style={{ padding: "14px 28px", borderBottom: `1px solid ${BORDER}`, background: SURFACE, display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-        <Btn variant="ghost" onClick={onBack} style={{ padding: "6px 12px", fontSize: "11px" }}>← BACK</Btn>
+        <Btn onClick={onBack} style={{ padding: "6px 14px", fontSize: "11px" }}>✎ EDIT MATRIX</Btn>
         <div style={{ width: "1px", height: "24px", background: "#333" }} />
         <span style={{ color: RED, fontSize: "15px", fontWeight: "700", fontFamily: CONDENSED, letterSpacing: "0.1em" }}>MATRIX ANALYSIS</span>
         <span style={{ color: "#fff", fontSize: "11px", fontFamily: MONO }}>{deal.prospect} · {deal.company}</span>
@@ -1047,7 +1146,7 @@ ${actionsHTML}
       <div style={{ flex: 1, padding: "40px 48px", overflowY: "auto", maxWidth: "1000px", width: "100%" }}>
 
         {/* Report header */}
-        <div style={{ marginBottom: "8px", fontSize: "10px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.18em" }}>◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
+        <div style={{ marginBottom: "8px", fontSize: "13px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.18em" }}>CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
         <div style={{ fontSize: "42px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.04em", lineHeight: 1, marginBottom: "10px" }}>{deal.prospect.toUpperCase()}</div>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
           <div style={{ width: "3px", height: "16px", background: RED, borderRadius: "1px", flexShrink: 0 }} />
@@ -1063,6 +1162,40 @@ ${actionsHTML}
           </div>
         ) : (
           <div>
+
+            {/* Collapsible source Matrix — check a finding against the cell without leaving */}
+            {cells && (
+              <div style={{ marginBottom: "28px" }}>
+                <button onClick={() => setShowMatrix(v => !v)}
+                  style={{ background: "transparent", border: `1px solid ${BORDER}`, borderRadius: "3px", padding: "7px 14px", cursor: "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.14em", color: "#aaa", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = "#fff"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = "#aaa"; }}
+                >{showMatrix ? "▲ HIDE THE MATRIX" : "▼ SHOW THE MATRIX"}</button>
+                {showMatrix && (
+                  <div style={{ marginTop: "14px", overflowX: "auto" }}>
+                    <div style={{ minWidth: "640px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr", gap: "4px", marginBottom: "4px" }}>
+                        <div />
+                        {MATRIX_COLS.map(col => (
+                          <div key={col} style={{ background: RED, borderRadius: "2px", padding: "6px", textAlign: "center", fontSize: "11px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.12em" }}>{col}</div>
+                        ))}
+                      </div>
+                      {MATRIX_ROWS.map(row => (
+                        <div key={row} style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr", gap: "4px", marginBottom: "4px" }}>
+                          <div style={{ background: RED, borderRadius: "2px", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px", textAlign: "center", fontSize: "10px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.08em", lineHeight: 1.3 }}>{row}</div>
+                          {MATRIX_COLS.map(col => {
+                            const v = (cells[`${row}|${col}`] || "").trim();
+                            return (
+                              <div key={col} style={{ background: SURFACE, border: `1px solid ${v ? "#2a2a2a" : "#181818"}`, borderRadius: "2px", padding: "8px 10px", fontSize: "10px", color: v ? "#ddd" : "#555", fontFamily: MONO, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{v || "—"}</div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Matrix Health */}
             {analysis.matrix_health_note && (
@@ -1091,7 +1224,7 @@ ${actionsHTML}
                             {cm.label && (
                               <span style={{ fontSize: "9px", fontWeight: "700", color: "#000", background: cm.color, borderRadius: "2px", padding: "2px 8px", letterSpacing: "0.14em", fontFamily: CONDENSED }}>{cm.label}</span>
                             )}
-                            {headline && <div style={{ fontSize: "11px", fontWeight: "700", color: cm.color, fontFamily: CONDENSED, letterSpacing: "0.16em" }}>{headline}</div>}
+                            {headline && <div style={{ fontSize: "11px", fontWeight: "700", color: cm.color, fontFamily: CONDENSED, letterSpacing: "0.16em" }}>{(headline||"").toUpperCase()}</div>}
                           </div>
                           <p style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.75", margin: 0 }}>{text}</p>
                         </div>
@@ -1102,12 +1235,12 @@ ${actionsHTML}
               </div>
             )}
 
-            {/* YOUR NEXT-CALL OBJECTIVE */}
+            {/* POSSIBLE NEXT-CALL OBJECTIVE */}
             {analysis.objective && (analysis.objective.who || analysis.objective.feels) && (
               <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
-                <SectionTag>YOUR NEXT-CALL OBJECTIVE</SectionTag>
+                <SectionTag>POSSIBLE NEXT-CALL OBJECTIVE</SectionTag>
                 <p style={{ fontSize: "15px", color: "#fff", fontFamily: MONO, lineHeight: "1.9", margin: 0 }}>
-                  This conversation succeeds if <strong style={{ color: "#fff" }}>{analysis.objective.who}</strong>{" "}
+                  This conversation will be successful if <strong style={{ color: "#fff" }}>{analysis.objective.who}</strong>{" "}
                   <span style={{ color: GREEN, fontWeight: "700" }}>FEELS</span> {analysis.objective.feels},{" "}
                   <span style={{ color: GREEN, fontWeight: "700" }}>SEES HOW</span> {analysis.objective.sees_how}, and{" "}
                   <span style={{ color: GREEN, fontWeight: "700" }}>TAKES STEPS</span> {analysis.objective.takes_steps}.
@@ -1144,8 +1277,14 @@ ${actionsHTML}
                     </div>
                     {(analysis.gaps||[]).map((gap, i) => (
                       <div key={i} style={{ borderLeft: `3px solid ${gap.severity === "HIGH" ? RED : AMBER}`, paddingLeft: "14px", marginBottom: "16px" }}>
-                        <div style={{ fontSize: "11px", fontWeight: "700", color: gap.severity === "HIGH" ? RED : AMBER, fontFamily: CONDENSED, letterSpacing: "0.12em", marginBottom: "5px" }}>{gap.cell}</div>
+                        <div style={{ fontSize: "11px", fontWeight: "700", color: gap.severity === "HIGH" ? RED : AMBER, fontFamily: CONDENSED, letterSpacing: "0.12em", marginBottom: "5px" }}>{(gap.cell || "").toUpperCase()}</div>
                         <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.6" }}>{gap.note}</div>
+                        {gap.ask && (
+                          <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #1e1e1e" }}>
+                            <span style={{ fontSize: "9px", color: GREEN, fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", display: "block", marginBottom: "3px" }}>ASK</span>
+                            <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.65", fontStyle: "italic" }}>"{gap.ask}"</div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1155,7 +1294,7 @@ ${actionsHTML}
                     <SectionTag>DEFENSE STRATEGY</SectionTag>
                     {(analysis.defense||[]).map((d, i) => (
                       <div key={i} style={{ borderLeft: `3px solid ${RED}`, paddingLeft: "14px", marginBottom: "20px" }}>
-                        <div style={{ fontSize: "11px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.12em", marginBottom: "6px" }}>{d.title}</div>
+                        <div style={{ fontSize: "11px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.12em", marginBottom: "6px" }}>{(d.title||"").toUpperCase()}</div>
                         <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.65" }}>{d.body}</div>
                       </div>
                     ))}
@@ -1172,13 +1311,19 @@ ${actionsHTML}
                   const question = typeof q === "object" ? q.question : q;
                   const timing = typeof q === "object" ? q.timing : null;
                   const bank = typeof q === "object" ? q.bank : null;
+                  const listenFor = typeof q === "object" ? q.listen_for : null;
                   const bankColor = bank === "VALIDATION" ? GREEN : AMBER;
                   return (
                     <div key={i} style={{ marginBottom: "22px", paddingLeft: "16px", borderLeft: `3px solid ${RED}` }}>
                       {bank && (
                         <span style={{ display: "inline-block", fontSize: "9px", fontWeight: "700", color: "#000", background: bankColor, borderRadius: "2px", padding: "2px 8px", letterSpacing: "0.12em", fontFamily: CONDENSED, marginBottom: "8px" }}>{bank}</span>
                       )}
-                      <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.8", fontStyle: "italic", marginBottom: timing ? "8px" : 0 }}>"{question}"</div>
+                      <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.8", fontStyle: "italic", marginBottom: (listenFor || timing) ? "8px" : 0 }}>"{question}"</div>
+                      {listenFor && (
+                        <div style={{ fontSize: "10px", color: "#9fb8a0", fontFamily: MONO, lineHeight: "1.6", marginBottom: timing ? "4px" : 0 }}>
+                          <span style={{ color: GREEN, fontWeight: "700" }}>Listen for:</span> {listenFor}
+                        </div>
+                      )}
                       {timing && <div style={{ fontSize: "10px", color: "#888", fontFamily: MONO, lineHeight: "1.6" }}>{timing}</div>}
                     </div>
                   );
@@ -1348,6 +1493,7 @@ export default function App() {
         <style>{FONTS}</style>
         <MatrixScreen
           deal={deal}
+          setDeal={setDeal}
           cells={cells}
           setCells={setCells}
           aiSources={aiSources}
