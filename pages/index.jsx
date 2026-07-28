@@ -253,12 +253,11 @@ YOUR JOB: produce the PLAN for the rep's next call. First, silently identify the
 - OBJECTIVE: One customer-centric call objective. FEELS ← a Current State cell (make them feel understood). SEES HOW ← the sharpest finding's insight. TAKES STEPS ← the countermove from the top THREAT (or, if no threats, the move that presses the top OPENING). fallback: the minimum viable win if the primary step stalls in the call.
 - OPENER: One opening insight, three parts as natural speech — unexpected point → personally relevant → a question that makes them think. Built from the highest-reliability cells. In "note": if Future State cells are empty/thin so the opener can't be truly specific, say so and name which cells to fill.
 - iQ QUESTIONS: Exactly 3, each banked. VALIDATION = full iQ (named Current Reality + named Future State + personal impact — never operational) testing a finding; at least one. DISCOVERY = a question filling the single most blocking empty cell; at least one. One natural sentence each, different data per question. Early/Mid/Late timing on each.
-- POSITIONING ASSESSMENT: Only run if an offering was provided (${deal.opportunity ? `"${deal.opportunity}"` : "none provided — skip this field and return null"}). The NEEDS row represents educated hypotheses about gaps between this stakeholder's current and future state — not a product spec. Assess whether the offering connects to those gaps and is positioned at the right altitude for this stakeholder's authority level. verdict: STRONG FIT (directly addresses NEEDS hypotheses and aligns with performance pressure or public commitments) / PARTIAL FIT (connects to some gaps but misses others, or wrong altitude) / WEAK FIT (doesn't connect to identified gaps, or stakeholder lacks authority/urgency/resources to act) / REFRAME NEEDED (relevant but framed in a way that won't land based on what the Matrix reveals). connects: one sentence on what specifically aligns. gap: one sentence on what needs to shift or what's missing. Be specific — name which NEEDS hypotheses connect and which don't. Never generic.
 - WATCH_FOR / WATCH_OUT: Exactly 2 each. Observable only. Tied to this person's intel.
 - NEXT_ACTIONS: Exactly 3. What, to whom, by when + cost of inaction. Never "prepare questions."
 
 Return ONLY this JSON, no backticks, no markdown:
-{"defense":[{"title":"","body":""}],"objective":{"who":"","feels":"","sees_how":"","takes_steps":"","fallback":""},"opener":{"text":"","note":""},"iq_questions":[{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""}],"positioning_assessment":{"verdict":"","connects":"","gap":""},"watch_for":["",""],"watch_out":["",""],"next_actions":["","",""]}`;
+{"defense":[{"title":"","body":""}],"objective":{"who":"","feels":"","sees_how":"","takes_steps":"","fallback":""},"opener":{"text":"","note":""},"iq_questions":[{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""},{"bank":"","question":"","timing":""}],"watch_for":["",""],"watch_out":["",""],"next_actions":["","",""]}`;
 
 // ─── SHARED BUTTON ─────────────────────────────
 function Btn({ children, onClick, disabled, variant, style = {} }) {
@@ -469,7 +468,7 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
     { key: "prospect",    label: "CONTACT NAME",           textarea: false },
     { key: "role",        label: "TITLE / ROLE",           textarea: false },
     { key: "company",     label: "COMPANY",                textarea: false },
-    { key: "opportunity", label: "WHAT PRODUCT, SERVICE OR SOLUTION ARE YOU OFFERING? (optional)", textarea: true  },
+    { key: "opportunity", label: "OPPORTUNITY (optional)", textarea: true  },
   ];
 
   const handleSubmit = () => {
@@ -646,7 +645,7 @@ function MatrixScreen({ deal, cells, setCells, aiSources, setAiSources, onComple
       const lastText = textBlocks[textBlocks.length - 1];
       if (lastText && lastText.text) {
         const cleaned = lastText.text
-          .replace(/<[^>]+>/g, "")
+          .replace(/]*>|<\/antml:cite>/g, "")
           .replace(/```json|```/g, "")
           .trim();
         const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
@@ -988,10 +987,6 @@ ${obj.fallback ? `<p style="font-size:12px;color:#888;line-height:1.7;"><strong 
 ${MATRIX_ROWS.map(r => `<tr><th style="background:#CC0000;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.08em;padding:8px;text-align:center;border:2px solid #0a0a0a;">${r}</th>${MATRIX_COLS.map(c => `<td style="background:#141414;color:#ccc;font-size:10px;line-height:1.55;padding:10px;vertical-align:top;border:2px solid #0a0a0a;">${esc(cells[`${r}|${c}`]) || "<span style='color:#555;'>—</span>"}</td>`).join("")}</tr>`).join("")}
 </table></div>` : "";
 
-    const paColors = { "STRONG FIT": "#22c55e", "PARTIAL FIT": "#f59e0b", "WEAK FIT": "#CC0000", "REFRAME NEEDED": "#8b5cf6" };
-    const pa = analysis.positioning_assessment;
-    const positioningHTML = (pa && pa.verdict) ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:16px;"><span style="color:#000;font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.18em;">POSITIONING ASSESSMENT</span></div><div style="display:inline-flex;align-items:center;gap:10px;padding:8px 16px;border:1px solid ${paColors[pa.verdict] || "#888"};border-radius:3px;margin-bottom:16px;"><span style="font-size:12px;font-weight:700;color:${paColors[pa.verdict] || "#888"};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.14em;">● ${esc(pa.verdict)}</span></div>${pa.connects ? `<div style="border-left:3px solid ${paColors[pa.verdict] || "#888"};padding-left:14px;margin-bottom:14px;"><div style="font-size:9px;color:${paColors[pa.verdict] || "#888"};font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;font-weight:700;margin-bottom:5px;">WHAT CONNECTS</div><div style="font-size:12px;color:#ccc;line-height:1.75;">${esc(pa.connects)}</div></div>` : ""}${pa.gap ? `<div style="border-left:3px solid #333;padding-left:14px;"><div style="font-size:9px;color:#888;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.12em;font-weight:700;margin-bottom:5px;">WHAT NEEDS TO SHIFT</div><div style="font-size:12px;color:#ccc;line-height:1.75;">${esc(pa.gap)}</div></div>` : ""}</div>` : "";
-
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Matrix Analysis — ${esc(deal.prospect)}</title><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:'IBM Plex Mono',monospace;padding:40px 48px;max-width:1000px;margin:0 auto;line-height:1.6}@media print{body{background:#fff;color:#000}}</style></head><body>
 <div style="font-size:10px;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.18em;margin-bottom:8px;">◆ CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
 <div style="font-size:38px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;line-height:1;">${esc(deal.prospect).toUpperCase()}</div>
@@ -1004,7 +999,6 @@ ${openerHTML}
 ${gapsHTML}
 ${defenseHTML}
 ${iqHTML}
-${positioningHTML}
 ${signalsHTML}
 ${actionsHTML}
 <div style="border-top:1px solid #333;padding-top:20px;font-size:10px;color:#666;">Semper Selling® Connection Intelligence Matrix — Semper Mind © 2026 · ${esc(deal.prospect)} · ${esc(deal.company)}</div>
@@ -1189,43 +1183,6 @@ ${actionsHTML}
                     </div>
                   );
                 })}
-              </div>
-            )}
-
-            {/* POSITIONING ASSESSMENT */}
-            {analysis.positioning_assessment && analysis.positioning_assessment.verdict && (
-              <div style={{ marginBottom: "36px", paddingBottom: "36px", borderBottom: "1px solid #1a1a1a" }}>
-                <SectionTag>POSITIONING ASSESSMENT</SectionTag>
-                {(() => {
-                  const pa = analysis.positioning_assessment;
-                  const verdictColors = {
-                    "STRONG FIT":     { bg: "rgba(34,197,94,0.08)",  border: "rgba(34,197,94,0.3)",  text: GREEN },
-                    "PARTIAL FIT":    { bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.3)", text: AMBER },
-                    "WEAK FIT":       { bg: "rgba(204,0,0,0.08)",    border: "rgba(204,0,0,0.3)",    text: RED },
-                    "REFRAME NEEDED": { bg: "rgba(139,92,246,0.08)", border: "rgba(139,92,246,0.3)", text: "#8b5cf6" },
-                  };
-                  const colors = verdictColors[pa.verdict] || verdictColors["PARTIAL FIT"];
-                  return (
-                    <div>
-                      <div style={{ display: "inline-flex", alignItems: "center", gap: "10px", padding: "8px 16px", background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: "3px", marginBottom: "18px" }}>
-                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: colors.text, flexShrink: 0 }} />
-                        <span style={{ fontSize: "12px", fontWeight: "700", color: colors.text, fontFamily: CONDENSED, letterSpacing: "0.14em" }}>{pa.verdict}</span>
-                      </div>
-                      {pa.connects && (
-                        <div style={{ marginBottom: "14px", paddingLeft: "16px", borderLeft: `3px solid ${colors.text}` }}>
-                          <div style={{ fontSize: "9px", color: colors.text, fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "5px" }}>WHAT CONNECTS</div>
-                          <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.75" }}>{pa.connects}</div>
-                        </div>
-                      )}
-                      {pa.gap && (
-                        <div style={{ paddingLeft: "16px", borderLeft: "3px solid #333" }}>
-                          <div style={{ fontSize: "9px", color: "#888", fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "5px" }}>WHAT NEEDS TO SHIFT</div>
-                          <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.75" }}>{pa.gap}</div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
               </div>
             )}
 
