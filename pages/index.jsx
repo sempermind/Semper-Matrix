@@ -86,19 +86,6 @@ async function callAnalysis(prompt, maxTokens = 2000) {
 const MATRIX_COLS = ["ROLE", "REACH", "RESULTS"];
 const MATRIX_ROWS = ["CURRENT STATE", "FUTURE STATE", "NEEDS"];
 
-// ─── CURRENT RELATIONSHIP ──────────────────────
-// Where the rep stands with this account. Drives which deal fields are required,
-// whether AI Search hunts for a stakeholder or researches a named one, and how
-// the analysis engine weights what it sees. Menu labels are what the rep picks;
-// the short label is what shows in headers and reports.
-const RELATIONSHIP_OPTIONS = [
-  { value: "no_contact",          menu: "Prospecting | No Contact Identified", label: "NO CONTACT IDENTIFIED" },
-  { value: "contact_identified",  menu: "Prospecting | Contact Identified",    label: "CONTACT IDENTIFIED" },
-  { value: "engaged_prospect",    menu: "Prospect | Engaged",                  label: "ENGAGED PROSPECT" },
-  { value: "existing_customer",   menu: "Existing Customer",                   label: "EXISTING CUSTOMER" },
-];
-const relLabel = (v) => (RELATIONSHIP_OPTIONS.find(o => o.value === v) || {}).label || "";
-
 const MATRIX_META = {
   "CURRENT STATE|ROLE": {
     label: "Decision Authority",
@@ -165,7 +152,7 @@ const emptyMatrix = () => {
 // Tag each cell by intel source so the analysis engine can weight it:
 // [SOURCED] verified public source · [INFERRED] AI hypothesis · [REP INTEL] rep's own knowledge
 const matrixToText = (cells, deal, aiSources = {}) => {
-  let out = `CONNECTION INTELLIGENCE MATRIX\n${deal.prospect?.trim() || "Stakeholder TBD"} — ${deal.role?.trim() || "Role TBD"} @ ${deal.company}${deal.currentRelationship ? ` [${relLabel(deal.currentRelationship)}]` : ""}\n${deal.opportunity ? `Deal: ${deal.opportunity}\n` : ""}\n`;
+  let out = `CONNECTION INTELLIGENCE MATRIX\n${deal.prospect} — ${deal.role} @ ${deal.company}\n${deal.opportunity ? `Deal: ${deal.opportunity}\n` : ""}\n`;
   MATRIX_ROWS.forEach(row => {
     out += `── ${row} ──\n`;
     MATRIX_COLS.forEach(col => {
@@ -211,83 +198,18 @@ When you find nothing but can infer from role/company context:
 When you find nothing at all:
 {"found": false}`;
 
-// ─── STARTING CONTACT ASSESSMENT ───────────────
-// Account-level intelligence that runs alongside (or instead of) the 9 cell
-// searches: who should the rep even start with? Named people when public
-// evidence supports it — cautiously worded, never "the buyer" without proof.
-const CONTACT_ASSESSMENT_SYSTEM = `You are a B2B sales research analyst working inside the Semper Selling® methodology. You assess WHO a sales rep should start with at a target account — the most logical stakeholder to research and approach first for a specific type of opportunity.
-
-Use the web_search tool to find real, publicly verifiable people and organizational context. Prioritize actual named individuals when credible public information exists. Do NOT default to the most senior executive. Do NOT assume anyone is "the buyer" unless public evidence directly supports that conclusion.
-
-Weigh these when reasoning about who to start with:
-- likely operational ownership of the area the rep's offering touches
-- strategic influence
-- vendor / procurement authority
-- functional responsibility
-- relevance to what the rep sells
-- organizational reach
-- whether the person is likely an entry point, influencer, operational owner, or decision stakeholder
-
-LANGUAGE — cautious always: "appears to be", "may be", "likely stakeholder", "potential starting point", "public information does not confirm". NEVER write "this is the buyer" unless reliable public evidence actually confirms it.
-
-If you CANNOT find a credible named person, do not invent one — return assessment "unknown" with 2-3 relevant functions instead.
-
-Return ONLY valid JSON, no markdown, no backticks:
-{"assessment":"recommended | credible | relevant_but_incomplete | questionable | unknown","recommended_contact":{"name":"","title":"","reason":"","likely_role":"","authority_unknown":""},"other_functions":["","",""],"summary":""}
-If no named person can be responsibly surfaced, set "recommended_contact" to null.`;
-
-const contactAssessmentUser = (deal) => {
-  const sells = deal.opportunity && deal.opportunity.trim() ? deal.opportunity.trim() : "(not specified)";
-  const rep = deal.repCompany && deal.repCompany.trim() ? deal.repCompany.trim() : "(not specified)";
-  const hasContact = !!(deal.prospect && deal.prospect.trim());
-  if (hasContact) {
-    return `TARGET ACCOUNT: ${deal.company}
-REP'S COMPANY: ${rep}
-WHAT THE REP SELLS: ${sells}
-RELATIONSHIP STAGE: ${relLabel(deal.currentRelationship) || "unspecified"}
-A CONTACT IS ALREADY ENTERED: ${deal.prospect}${deal.role ? ` — ${deal.role}` : ""}
-
-TASK: Assess whether ${deal.prospect} appears to be a credible STARTING stakeholder for this type of opportunity at ${deal.company}. Choose the single best-fitting "assessment": "credible" (a solid entry point), "relevant_but_incomplete" (relevant but likely not sufficient alone), "questionable" (probably not the right starting point), or "unknown" (insufficient public info to judge). Put your reasoning in "summary". If a DIFFERENT named person appears MORE logical to start with, put them in "recommended_contact" as an ADDITIONAL person to consider — do NOT replace the rep's contact. Otherwise set "recommended_contact" to null. Fill "other_functions" with 2-3 other stakeholder types or functions worth keeping in mind.`;
-  }
-  return `TARGET ACCOUNT: ${deal.company}
-REP'S COMPANY: ${rep}
-WHAT THE REP SELLS: ${sells}
-RELATIONSHIP STAGE: No contact identified yet.
-
-TASK: Identify the most logical NAMED person to investigate first for this type of opportunity at ${deal.company}. Set "assessment" to "recommended" if you find a credible named person, or "unknown" if you cannot. In "recommended_contact": name, current title, "reason" (why this person appears relevant), "likely_role" (their likely role in the buying process, cautiously worded), and "authority_unknown" (what public information does NOT confirm about their authority). Fill "other_functions" with 2-3 additional functions or stakeholder types the rep should keep in mind. Never present anyone as a confirmed buyer.`;
-};
-
 // ─── ANALYSIS PROMPT ──────────────────────────
 // Shared context both halves of the analysis need: the intel, the pattern
 // library, and the classification rule. Sent with each of the two parallel calls.
-const RELATIONSHIP_GUARDRAIL = (deal) => {
-  const stage = deal.currentRelationship;
-  const base = `
-
-RELATIONSHIP STAGE: ${relLabel(stage) || "UNSPECIFIED"}. Interpret the SAME Matrix through this lens.
-
-DO NOT TURN A HYPOTHESIS INTO A PROBLEM. If public intelligence suggests the company's growth, strategy, or shifting priorities COULD pressure an existing process, you may recommend validating whether a gap exists. You may NOT state the gap exists unless reliable Matrix intelligence supports that conclusion. Acceptable: "The company's growth may place new demands on the existing process — validate whether that's creating execution or reporting gaps." Unacceptable: "The company has a reporting gap that must be closed."`;
-  if (stage === "contact_identified") return base + `
-
-CONTACT IDENTIFIED — the rep knows who they want to approach but has NOT spoken with them. Treat ALL public research and inferred NEEDS as PRE-ENGAGEMENT intelligence. Do NOT imply the person has told the rep anything, that an active deal exists, that buying momentum exists, that a hypothesized problem is real, or that the person is a champion or decision-maker without evidence. Focus on: whether this is a credible entry point, why they may care, what needs validation, who else may need to be involved, incumbent processes or vendors, and an initial conversation strategy.`;
-  if (stage === "engaged_prospect") return base + `
-
-ENGAGED PROSPECT — the rep has had direct interaction with the stakeholder, but the company is NOT yet a customer. Use full opportunity-oriented analysis. Focus on: validated vs unvalidated intelligence, decision dynamics, influence, momentum, resistance, competitive threats, missing stakeholders, deal risk, and next-conversation objectives.`;
-  if (stage === "existing_customer") return base + `
-
-EXISTING CUSTOMER — the rep's company already has an established relationship. Analyze through a relationship-depth, protection, and growth lens. Focus on: what has changed, outdated assumptions, relationship breadth, single-threading risk, new stakeholders, emerging priorities, competitive vulnerability, and expansion opportunities. Judge MISSING intelligence MORE critically here — the rep already has access, so gaps in what they should know are less forgivable.`;
-  return base;
-};
-
 const ANALYSIS_CONTEXT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine. Senior sales strategist. Find cross-cell gaps that reveal what's actually happening in this deal beneath the surface. A finding that restates one cell is not a finding.
 
-Deal: ${deal.prospect?.trim() || "Stakeholder TBD"} (${deal.role?.trim() || "Role TBD"} @ ${deal.company})
+Deal: ${deal.prospect} (${deal.role} @ ${deal.company})
 
 WHAT THE REP SELLS — CONTEXT ONLY, to sharpen your read:
 ${deal.repCompany ? `The rep works for: ${deal.repCompany}.` : "The rep's company is not specified."}
 ${deal.opportunity ? `In this deal they are selling: ${deal.opportunity}.` : "What they're selling in this deal is not specified — reason about their needs generically."}
 Use this ONLY to (a) sharpen the NEEDS read — pinpoint the specific gap in the customer's world where this rep can add value — and (b) make the Opener, Objective, Defense, and questions relevant to that value.
-GUARDRAIL — ABSOLUTE: the OUTPUT stays entirely in the CUSTOMER's world. Never name or describe the rep's product, company, or solution in any briefing, finding, gap, question, opener, or objective. Never say what the customer "needs to buy," never pitch. You think about the rep's value privately to aim your analysis; you never write about it. iQ questions and gap questions name no solution, ever.${RELATIONSHIP_GUARDRAIL(deal)}
+GUARDRAIL — ABSOLUTE: the OUTPUT stays entirely in the CUSTOMER's world. Never name or describe the rep's product, company, or solution in any briefing, finding, gap, question, opener, or objective. Never say what the customer "needs to buy," never pitch. You think about the rep's value privately to aim your analysis; you never write about it. iQ questions and gap questions name no solution, ever.
 
 ${matrixText}
 
@@ -419,7 +341,7 @@ function CodeChip({ code, status }) {
 function WhatGoesHere({ description }) {
   const [open, setOpen] = useState(false);
   return (
-    <div style={{ position: "relative", flexShrink: 0, display: "inline-flex" }}>
+    <div style={{ position: "relative", flexShrink: 0 }}>
       <button
         onClick={() => setOpen(o => !o)}
         style={{ background: open ? "rgba(204,0,0,0.08)" : "transparent", border: `1px solid ${RED}`, borderRadius: "2px", padding: "2px 7px", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", transition: "all 0.15s", lineHeight: 1 }}
@@ -440,205 +362,7 @@ function WhatGoesHere({ description }) {
 }
 
 // ─── SEARCH REVIEW MODAL ───────────────────────
-const ASSESSMENT_META = {
-  recommended:             { color: "#4a9eff", label: "STARTING POINT IDENTIFIED" },
-  credible:                { color: GREEN,     label: "CREDIBLE STARTING STAKEHOLDER" },
-  relevant_but_incomplete: { color: AMBER,     label: "RELEVANT — LIKELY NOT SUFFICIENT ALONE" },
-  questionable:            { color: RED,       label: "QUESTIONABLE STARTING POINT" },
-  unknown:                 { color: "#888",    label: "INSUFFICIENT PUBLIC INFORMATION" },
-};
-
-// Account-level intel shown at the top of the search review — never written into a
-// Matrix cell. Helps the rep decide WHOSE Matrix they're building.
-function StartingContactAssessment({ assessment, deal, onUseContact }) {
-  if (!assessment) return null;
-  const meta = ASSESSMENT_META[assessment.assessment] || ASSESSMENT_META.unknown;
-  const rc = assessment.recommended_contact;
-  const noContact = deal?.currentRelationship === "no_contact" && !(deal?.prospect && deal.prospect.trim());
-  const canUse = noContact && rc && rc.name;
-  const funcs = Array.isArray(assessment.other_functions) ? assessment.other_functions.filter(Boolean) : [];
-  return (
-    <div style={{ margin: "16px 24px 0", border: `1px solid #2f2f2f`, borderLeft: `3px solid ${meta.color}`, borderRadius: "4px", background: "#101010", padding: "16px 18px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
-        <span style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700" }}>STARTING CONTACT ASSESSMENT</span>
-        <span style={{ fontSize: "9px", color: "#000", background: meta.color, fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", borderRadius: "2px", padding: "2px 8px" }}>{meta.label}</span>
-      </div>
-
-      {assessment.summary && (
-        <div style={{ fontSize: "11px", color: "#bbb", fontFamily: MONO, lineHeight: "1.7", marginBottom: (rc && rc.name) ? "14px" : "0" }}>{assessment.summary}</div>
-      )}
-
-      {rc && rc.name && (
-        <div style={{ marginBottom: "12px" }}>
-          <div style={{ fontSize: "9px", color: "#666", fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "3px" }}>{noContact ? "RECOMMENDED CONTACT" : "ADDITIONAL STAKEHOLDER TO CONSIDER"}</div>
-          <div style={{ fontSize: "22px", color: "#fff", fontFamily: CONDENSED, fontWeight: "900", letterSpacing: "0.03em", lineHeight: 1.1 }}>{rc.name}</div>
-          {rc.title && <div style={{ fontSize: "11px", color: "#fff", fontFamily: MONO, marginTop: "2px" }}>{rc.title}</div>}
-        </div>
-      )}
-
-      {rc && rc.reason && (
-        <div style={{ marginBottom: "10px" }}>
-          <div style={{ fontSize: "9px", color: GREEN, fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "3px" }}>WHY THIS PERSON MAY MATTER</div>
-          <div style={{ fontSize: "11px", color: "#ccc", fontFamily: MONO, lineHeight: "1.65" }}>{rc.reason}</div>
-        </div>
-      )}
-
-      {rc && rc.likely_role && (
-        <div style={{ marginBottom: "10px" }}>
-          <div style={{ fontSize: "9px", color: "#888", fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "3px" }}>LIKELY ROLE</div>
-          <div style={{ fontSize: "11px", color: "#ccc", fontFamily: MONO, lineHeight: "1.65" }}>{rc.likely_role}</div>
-        </div>
-      )}
-
-      {rc && rc.authority_unknown && (
-        <div style={{ marginBottom: "10px" }}>
-          <div style={{ fontSize: "9px", color: AMBER, fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "3px" }}>WHAT'S UNCONFIRMED</div>
-          <div style={{ fontSize: "11px", color: "#ccc", fontFamily: MONO, lineHeight: "1.65" }}>{rc.authority_unknown}</div>
-        </div>
-      )}
-
-      {funcs.length > 0 && (
-        <div style={{ marginBottom: canUse ? "14px" : "0" }}>
-          <div style={{ fontSize: "9px", color: "#888", fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "5px" }}>OTHER FUNCTIONS TO INVESTIGATE</div>
-          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-            {funcs.map((f, i) => (
-              <span key={i} style={{ fontSize: "10px", color: "#bbb", fontFamily: MONO, border: `1px solid #2f2f2f`, borderRadius: "3px", padding: "3px 9px" }}>{f}</span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {canUse && (
-        <button onClick={() => onUseContact(rc.name, rc.title, rc.reason || assessment.summary || "")}
-          style={{ marginTop: "4px", background: "#1a1a1a", border: `1px solid ${GREEN}`, color: GREEN, borderRadius: "3px", padding: "9px 18px", cursor: "pointer", fontSize: "11px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em" }}>
-          ✓ USE THIS CONTACT
-        </button>
-      )}
-    </div>
-  );
-}
-
-// Shown only on legacy sessions that predate Current Relationship, when the rep
-// tries to search or analyze. Forces a pick, then they tap the action again.
-function RelationshipGate({ onPick, onClose }) {
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "20px" }}>
-      <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "6px", padding: "28px", maxWidth: "460px", width: "100%" }}>
-        <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700", marginBottom: "8px" }}>ONE THING FIRST</div>
-        <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.7", marginBottom: "18px" }}>
-          This Matrix was started before Current Relationship existed. Pick where you stand with this account to continue — it shapes the search and the analysis.
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {RELATIONSHIP_OPTIONS.map(o => (
-            <button key={o.value} onClick={() => onPick(o.value)}
-              style={{ textAlign: "left", background: "#0d0d0d", border: `1px solid ${BORDER}`, borderRadius: "3px", padding: "11px 14px", cursor: "pointer", fontSize: "12px", fontFamily: MONO, color: "#fff", transition: "all 0.15s" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = RED; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; }}>
-              {o.menu}
-            </button>
-          ))}
-        </div>
-        <div style={{ marginTop: "14px", textAlign: "right" }}>
-          <Btn variant="ghost" onClick={onClose} style={{ padding: "8px 16px" }}>CANCEL</Btn>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── SEARCH FAILURE DIAGNOSIS ──────────────────
-// Translate a raw error (HTTP status + body, or "web_search never ran") into a
-// plain-English most-likely cause and the exact thing to check. This is what the
-// old "thin online footprint" message was hiding.
-function diagnoseSearchError(diag) {
-  if (!diag) return null;
-  if (diag.kind === "no_browse") {
-    return {
-      headline: "The search ran, but never actually browsed the web",
-      cause: "Your /api/chat route reached the model, but no web_search activity came back. The route is almost certainly not forwarding the `tools` field to the Anthropic API — so the model answered from memory and reported \"found nothing\" for every cell.",
-      fix: "In your /api/chat handler, make sure you pass `tools` (and `system`) straight through to the Anthropic messages call — not just model / max_tokens / messages.",
-    };
-  }
-  const err = (diag.errors && diag.errors[0]) || {};
-  const status = err.status;
-  const detail = err.detail || "";
-  if (status === 404) return {
-    headline: "The /api/chat endpoint returned 404 — it isn't there",
-    cause: "The front end is calling a relative /api/chat route that doesn't exist at this URL. Either the serverless function isn't deployed, or this build is running somewhere with no backend (e.g. a raw artifact preview).",
-    fix: "Deploy the /api/chat (and /api/session) functions to the same origin, or point the fetch at wherever your chat proxy actually lives.",
-    detail,
-  };
-  if (status === 401 || status === 403) return {
-    headline: `Auth rejected (${status}) — the key isn't working`,
-    cause: "The /api/chat route reached Anthropic but the API key is missing, wrong, or not permitted for this model / for the web_search tool.",
-    fix: "Check ANTHROPIC_API_KEY in your deployment env, and confirm the key's org has the web_search tool and claude-sonnet-4-6 enabled.",
-    detail,
-  };
-  if (status === 429) return {
-    headline: "Rate limited (429)",
-    cause: "Anthropic throttled the burst. The search fires up to 10 calls at once (9 cells + assessment), which can trip per-minute limits on a new key.",
-    fix: "Lower the BATCH size, add a short delay between batches, or raise your rate limit.",
-    detail,
-  };
-  if (status === 500 || status === 502 || status === 503 || status === 504) return {
-    headline: `Server error (${status}) from /api/chat`,
-    cause: "The route itself threw or timed out. With 10 parallel web_search calls, a serverless function on a short maxDuration is a prime suspect for a timeout.",
-    fix: "Check the function logs for the stack trace, and raise maxDuration if it's timing out on the search calls.",
-    detail,
-  };
-  if (status === "api_error") return {
-    headline: "Anthropic returned an error inside the response",
-    cause: "The route forwarded a request the API rejected — commonly an invalid model string, a bad tool definition, or the web_search tool not being enabled on the account.",
-    fix: "Read the detail below — it's the API's own error message.",
-    detail,
-  };
-  if (status === "no_content") return {
-    headline: "The route replied, but with nothing usable",
-    cause: "A 200 came back with no text/tool content in the expected Anthropic shape. Your route may be reshaping or truncating the response before it reaches the app.",
-    fix: "Return the Anthropic response body as-is (its `content` array) from /api/chat.",
-    detail,
-  };
-  if (status === "fetch_failed") return {
-    headline: "The request never completed",
-    cause: "The fetch to /api/chat threw before getting a response — a network/CORS failure, or again, no such endpoint at this origin.",
-    fix: "Confirm /api/chat is reachable from the browser (check the Network tab) and returns JSON.",
-    detail,
-  };
-  return {
-    headline: status ? `Search failed (${status})` : "Search failed",
-    cause: "The backend call didn't return usable intel. Detail below.",
-    fix: "Check your /api/chat route and its logs.",
-    detail,
-  };
-}
-
-function SearchDiagnosticModal({ diag, onClose, onRetry }) {
-  const d = diagnoseSearchError(diag);
-  if (!d) return null;
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
-      <div style={{ background: SURFACE, border: `1px solid ${AMBER}`, borderRadius: "6px", padding: "28px", maxWidth: "560px", width: "100%" }}>
-        <div style={{ fontSize: "11px", color: AMBER, fontFamily: CONDENSED, letterSpacing: "0.14em", marginBottom: "10px", fontWeight: "700" }}>◈ SEARCH DIDN'T RUN — DIAGNOSTIC</div>
-        <div style={{ fontSize: "16px", color: "#fff", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.04em", marginBottom: "14px" }}>{d.headline}</div>
-        <div style={{ fontSize: "12px", color: "#ddd", fontFamily: MONO, lineHeight: "1.7", marginBottom: "14px" }}>{d.cause}</div>
-        <div style={{ fontSize: "10px", color: AMBER, fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "5px" }}>WHAT TO CHECK</div>
-        <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.7", marginBottom: d.detail ? "14px" : "20px" }}>{d.fix}</div>
-        {d.detail ? (
-          <div style={{ marginBottom: "20px" }}>
-            <div style={{ fontSize: "10px", color: "#888", fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "5px" }}>RAW RESPONSE</div>
-            <pre style={{ fontSize: "10px", color: "#aaa", fontFamily: MONO, background: "#0a0a0a", border: `1px solid ${BORDER}`, borderRadius: "3px", padding: "10px 12px", whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: "160px", overflowY: "auto", margin: 0 }}>{d.detail}</pre>
-          </div>
-        ) : null}
-        <div style={{ display: "flex", gap: "10px" }}>
-          <Btn variant="ghost" onClick={onClose} style={{ width: "100%" }}>CLOSE</Btn>
-          {onRetry && <Btn onClick={onRetry} style={{ width: "100%" }}>RETRY SEARCH</Btn>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SearchReviewModal({ results, assessment, diag, deal, onUseContact, onAccept, onClose }) {
+function SearchReviewModal({ results, onAccept, onClose }) {
   const found = results.filter(r => r.result?.found);
   const [accepted, setAccepted] = useState(() => {
     const a = {};
@@ -651,13 +375,7 @@ function SearchReviewModal({ results, assessment, diag, deal, onUseContact, onAc
     return e;
   });
 
-  // If the search didn't truly run (route degraded, tools not forwarded), show
-  // the real cause — never the "thin footprint" message, which hides the bug.
-  if (found.length === 0 && !assessment && diag) {
-    return <SearchDiagnosticModal diag={diag} onClose={onClose} onRetry={null} />;
-  }
-
-  if (found.length === 0 && !assessment) {
+  if (found.length === 0) {
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
         <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "6px", padding: "32px", maxWidth: "480px", width: "100%", textAlign: "center" }}>
@@ -666,28 +384,6 @@ function SearchReviewModal({ results, assessment, diag, deal, onUseContact, onAc
             No public intel found for this contact. This person has a thin online footprint — add what you know from your own conversations to fill the Matrix before generating your analysis.
           </div>
           <Btn onClick={onClose} variant="ghost" style={{ width: "100%" }}>CLOSE</Btn>
-        </div>
-      </div>
-    );
-  }
-
-  // No cell findings but we DID get a starting-contact assessment (the typical
-  // no_contact path). Show the assessment on its own.
-  if (found.length === 0) {
-    return (
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 1000, padding: "20px", overflowY: "auto" }}>
-        <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "6px", width: "100%", maxWidth: "680px", marginTop: "20px", marginBottom: "20px" }}>
-          <div style={{ padding: "20px 24px 4px" }}>
-            <div style={{ fontSize: "11px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", marginBottom: "4px" }}>AI INTELLIGENCE SEARCH</div>
-            <div style={{ fontSize: "20px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em" }}>Starting point</div>
-            <div style={{ fontSize: "11px", color: "#fff", fontFamily: MONO, marginTop: "4px" }}>
-              No stakeholder entered yet — here's the most logical person to start with. Pick them to build their Matrix, or close and enter your own.
-            </div>
-          </div>
-          <StartingContactAssessment assessment={assessment} deal={deal} onUseContact={onUseContact} />
-          <div style={{ padding: "18px 24px", borderTop: `1px solid ${BORDER}`, marginTop: "16px", display: "flex", gap: "10px" }}>
-            <Btn variant="ghost" onClick={onClose} style={{ width: "100%" }}>CLOSE</Btn>
-          </div>
         </div>
       </div>
     );
@@ -719,8 +415,6 @@ function SearchReviewModal({ results, assessment, diag, deal, onUseContact, onAc
             Review each finding. Accept what's useful, skip what isn't. Only accepted intel gets added to your Matrix.
           </div>
         </div>
-
-        {assessment && <StartingContactAssessment assessment={assessment} deal={deal} onUseContact={onUseContact} />}
 
         <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: "12px" }}>
           {found.map(r => {
@@ -791,7 +485,7 @@ function SearchReviewModal({ results, assessment, diag, deal, onUseContact, onAc
 
 // ─── SCREEN 1: DEAL ENTRY ──────────────────────
 function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode, codeError, clearCodeError }) {
-  const [form, setForm] = useState({ currentRelationship: "", prospect: "", role: "", company: "", repCompany: "", opportunity: "" });
+  const [form, setForm] = useState({ prospect: "", role: "", company: "", repCompany: "", opportunity: "" });
   const [errors, setErrors] = useState({});
   const [codeInput, setCodeInput] = useState("");
   const [loadingCode, setLoadingCode] = useState(false);
@@ -821,14 +515,7 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
 
   const handleSubmit = () => {
     const errs = {};
-    if (!form.currentRelationship) errs.currentRelationship = true;
-    if (form.currentRelationship === "no_contact") {
-      // No stakeholder yet: name + title optional, but we need what they sell so the
-      // AI has enough context to identify a logical stakeholder.
-      ["company", "repCompany", "opportunity"].forEach(k => { if (!form[k].trim()) errs[k] = true; });
-    } else {
-      ["prospect", "role", "company", "repCompany"].forEach(k => { if (!form[k].trim()) errs[k] = true; });
-    }
+    ["prospect", "role", "company", "repCompany"].forEach(k => { if (!form[k].trim()) errs[k] = true; });
     if (Object.keys(errs).length) { setErrors(errs); return; }
     try { localStorage.setItem("semper_rep_company", form.repCompany.trim()); } catch { /* ignore */ }
     onComplete(form);
@@ -890,33 +577,13 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
         <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: "4px", padding: "32px 28px" }}>
           <div style={{ fontSize: "14px", color: RED, fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.14em", marginBottom: "20px" }}>DEAL CONTEXT</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            <div>
-              <label style={{ display: "block", fontSize: "14px", color: errors.currentRelationship ? "#ff6666" : "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", marginBottom: "6px" }}>
-                CURRENT RELATIONSHIP{errors.currentRelationship && " — REQUIRED"}
-              </label>
-              <select
-                value={form.currentRelationship}
-                onChange={e => { setForm(p => ({ ...p, currentRelationship: e.target.value })); setErrors(p => ({ ...p, currentRelationship: false, prospect: false, role: false, opportunity: false })); }}
-                style={{ width: "100%", background: "#0d0d0d", border: `1px solid ${errors.currentRelationship ? "#ff6666" : BORDER}`, borderLeft: `3px solid ${errors.currentRelationship ? "#ff6666" : BORDER}`, borderRadius: "3px", color: form.currentRelationship ? "#fff" : "#555", padding: "10px 12px", fontSize: "12px", fontFamily: MONO, outline: "none", transition: "all 0.2s", appearance: "none", WebkitAppearance: "none", cursor: "pointer" }}
-                onFocus={e => { e.target.style.borderColor = RED; e.target.style.borderLeftColor = RED; }}
-                onBlur={e => { e.target.style.borderColor = errors.currentRelationship ? "#ff6666" : BORDER; e.target.style.borderLeftColor = errors.currentRelationship ? "#ff6666" : BORDER; }}
-              >
-                <option value="" disabled>Select where you stand…</option>
-                {RELATIONSHIP_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ color: "#fff", background: "#0d0d0d" }}>{o.menu}</option>)}
-              </select>
-              {form.currentRelationship === "no_contact" && (
-                <div style={{ marginTop: "7px", padding: "8px 11px", background: "rgba(74,158,255,0.05)", border: "1px solid rgba(74,158,255,0.25)", borderRadius: "2px", fontSize: "10px", color: "#8ab4e8", fontFamily: MONO, lineHeight: "1.6" }}>
-                  No name yet? That's fine — Contact Name and Title are optional. The AI Intelligence Search will help you find the most logical stakeholder to start with.
-                </div>
-              )}
-            </div>
             {fields.map(f => (
               <div key={f.key}>
                 <label style={{ display: "block", fontSize: "14px", color: errors[f.key] ? "#ff6666" : "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", marginBottom: "6px" }}>
-                  {f.label}{errors[f.key] ? " — REQUIRED" : (form.currentRelationship === "no_contact" && (f.key === "prospect" || f.key === "role") ? " — OPTIONAL" : "")}
+                  {f.label}{errors[f.key] && " — REQUIRED"}
                 </label>
                 {f.textarea ? (
-                  <textarea value={form[f.key]} onChange={e => { setForm(p => ({ ...p, [f.key]: e.target.value })); setErrors(p => ({ ...p, [f.key]: false })); }} rows={2}
+                  <textarea value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} rows={2}
                     placeholder={f.placeholder || ""}
                     style={{ width: "100%", background: "#0d0d0d", border: `1px solid ${BORDER}`, borderLeft: `3px solid ${BORDER}`, borderRadius: "3px", color: "#fff", padding: "10px 12px", fontSize: "12px", fontFamily: MONO, resize: "none", outline: "none", transition: "all 0.2s" }}
                     onFocus={e => { e.target.style.borderColor = RED; e.target.style.borderLeftColor = RED; }}
@@ -984,17 +651,11 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
   const [searching, setSearching] = useState(false);
   const [searchProgress, setSearchProgress] = useState(null);
   const [searchResults, setSearchResults] = useState(null);
-  const [searchError, setSearchError] = useState(null);   // real backend failure, surfaced instead of "no intel found"
   const [searchRan, setSearchRan] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState(null);
   const [oppNudge, setOppNudge] = useState(false);        // soft "what are you selling?" nudge
   const [oppDraft, setOppDraft] = useState("");
-  const [contactAssessment, setContactAssessment] = useState(null);   // starting-contact intel from AI search
-  const [relGate, setRelGate] = useState(false);                      // legacy session missing currentRelationship
-  const [contactSetNudge, setContactSetNudge] = useState(false);      // shown after "USE THIS CONTACT"
-  const [needStakeholder, setNeedStakeholder] = useState(false);      // tried to analyze with no stakeholder
-  const [contactSetReason, setContactSetReason] = useState("");       // AI rationale carried onto the Matrix
   const fileRef = useRef(null);
 
   // Cell prompts — what to search for in each cell
@@ -1033,30 +694,12 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
           messages: [{ role: "user", content: userContent }],
         }),
       });
-      // The backend answered with an HTTP error (route missing, bad key, 500,
-      // timeout). Carry the real status + body so the UI can show WHY instead of
-      // pretending the person has a thin footprint.
-      if (!resp.ok) {
-        let detail = "";
-        try { detail = (await resp.text()).slice(0, 400); } catch { /* ignore */ }
-        return { key, row, col, existing, result: { found: false }, error: { status: resp.status, detail } };
-      }
       const data = await resp.json();
-      // An error object came back inside a 200 (e.g. web_search not enabled on
-      // the key, or the route forwarded an Anthropic error body verbatim).
-      if (data && (data.type === "error" || data.error)) {
-        return { key, row, col, existing, result: { found: false }, error: { status: "api_error", detail: JSON.stringify(data.error || data).slice(0, 400) } };
-      }
-      const content = data.content || [];
-      // Proof that web_search actually ran server-side. If the /api/chat route
-      // drops the `tools` field, the model can't browse and returns found:false
-      // for every cell — which is indistinguishable from a real thin footprint.
-      const browsed = content.some(b => b.type === "server_tool_use" || b.type === "web_search_tool_result");
-      const textBlocks = content.filter(b => b.type === "text");
+      const textBlocks = (data.content || []).filter(b => b.type === "text");
       const lastText = textBlocks[textBlocks.length - 1];
       if (lastText && lastText.text) {
         const cleaned = lastText.text
-          .replace(/<cite[^>]*>|<\/cite>/g, "")
+          .replace(/]*>|<\/antml:cite>/g, "")
           .replace(/```json|```/g, "")
           .trim();
         const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
@@ -1064,139 +707,39 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
           try {
             const parsed = JSON.parse(jsonMatch[0]);
             if (parsed.intel) parsed.intel = parsed.intel.replace(/<[^>]*>/g, "").trim();
-            return { key, row, col, existing, result: parsed, browsed };
-          } catch { return { key, row, col, existing, result: { found: false }, browsed }; }
+            return { key, row, col, existing, result: parsed };
+          } catch { return { key, row, col, existing, result: { found: false } }; }
         }
-        return { key, row, col, existing, result: { found: false }, browsed };
       }
-      // 200 with no usable content block at all — that's a malformed route
-      // response, not an empty search. Flag it.
-      return { key, row, col, existing, result: { found: false }, browsed, error: { status: "no_content", detail: JSON.stringify(data).slice(0, 400) } };
-    } catch (e) {
-      return { key, row, col, existing, result: { found: false }, error: { status: "fetch_failed", detail: String((e && e.message) || e).slice(0, 400) } };
+      return { key, row, col, existing, result: { found: false } };
+    } catch {
+      return { key, row, col, existing, result: { found: false } };
     }
   };
 
-  // ── STARTING CONTACT ASSESSMENT — one extra research task: who to start with? ──
-  const runContactAssessment = async () => {
-    try {
-      const resp = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 900,
-          system: CONTACT_ASSESSMENT_SYSTEM,
-          tools: [{ type: "web_search_20250305", name: "web_search" }],
-          messages: [{ role: "user", content: contactAssessmentUser(deal) }],
-        }),
-      });
-      if (!resp.ok) {
-        let detail = "";
-        try { detail = (await resp.text()).slice(0, 400); } catch { /* ignore */ }
-        return { __error: { status: resp.status, detail } };
-      }
-      const data = await resp.json();
-      if (data && (data.type === "error" || data.error)) {
-        return { __error: { status: "api_error", detail: JSON.stringify(data.error || data).slice(0, 400) } };
-      }
-      const content = data.content || [];
-      const browsed = content.some(b => b.type === "server_tool_use" || b.type === "web_search_tool_result");
-      const textBlocks = content.filter(b => b.type === "text");
-      const lastText = textBlocks[textBlocks.length - 1];
-      if (lastText && lastText.text) {
-        const cleaned = lastText.text.replace(/<\/?cite[^>]*>/g, "").replace(/```json|```/g, "").trim();
-        const m = cleaned.match(/\{[\s\S]*\}/);
-        if (m) { try { const parsed = JSON.parse(m[0]); parsed.__browsed = browsed; return parsed; } catch { return { __error: { status: "parse_failed", detail: cleaned.slice(0, 400) }, __browsed: browsed }; } }
-      }
-      return { __error: { status: "no_content", detail: JSON.stringify(data).slice(0, 400) }, __browsed: browsed };
-    } catch (e) { return { __error: { status: "fetch_failed", detail: String((e && e.message) || e).slice(0, 400) } }; }
-  };
-
-  // Populate the Matrix stakeholder from the AI's recommendation without resetting
-  // anything. Flips no_contact → contact_identified. Does NOT auto-rerun search.
-  const handleUseContact = (name, title, reason) => {
-    setDeal({ ...deal, prospect: name, role: title || deal.role || "", currentRelationship: "contact_identified" });
-    setSearchResults(null);
-    setContactAssessment(null);
-    setNeedStakeholder(false);
-    setContactSetReason(reason || "");
-    setContactSetNudge(true);
-  };
-
-  // ── AI SEARCH — contact assessment always runs; the 9 cell searches run only
-  //    when we have a named person (a person-less search returns garbage). ──
+  // ── AI SEARCH — batched 3 at a time so a full room doesn't hit rate limits ──
   const handleSearch = async () => {
-    // Legacy session created before Current Relationship existed — force a pick first.
-    if (!deal.currentRelationship) { setRelGate(true); return; }
     setSearching(true);
-    setSearchError(null);
-    setContactSetNudge(false);
-    setContactSetReason("");
-    setNeedStakeholder(false);
+    setSearchProgress("Searching public sources...");
 
-    const noContact = deal.currentRelationship === "no_contact" && !(deal.prospect && deal.prospect.trim());
-    setSearchProgress(noContact ? "Identifying the best stakeholder to start with..." : "Searching public sources...");
-
-    // Kick off the account-level assessment in parallel with any cell research.
-    const assessmentPromise = runContactAssessment();
+    const allKeys = [];
+    MATRIX_ROWS.forEach(row => MATRIX_COLS.forEach(col => allKeys.push({ key: `${row}|${col}`, row, col })));
 
     const results = [];
-    if (!noContact) {
-      const allKeys = [];
-      MATRIX_ROWS.forEach(row => MATRIX_COLS.forEach(col => allKeys.push({ key: `${row}|${col}`, row, col })));
-      let completed = 0;
-      const BATCH = 3;
-      for (let i = 0; i < allKeys.length; i += BATCH) {
-        const batch = allKeys.slice(i, i + BATCH);
-        const batchResults = await Promise.all(batch.map(({ key, row, col }) => searchOneCell(key, row, col)));
-        results.push(...batchResults);
-        completed += batch.length;
-        setSearchProgress(`Searching... ${completed} of 9 complete`);
-      }
-    }
+    let completed = 0;
+    const BATCH = 3;
 
-    const rawAssessment = await assessmentPromise;
-    const assessmentErr = rawAssessment && rawAssessment.__error ? rawAssessment.__error : null;
-    const assessment = assessmentErr ? null : rawAssessment;
-
-    // ── FAILURE DETECTION ──────────────────────────────────────────────
-    // Separate "the search genuinely found nothing" from "the search never
-    // actually ran." The old code collapsed both into found:false and told the
-    // rep the person had a thin footprint — hiding every real error.
-    const cellErrors = results.filter(r => r.error).map(r => r.error);
-    const anyBrowsed = results.some(r => r.browsed) || (rawAssessment && rawAssessment.__browsed);
-    const ranCellSearches = !noContact && results.length > 0;
-
-    let diag = null;
-    if (noContact) {
-      // Only the assessment ran. If it errored, that's a hard failure.
-      if (assessmentErr) diag = { kind: "hard", errors: [assessmentErr] };
-    } else if (ranCellSearches && cellErrors.length === results.length) {
-      // Every one of the 9 cell calls failed the same way → transport/route down.
-      diag = { kind: "hard", errors: cellErrors.slice(0, 1) };
-    } else if (ranCellSearches && cellErrors.length > 0) {
-      // Some calls errored — partial degradation worth flagging but not fatal.
-      diag = { kind: "partial", errors: cellErrors.slice(0, 1), okCount: results.length - cellErrors.length };
-    } else if (ranCellSearches && cellErrors.length === 0 && !anyBrowsed) {
-      // Calls succeeded but web_search never actually ran server-side → the
-      // /api/chat route almost certainly isn't forwarding the `tools` field.
-      diag = { kind: "no_browse" };
+    for (let i = 0; i < allKeys.length; i += BATCH) {
+      const batch = allKeys.slice(i, i + BATCH);
+      const batchResults = await Promise.all(batch.map(({ key, row, col }) => searchOneCell(key, row, col)));
+      results.push(...batchResults);
+      completed += batch.length;
+      setSearchProgress(`Searching... ${completed} of 9 complete`);
     }
 
     setSearching(false);
     setSearchProgress(null);
     setSearchRan(true);
-    setContactAssessment(assessment);
-
-    if (diag && diag.kind === "hard") {
-      // Don't show the "thin footprint" lie. Show what actually broke.
-      setSearchError(diag);
-      setSearchResults(null);
-      return;
-    }
-    // Soft diagnostics ride along with whatever results we did get.
-    setSearchError(diag && diag.kind !== "hard" ? diag : null);
     setSearchResults(results);
   };
 
@@ -1219,11 +762,6 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
 
   const handleGenerate = async () => {
     if (filled === 0 || analyzing) return;
-    // Legacy session with no relationship stage — force a pick first.
-    if (!deal.currentRelationship) { setRelGate(true); return; }
-    // No stakeholder chosen yet: the Matrix is stakeholder-centered, so block the
-    // full analysis and point the rep at AI Search to identify who to build around.
-    if (deal.currentRelationship === "no_contact" && !(deal.prospect && deal.prospect.trim())) { setNeedStakeholder(true); return; }
     // Soft nudge (once): if they never said what they're selling, the analysis stays
     // generic. Surface it, but never block. oppNudge latches so we never loop.
     if (!deal.opportunity?.trim() && !oppNudge) { setOppNudge(true); return; }
@@ -1309,7 +847,7 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
   return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", flexDirection: "column" }}>
       <style>{`
-        .matrix-cell { display: block; width: 100%; max-width: 100%; box-sizing: border-box; background: transparent; border: none; color: #fff; font-family: ${MONO}; font-size: 11px; line-height: 1.65; resize: none; outline: none; min-height: 72px; overflow-wrap: anywhere; }
+        .matrix-cell { width: 100%; background: transparent; border: none; color: #fff; font-family: ${MONO}; font-size: 11px; line-height: 1.65; resize: none; outline: none; min-height: 72px; }
         .matrix-cell::placeholder { color: #444; }
         @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes readingPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
@@ -1319,15 +857,7 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
       {analyzing && <AnalysisLoader steps={analyzeSteps} />}
 
       {searchResults !== null && (
-        <SearchReviewModal results={searchResults} assessment={contactAssessment} diag={searchError} deal={deal} onUseContact={handleUseContact} onAccept={handleAcceptResults} onClose={() => { setSearchResults(null); setContactAssessment(null); setSearchError(null); }} />
-      )}
-
-      {searchError && searchError.kind === "hard" && searchResults === null && (
-        <SearchDiagnosticModal diag={searchError} onClose={() => setSearchError(null)} onRetry={() => { setSearchError(null); handleSearch(); }} />
-      )}
-
-      {relGate && (
-        <RelationshipGate onPick={(val) => { setDeal({ ...deal, currentRelationship: val }); setRelGate(false); }} onClose={() => setRelGate(false)} />
+        <SearchReviewModal results={searchResults} onAccept={handleAcceptResults} onClose={() => setSearchResults(null)} />
       )}
 
       {/* Header */}
@@ -1335,8 +865,7 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
         <Btn variant="ghost" onClick={onBack} style={{ padding: "6px 12px", fontSize: "11px" }}>← BACK</Btn>
         <div style={{ width: "1px", height: "24px", background: "#333" }} />
         <span style={{ color: RED, fontSize: "15px", fontWeight: "700", fontFamily: CONDENSED, letterSpacing: "0.1em" }}>CONNECTION INTELLIGENCE MATRIX</span>
-        <span style={{ color: "#fff", fontSize: "11px", fontFamily: MONO }}>{deal.prospect?.trim() || "Stakeholder TBD"} · {deal.company}</span>
-        {deal.currentRelationship && <span style={{ fontSize: "9px", color: "#888", fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", border: `1px solid ${BORDER}`, borderRadius: "3px", padding: "2px 8px" }}>{relLabel(deal.currentRelationship)}</span>}
+        <span style={{ color: "#fff", fontSize: "11px", fontFamily: MONO }}>{deal.prospect} · {deal.company}</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: "12px", alignItems: "center" }}>
           <CodeChip code={code} status={cloudStatus} />
           <div style={{ width: "1px", height: "20px", background: "#333" }} />
@@ -1372,7 +901,7 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
           <div style={{ display: "grid", gridTemplateColumns: "130px 1fr 1fr 1fr", gap: "5px", marginBottom: "5px" }}>
             <div />
             {MATRIX_COLS.map(col => (
-              <div key={col} style={{ background: RED, borderRadius: "3px", padding: "10px 14px", textAlign: "center", fontSize: "14px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.14em", minWidth: 0 }}>{col}</div>
+              <div key={col} style={{ background: RED, borderRadius: "3px", padding: "10px 14px", textAlign: "center", fontSize: "14px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.14em" }}>{col}</div>
             ))}
           </div>
 
@@ -1390,8 +919,8 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
                 // Inferred cells get a loud amber left border so a guess never reads as a fact.
                 const leftBorder = isInferred ? AMBER : (isFocused ? RED : hasValue ? "#383838" : "#1e1e1e");
                 return (
-                  <div key={key} style={{ background: SURFACE, border: `1px solid ${isFocused ? RED : hasValue ? "#383838" : "#1e1e1e"}`, borderLeft: `3px solid ${leftBorder}`, borderRadius: "3px", padding: "14px 14px 12px 14px", transition: "border-color 0.2s", display: "flex", flexDirection: "column", gap: "6px", minHeight: "130px", minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
+                  <div key={key} style={{ background: SURFACE, border: `1px solid ${isFocused ? RED : hasValue ? "#383838" : "#1e1e1e"}`, borderLeft: `3px solid ${leftBorder}`, borderRadius: "3px", padding: "14px 14px 12px 14px", transition: "border-color 0.2s", display: "flex", flexDirection: "column", gap: "6px", minHeight: "130px" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "6px", flexWrap: "wrap", rowGap: "5px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", rowGap: "3px", minWidth: 0, flex: "1 1 auto" }}>
                         <div style={{ fontSize: "9px", color: isFocused ? RED : "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", transition: "color 0.2s", textTransform: "uppercase", paddingTop: "2px" }}>
                           {meta.label}
@@ -1451,9 +980,7 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: "11px", fontWeight: "700", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", marginBottom: "2px" }}>AI INTELLIGENCE SEARCH</div>
                 <div style={{ fontSize: "10px", color: "#fff", fontFamily: MONO }}>
-                  {deal.currentRelationship === "no_contact" && !(deal.prospect && deal.prospect.trim())
-                    ? `Finds the most logical stakeholder to start with at ${deal.company}`
-                    : `Searches public sources for ${deal.prospect?.trim() || "this contact"} at ${deal.company}`}
+                  Searches public sources for {deal.prospect} at {deal.company}
                 </div>
               </div>
               <button onClick={handleSearch} disabled={searching}
@@ -1463,29 +990,9 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
               >
                 {searching
                   ? <span style={{ animation: "readingPulse 1s ease-in-out infinite", display: "inline-block" }}>● {searchProgress || "SEARCHING..."}</span>
-                  : (deal.currentRelationship === "no_contact" && !(deal.prospect && deal.prospect.trim()) ? "◈ FIND A STAKEHOLDER" : "◈ SEARCH THE WEB")}
+                  : "◈ SEARCH THE WEB"}
               </button>
             </div>
-
-            {contactSetNudge && (
-              <div style={{ marginBottom: "12px", padding: "12px 14px", background: "rgba(34,197,94,0.06)", border: `1px solid rgba(34,197,94,0.35)`, borderRadius: "4px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                <div style={{ fontSize: "11px", color: GREEN, fontFamily: MONO, lineHeight: "1.6", flex: 1, minWidth: "220px" }}>
-                  Recommended by AI Search: <strong>{deal.prospect}</strong>{deal.role ? `, ${deal.role}` : ""}{contactSetReason ? ` — ${contactSetReason}` : ""}. Run AI Intelligence Search to pull this person's public intel into the Matrix.
-                </div>
-                <button onClick={() => { setContactSetNudge(false); setContactSetReason(""); handleSearch(); }} disabled={searching}
-                  style={{ background: "#1a1a1a", border: `1px solid ${GREEN}`, color: GREEN, borderRadius: "3px", padding: "8px 16px", cursor: searching ? "not-allowed" : "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.1em", whiteSpace: "nowrap" }}>
-                  ◈ PULL THEIR INTEL
-                </button>
-              </div>
-            )}
-
-            {needStakeholder && (
-              <div style={{ marginBottom: "12px", padding: "12px 14px", background: "rgba(204,0,0,0.06)", border: `1px solid rgba(204,0,0,0.35)`, borderRadius: "4px" }}>
-                <div style={{ fontSize: "11px", color: RED, fontFamily: MONO, lineHeight: "1.6" }}>
-                  Pick a stakeholder before running the full Matrix Analysis. The Matrix is built around one person — run AI Intelligence Search to identify the most logical starting contact, then use them.
-                </div>
-              </div>
-            )}
 
             {oppNudge && !deal.opportunity?.trim() && !analyzing && (
               <div style={{ marginBottom: "12px", padding: "12px 14px", background: "rgba(245,158,11,0.06)", border: `1px solid rgba(245,158,11,0.35)`, borderRadius: "4px" }}>
@@ -1579,10 +1086,10 @@ ${obj.fallback ? `<p style="font-size:12px;color:#888;line-height:1.7;"><strong 
 ${MATRIX_ROWS.map(r => `<tr><th style="background:#CC0000;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.08em;padding:8px;text-align:center;border:2px solid #0a0a0a;">${r}</th>${MATRIX_COLS.map(c => `<td style="background:#141414;color:#ccc;font-size:10px;line-height:1.55;padding:10px;vertical-align:top;border:2px solid #0a0a0a;">${esc(cells[`${r}|${c}`]) || "<span style='color:#555;'>—</span>"}</td>`).join("")}</tr>`).join("")}
 </table></div>` : "";
 
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Matrix Analysis — ${esc(deal.prospect || "Stakeholder TBD")}</title><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:'IBM Plex Mono',monospace;padding:40px 48px;max-width:1000px;margin:0 auto;line-height:1.6}@media print{body{background:#fff;color:#000}}</style></head><body>
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Matrix Analysis — ${esc(deal.prospect)}</title><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:'IBM Plex Mono',monospace;padding:40px 48px;max-width:1000px;margin:0 auto;line-height:1.6}@media print{body{background:#fff;color:#000}}</style></head><body>
 <div style="font-size:13px;font-weight:700;color:#CC0000;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.18em;margin-bottom:8px;">CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
-<div style="font-size:38px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;line-height:1;">${esc(deal.prospect || "Stakeholder TBD").toUpperCase()}</div>
-<div style="font-size:13px;color:#fff;font-family:'IBM Plex Mono',monospace;margin-top:6px;margin-bottom:28px;">${esc(deal.role) || "Role TBD"}${deal.company ? ` · ${esc(deal.company)}` : ""}${deal.opportunity ? ` · ${esc(deal.opportunity)}` : ""}${deal.currentRelationship ? ` · ${esc(relLabel(deal.currentRelationship))}` : ""}</div>
+<div style="font-size:38px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;line-height:1;">${esc(deal.prospect).toUpperCase()}</div>
+<div style="font-size:13px;color:#fff;font-family:'IBM Plex Mono',monospace;margin-top:6px;margin-bottom:28px;">${esc(deal.role)}${deal.company ? ` · ${esc(deal.company)}` : ""}${deal.opportunity ? ` · ${esc(deal.opportunity)}` : ""}</div>
 ${analysis.matrix_health_note ? `<div style="border-left:3px solid #CC0000;padding:10px 16px;margin-bottom:32px;font-size:13px;color:#ccc;font-style:italic;">● ${esc(analysis.matrix_health_note)}</div>` : ""}
 ${gridHTML}
 ${(briefingHTML || findingsHTML) ? `<div style="margin-bottom:32px;"><div style="display:inline-block;background:#fff;border:1px solid #CC0000;border-radius:3px;padding:5px 14px;margin-bottom:20px;"><span style="color:#000;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.16em;">WHAT THE MATRIX IS TELLING YOU</span></div>${briefingHTML}${findingsHTML}</div>` : ""}
@@ -1598,7 +1105,7 @@ ${actionsHTML}
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `${(deal.prospect || "matrix").replace(/\s+/g, "_")}_matrix_analysis.html`;
+    a.href = url; a.download = `${deal.prospect.replace(/\s+/g, "_")}_matrix_analysis.html`;
     a.click(); URL.revokeObjectURL(url);
   }, [analysis, deal]);
 
@@ -1610,8 +1117,7 @@ ${actionsHTML}
         <Btn onClick={onBack} style={{ padding: "6px 14px", fontSize: "11px" }}>✎ EDIT MATRIX</Btn>
         <div style={{ width: "1px", height: "24px", background: "#333" }} />
         <span style={{ color: RED, fontSize: "15px", fontWeight: "700", fontFamily: CONDENSED, letterSpacing: "0.1em" }}>MATRIX ANALYSIS</span>
-        <span style={{ color: "#fff", fontSize: "11px", fontFamily: MONO }}>{deal.prospect?.trim() || "Stakeholder TBD"} · {deal.company}</span>
-        {deal.currentRelationship && <span style={{ fontSize: "9px", color: "#888", fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", border: `1px solid ${BORDER}`, borderRadius: "3px", padding: "2px 8px" }}>{relLabel(deal.currentRelationship)}</span>}
+        <span style={{ color: "#fff", fontSize: "11px", fontFamily: MONO }}>{deal.prospect} · {deal.company}</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: "10px", alignItems: "center" }}>
           <CodeChip code={code} status={cloudStatus} />
           <div style={{ width: "1px", height: "20px", background: "#333" }} />
@@ -1641,11 +1147,11 @@ ${actionsHTML}
 
         {/* Report header */}
         <div style={{ marginBottom: "8px", fontSize: "13px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.18em" }}>CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
-        <div style={{ fontSize: "42px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.04em", lineHeight: 1, marginBottom: "10px" }}>{(deal.prospect?.trim() || "Stakeholder TBD").toUpperCase()}</div>
+        <div style={{ fontSize: "42px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.04em", lineHeight: 1, marginBottom: "10px" }}>{deal.prospect.toUpperCase()}</div>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
           <div style={{ width: "3px", height: "16px", background: RED, borderRadius: "1px", flexShrink: 0 }} />
           <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO }}>
-            {deal.role || "Role TBD"}{deal.company ? ` · ${deal.company}` : ""}{deal.opportunity ? ` · ${deal.opportunity}` : ""}{deal.currentRelationship ? ` · ${relLabel(deal.currentRelationship)}` : ""}
+            {deal.role}{deal.company ? ` · ${deal.company}` : ""}{deal.opportunity ? ` · ${deal.opportunity}` : ""}
           </div>
         </div>
 
