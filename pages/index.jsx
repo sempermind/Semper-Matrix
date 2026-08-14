@@ -546,7 +546,99 @@ function RelationshipGate({ onPick, onClose }) {
   );
 }
 
-function SearchReviewModal({ results, assessment, deal, onUseContact, onAccept, onClose }) {
+// ─── SEARCH FAILURE DIAGNOSIS ──────────────────
+// Translate a raw error (HTTP status + body, or "web_search never ran") into a
+// plain-English most-likely cause and the exact thing to check. This is what the
+// old "thin online footprint" message was hiding.
+function diagnoseSearchError(diag) {
+  if (!diag) return null;
+  if (diag.kind === "no_browse") {
+    return {
+      headline: "The search ran, but never actually browsed the web",
+      cause: "Your /api/chat route reached the model, but no web_search activity came back. The route is almost certainly not forwarding the `tools` field to the Anthropic API — so the model answered from memory and reported \"found nothing\" for every cell.",
+      fix: "In your /api/chat handler, make sure you pass `tools` (and `system`) straight through to the Anthropic messages call — not just model / max_tokens / messages.",
+    };
+  }
+  const err = (diag.errors && diag.errors[0]) || {};
+  const status = err.status;
+  const detail = err.detail || "";
+  if (status === 404) return {
+    headline: "The /api/chat endpoint returned 404 — it isn't there",
+    cause: "The front end is calling a relative /api/chat route that doesn't exist at this URL. Either the serverless function isn't deployed, or this build is running somewhere with no backend (e.g. a raw artifact preview).",
+    fix: "Deploy the /api/chat (and /api/session) functions to the same origin, or point the fetch at wherever your chat proxy actually lives.",
+    detail,
+  };
+  if (status === 401 || status === 403) return {
+    headline: `Auth rejected (${status}) — the key isn't working`,
+    cause: "The /api/chat route reached Anthropic but the API key is missing, wrong, or not permitted for this model / for the web_search tool.",
+    fix: "Check ANTHROPIC_API_KEY in your deployment env, and confirm the key's org has the web_search tool and claude-sonnet-4-6 enabled.",
+    detail,
+  };
+  if (status === 429) return {
+    headline: "Rate limited (429)",
+    cause: "Anthropic throttled the burst. The search fires up to 10 calls at once (9 cells + assessment), which can trip per-minute limits on a new key.",
+    fix: "Lower the BATCH size, add a short delay between batches, or raise your rate limit.",
+    detail,
+  };
+  if (status === 500 || status === 502 || status === 503 || status === 504) return {
+    headline: `Server error (${status}) from /api/chat`,
+    cause: "The route itself threw or timed out. With 10 parallel web_search calls, a serverless function on a short maxDuration is a prime suspect for a timeout.",
+    fix: "Check the function logs for the stack trace, and raise maxDuration if it's timing out on the search calls.",
+    detail,
+  };
+  if (status === "api_error") return {
+    headline: "Anthropic returned an error inside the response",
+    cause: "The route forwarded a request the API rejected — commonly an invalid model string, a bad tool definition, or the web_search tool not being enabled on the account.",
+    fix: "Read the detail below — it's the API's own error message.",
+    detail,
+  };
+  if (status === "no_content") return {
+    headline: "The route replied, but with nothing usable",
+    cause: "A 200 came back with no text/tool content in the expected Anthropic shape. Your route may be reshaping or truncating the response before it reaches the app.",
+    fix: "Return the Anthropic response body as-is (its `content` array) from /api/chat.",
+    detail,
+  };
+  if (status === "fetch_failed") return {
+    headline: "The request never completed",
+    cause: "The fetch to /api/chat threw before getting a response — a network/CORS failure, or again, no such endpoint at this origin.",
+    fix: "Confirm /api/chat is reachable from the browser (check the Network tab) and returns JSON.",
+    detail,
+  };
+  return {
+    headline: status ? `Search failed (${status})` : "Search failed",
+    cause: "The backend call didn't return usable intel. Detail below.",
+    fix: "Check your /api/chat route and its logs.",
+    detail,
+  };
+}
+
+function SearchDiagnosticModal({ diag, onClose, onRetry }) {
+  const d = diagnoseSearchError(diag);
+  if (!d) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+      <div style={{ background: SURFACE, border: `1px solid ${AMBER}`, borderRadius: "6px", padding: "28px", maxWidth: "560px", width: "100%" }}>
+        <div style={{ fontSize: "11px", color: AMBER, fontFamily: CONDENSED, letterSpacing: "0.14em", marginBottom: "10px", fontWeight: "700" }}>◈ SEARCH DIDN'T RUN — DIAGNOSTIC</div>
+        <div style={{ fontSize: "16px", color: "#fff", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.04em", marginBottom: "14px" }}>{d.headline}</div>
+        <div style={{ fontSize: "12px", color: "#ddd", fontFamily: MONO, lineHeight: "1.7", marginBottom: "14px" }}>{d.cause}</div>
+        <div style={{ fontSize: "10px", color: AMBER, fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "5px" }}>WHAT TO CHECK</div>
+        <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.7", marginBottom: d.detail ? "14px" : "20px" }}>{d.fix}</div>
+        {d.detail ? (
+          <div style={{ marginBottom: "20px" }}>
+            <div style={{ fontSize: "10px", color: "#888", fontFamily: CONDENSED, letterSpacing: "0.12em", fontWeight: "700", marginBottom: "5px" }}>RAW RESPONSE</div>
+            <pre style={{ fontSize: "10px", color: "#aaa", fontFamily: MONO, background: "#0a0a0a", border: `1px solid ${BORDER}`, borderRadius: "3px", padding: "10px 12px", whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: "160px", overflowY: "auto", margin: 0 }}>{d.detail}</pre>
+          </div>
+        ) : null}
+        <div style={{ display: "flex", gap: "10px" }}>
+          <Btn variant="ghost" onClick={onClose} style={{ width: "100%" }}>CLOSE</Btn>
+          {onRetry && <Btn onClick={onRetry} style={{ width: "100%" }}>RETRY SEARCH</Btn>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SearchReviewModal({ results, assessment, diag, deal, onUseContact, onAccept, onClose }) {
   const found = results.filter(r => r.result?.found);
   const [accepted, setAccepted] = useState(() => {
     const a = {};
@@ -558,6 +650,12 @@ function SearchReviewModal({ results, assessment, deal, onUseContact, onAccept, 
     found.forEach(r => { e[r.key] = r.result.intel; });
     return e;
   });
+
+  // If the search didn't truly run (route degraded, tools not forwarded), show
+  // the real cause — never the "thin footprint" message, which hides the bug.
+  if (found.length === 0 && !assessment && diag) {
+    return <SearchDiagnosticModal diag={diag} onClose={onClose} onRetry={null} />;
+  }
 
   if (found.length === 0 && !assessment) {
     return (
@@ -886,6 +984,7 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
   const [searching, setSearching] = useState(false);
   const [searchProgress, setSearchProgress] = useState(null);
   const [searchResults, setSearchResults] = useState(null);
+  const [searchError, setSearchError] = useState(null);   // real backend failure, surfaced instead of "no intel found"
   const [searchRan, setSearchRan] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState(null);
@@ -934,12 +1033,30 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
           messages: [{ role: "user", content: userContent }],
         }),
       });
+      // The backend answered with an HTTP error (route missing, bad key, 500,
+      // timeout). Carry the real status + body so the UI can show WHY instead of
+      // pretending the person has a thin footprint.
+      if (!resp.ok) {
+        let detail = "";
+        try { detail = (await resp.text()).slice(0, 400); } catch { /* ignore */ }
+        return { key, row, col, existing, result: { found: false }, error: { status: resp.status, detail } };
+      }
       const data = await resp.json();
-      const textBlocks = (data.content || []).filter(b => b.type === "text");
+      // An error object came back inside a 200 (e.g. web_search not enabled on
+      // the key, or the route forwarded an Anthropic error body verbatim).
+      if (data && (data.type === "error" || data.error)) {
+        return { key, row, col, existing, result: { found: false }, error: { status: "api_error", detail: JSON.stringify(data.error || data).slice(0, 400) } };
+      }
+      const content = data.content || [];
+      // Proof that web_search actually ran server-side. If the /api/chat route
+      // drops the `tools` field, the model can't browse and returns found:false
+      // for every cell — which is indistinguishable from a real thin footprint.
+      const browsed = content.some(b => b.type === "server_tool_use" || b.type === "web_search_tool_result");
+      const textBlocks = content.filter(b => b.type === "text");
       const lastText = textBlocks[textBlocks.length - 1];
       if (lastText && lastText.text) {
         const cleaned = lastText.text
-          .replace(/]*>|<\/antml:cite>/g, "")
+          .replace(/<cite[^>]*>|<\/cite>/g, "")
           .replace(/```json|```/g, "")
           .trim();
         const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
@@ -947,13 +1064,16 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
           try {
             const parsed = JSON.parse(jsonMatch[0]);
             if (parsed.intel) parsed.intel = parsed.intel.replace(/<[^>]*>/g, "").trim();
-            return { key, row, col, existing, result: parsed };
-          } catch { return { key, row, col, existing, result: { found: false } }; }
+            return { key, row, col, existing, result: parsed, browsed };
+          } catch { return { key, row, col, existing, result: { found: false }, browsed }; }
         }
+        return { key, row, col, existing, result: { found: false }, browsed };
       }
-      return { key, row, col, existing, result: { found: false } };
-    } catch {
-      return { key, row, col, existing, result: { found: false } };
+      // 200 with no usable content block at all — that's a malformed route
+      // response, not an empty search. Flag it.
+      return { key, row, col, existing, result: { found: false }, browsed, error: { status: "no_content", detail: JSON.stringify(data).slice(0, 400) } };
+    } catch (e) {
+      return { key, row, col, existing, result: { found: false }, error: { status: "fetch_failed", detail: String((e && e.message) || e).slice(0, 400) } };
     }
   };
 
@@ -971,16 +1091,26 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
           messages: [{ role: "user", content: contactAssessmentUser(deal) }],
         }),
       });
+      if (!resp.ok) {
+        let detail = "";
+        try { detail = (await resp.text()).slice(0, 400); } catch { /* ignore */ }
+        return { __error: { status: resp.status, detail } };
+      }
       const data = await resp.json();
-      const textBlocks = (data.content || []).filter(b => b.type === "text");
+      if (data && (data.type === "error" || data.error)) {
+        return { __error: { status: "api_error", detail: JSON.stringify(data.error || data).slice(0, 400) } };
+      }
+      const content = data.content || [];
+      const browsed = content.some(b => b.type === "server_tool_use" || b.type === "web_search_tool_result");
+      const textBlocks = content.filter(b => b.type === "text");
       const lastText = textBlocks[textBlocks.length - 1];
       if (lastText && lastText.text) {
         const cleaned = lastText.text.replace(/<\/?cite[^>]*>/g, "").replace(/```json|```/g, "").trim();
         const m = cleaned.match(/\{[\s\S]*\}/);
-        if (m) { try { return JSON.parse(m[0]); } catch { return null; } }
+        if (m) { try { const parsed = JSON.parse(m[0]); parsed.__browsed = browsed; return parsed; } catch { return { __error: { status: "parse_failed", detail: cleaned.slice(0, 400) }, __browsed: browsed }; } }
       }
-      return null;
-    } catch { return null; }
+      return { __error: { status: "no_content", detail: JSON.stringify(data).slice(0, 400) }, __browsed: browsed };
+    } catch (e) { return { __error: { status: "fetch_failed", detail: String((e && e.message) || e).slice(0, 400) } }; }
   };
 
   // Populate the Matrix stakeholder from the AI's recommendation without resetting
@@ -1000,6 +1130,7 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
     // Legacy session created before Current Relationship existed — force a pick first.
     if (!deal.currentRelationship) { setRelGate(true); return; }
     setSearching(true);
+    setSearchError(null);
     setContactSetNudge(false);
     setContactSetReason("");
     setNeedStakeholder(false);
@@ -1025,12 +1156,47 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
       }
     }
 
-    const assessment = await assessmentPromise;
+    const rawAssessment = await assessmentPromise;
+    const assessmentErr = rawAssessment && rawAssessment.__error ? rawAssessment.__error : null;
+    const assessment = assessmentErr ? null : rawAssessment;
+
+    // ── FAILURE DETECTION ──────────────────────────────────────────────
+    // Separate "the search genuinely found nothing" from "the search never
+    // actually ran." The old code collapsed both into found:false and told the
+    // rep the person had a thin footprint — hiding every real error.
+    const cellErrors = results.filter(r => r.error).map(r => r.error);
+    const anyBrowsed = results.some(r => r.browsed) || (rawAssessment && rawAssessment.__browsed);
+    const ranCellSearches = !noContact && results.length > 0;
+
+    let diag = null;
+    if (noContact) {
+      // Only the assessment ran. If it errored, that's a hard failure.
+      if (assessmentErr) diag = { kind: "hard", errors: [assessmentErr] };
+    } else if (ranCellSearches && cellErrors.length === results.length) {
+      // Every one of the 9 cell calls failed the same way → transport/route down.
+      diag = { kind: "hard", errors: cellErrors.slice(0, 1) };
+    } else if (ranCellSearches && cellErrors.length > 0) {
+      // Some calls errored — partial degradation worth flagging but not fatal.
+      diag = { kind: "partial", errors: cellErrors.slice(0, 1), okCount: results.length - cellErrors.length };
+    } else if (ranCellSearches && cellErrors.length === 0 && !anyBrowsed) {
+      // Calls succeeded but web_search never actually ran server-side → the
+      // /api/chat route almost certainly isn't forwarding the `tools` field.
+      diag = { kind: "no_browse" };
+    }
 
     setSearching(false);
     setSearchProgress(null);
     setSearchRan(true);
     setContactAssessment(assessment);
+
+    if (diag && diag.kind === "hard") {
+      // Don't show the "thin footprint" lie. Show what actually broke.
+      setSearchError(diag);
+      setSearchResults(null);
+      return;
+    }
+    // Soft diagnostics ride along with whatever results we did get.
+    setSearchError(diag && diag.kind !== "hard" ? diag : null);
     setSearchResults(results);
   };
 
@@ -1153,7 +1319,11 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
       {analyzing && <AnalysisLoader steps={analyzeSteps} />}
 
       {searchResults !== null && (
-        <SearchReviewModal results={searchResults} assessment={contactAssessment} deal={deal} onUseContact={handleUseContact} onAccept={handleAcceptResults} onClose={() => { setSearchResults(null); setContactAssessment(null); }} />
+        <SearchReviewModal results={searchResults} assessment={contactAssessment} diag={searchError} deal={deal} onUseContact={handleUseContact} onAccept={handleAcceptResults} onClose={() => { setSearchResults(null); setContactAssessment(null); setSearchError(null); }} />
+      )}
+
+      {searchError && searchError.kind === "hard" && searchResults === null && (
+        <SearchDiagnosticModal diag={searchError} onClose={() => setSearchError(null)} onRetry={() => { setSearchError(null); handleSearch(); }} />
       )}
 
       {relGate && (
