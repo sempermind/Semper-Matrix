@@ -334,7 +334,43 @@ When you find nothing at all:
 // ─── ANALYSIS PROMPT ──────────────────────────
 // Shared context both halves of the analysis need: the intel, the pattern
 // library, and the classification rule. Sent with each of the two parallel calls.
+// Anti-slop rules baked into every generated section. Distilled from the
+// stop-slop, humanizer, and anti-ai-detector standards. Applies to ALL prose the
+// engine writes: health note, briefing, findings, objective, opener, iQ, gaps,
+// signals, next actions.
+const WRITING_RULES = `HOW TO WRITE (NON-NEGOTIABLE, APPLIES TO EVERY WORD IN EVERY FIELD):
+You are writing for a working salesperson. Write the way a sharp sales strategist talks, not the way an AI writes. These rules are hard constraints, not preferences.
+
+PUNCTUATION:
+- NO em dashes (—) and NO en dashes (–). None. Anywhere. This is the single most common AI tell. Use a period, a comma, a colon, or parentheses, or rewrite the sentence. Also no " -- " used as a dash.
+- Use straight quotes, not curly quotes.
+
+BANNED PHRASES AND WORDS (never use any of these):
+- Filler: "here's the thing," "the brutal truth," "the reality is," "let that sink in," "it's important to note," "it's worth noting," "needless to say," "simply put," "at the end of the day," "in today's landscape/world/environment," "game-changer," "dive into," "delve," "unpack," "navigate" (for challenges), "actually" (as emphasis).
+- AI vocabulary: leverage, landscape (as abstract noun), underscore, highlight (as verb), pivotal, crucial, testament, tapestry, intricate, interplay, showcase, foster, garner, enhance, robust, vibrant, align with, key (as filler adjective).
+- Significance inflation: "plays a vital role," "stands as a testament," "reflects a broader," "marks a turning point," "setting the stage for," "leaves an indelible mark."
+
+BANNED STRUCTURES:
+- No "not just X, but Y" and no "it's not about X, it's about Y" contrasts.
+- No rule-of-three lists used for rhythm ("faster, smarter, and stronger"). Only enumerate when the items are real and necessary.
+- No rhetorical questions as openers ("What does this mean for the deal?").
+- No fake-profound one-liners dropped at the end of a paragraph to sound deep.
+- No fake urgency closes ("The time is now," "Act today").
+- No stacking short punchy sentences for manufactured momentum.
+
+VOICE:
+- Direct sentences that say what they mean. Contractions are good. Vary sentence length so it reads like a person, not a template.
+- Specific beats vague every time: name the actual client, number, or role, not "various stakeholders" or "significant pressure."
+- Confident and plain, peer to peer, never corporate hedging and never servile.`;
+
 const ANALYSIS_CONTEXT = (matrixText, deal) => `You are the Semper Selling® Matrix Analysis Engine. Senior sales strategist. Find cross-cell gaps that reveal what's actually happening in this deal beneath the surface. A finding that restates one cell is not a finding.
+
+${WRITING_RULES}
+
+RELATIONSHIP CONTEXT — this changes how you analyze the deal:
+${deal.relationship === "existing"
+  ? `This is an EXISTING CUSTOMER. There is already a relationship and a history. Bias the read toward growth, expansion, renewal risk, and protecting what's been built. You can assume some rapport and prior context. Do NOT tell the rep to introduce themselves or establish credibility from scratch. The objective, opener, and next actions should pick up an ongoing relationship, not start one. Where the Matrix implies things already known from working together, treat them as more reliable.`
+  : `This is a NEW PROSPECT. There is no relationship yet and intel is thin by nature. Bias the read toward discovery and earning the right to a real conversation. Treat inferences as lighter and flag more of them for confirmation. Do NOT tell the rep to reference shared history, past work, or established trust that does not exist. The opener must earn attention cold. The objective and next actions must be realistic for someone with no relationship yet: no assuming rapport, no asking them to close or commit prematurely, no next steps that require access the rep hasn't earned.`}
 
 Deal: ${deal.prospect} (${deal.role} @ ${deal.company})
 
@@ -426,14 +462,14 @@ YOUR JOB: produce the PLAN for the rep's next call. First, silently identify the
   takes_steps = follows "TAKES STEPS", so it MUST start with "to" + a verb: "to bring in the two stakeholders whose buy-in he needs". NEVER start it with "agrees to" or a conjugated verb. (Right: "TAKES STEPS to bring in the two stakeholders…". Wrong: "TAKES STEPS agrees to include…")
   Keep each clause ~8-14 words, no em-dashes, no nested qualifiers. fallback = the minimum outcome if that step stalls — one short clause (under ~14 words) stating what they still agree to or share, phrased as an actual outcome, NOT a description of what to name. (Right: "he shares which revenue target he personally owns this year." Wrong: "names the pressure he's accountable for.")
 
-- OPENER (Command Attention with Insight): one opening the rep can say out loud, built in three moves — (1) LEAD WITH THE UNEXPECTED: a surprising stat, emerging trend, or new challenge from THEIR world; (2) PERSONALIZED RELEVANCE: tie it directly to their department, responsibility, legacy, or budget; (3) END WITH A QUESTION that makes them think about impact, readiness, risk, or opportunity. Put the full spoken opener in "text". In "note": if Future State intel is thin so the opener can't be truly specific to this person, say so plainly and name which cells to fill to sharpen it.
+- OPENER (Command Attention with Insight): one opening the rep can say out loud, built in three moves — (1) LEAD WITH THE UNEXPECTED: a surprising stat, emerging trend, or new challenge from THEIR world; (2) PERSONALIZED RELEVANCE: tie it directly to their department, responsibility, legacy, or budget; (3) END WITH A QUESTION that makes them think about impact, readiness, risk, or opportunity. SPECIFICITY IS THE WHOLE POINT: anchor move (1) in something actually sourced about THIS company or THIS person from the Matrix (a named acquisition, a real contract, a metric, a public commitment), not a generic industry platitude the rep could say to anyone. If the only hook available is a broad industry trend because the intel is thin, keep it but say so plainly in the note and name the exact cell to fill to make it land. For a NEW PROSPECT the opener earns a cold conversation and cannot reference history; for an EXISTING CUSTOMER it can pick up the ongoing relationship. Put the full spoken opener in "text". In "note": if Future State intel is thin so the opener can't be truly specific to this person, say so plainly and name which cells to fill to sharpen it.
 
 - iQ QUESTIONS: exactly 3, each a true insight question built with the INSIGHT QUESTION CONSTRUCTION above. EVERY question MUST contain all three components — ONE Current Reality AND ONE Future State AND ONE Personal Impact. Before you finalize each question, check it: can you point to the current reality, the future state, AND the personal stake inside the sentence? If any one of the three is missing, the question is INVALID — rewrite it until all three are present. A question that only names a current pressure, or only asks about the future, is NOT an insight question. Bank each: VALIDATION (tests a finding you believe is true) or DISCOVERY (opens something you can't yet see). At least one of each. Give Early/Mid/Late timing. For each question also give "listen_for": one short line (under ~20 words) naming what a CONFIRMING answer sounds like versus what would KILL your read — so the rep listens like an analyst, not a scriptreader.
   GOOD (follow this shape): "Given that you're personally signing county-level contracts, while positioning Kofile as one scaled platform across the combined HF Group units, what concerns you most about how much of that integration is riding on you specifically?"
   NOT an insight question (do NOT produce this — operational, no personal stake, names a need): "What are your biggest integration challenges and what tools would help?"
 
 - WATCH_FOR / WATCH_OUT: exactly 2 each. Observable signals only, tied to this person's intel.
-- NEXT_ACTIONS: exactly 3. Each is a clear recommendation the rep should act on before the next conversation, written for a professional who owns their own timing — do NOT assign specific days, deadlines, or "within X business days." State the recommendation plainly, then the rationale: why it matters and what it protects or unlocks. Never "prepare questions."
+- NEXT_ACTIONS: exactly 3. Each is a clear recommendation the rep should act on before the next conversation, written for a professional who owns their own timing — do NOT assign specific days, deadlines, or "within X business days." State the recommendation plainly, then the rationale: why it matters and what it protects or unlocks. Never "prepare questions." FEASIBILITY: every action must be realistic for where this relationship actually stands. For a NEW PROSPECT, do NOT recommend anything that assumes access, trust, or internal information the rep hasn't earned yet: no "meet with the CFO," no "get introduced to the team," no leaning on a relationship that doesn't exist. Favor research, outreach, and discovery the rep can genuinely do from where they are now. For an EXISTING CUSTOMER, actions can use the standing relationship. If an action depends on something the rep must first earn, say that first step instead.
 
 Return ONLY this JSON, no backticks, no markdown:
 {"defense":[{"title":"","body":""}],"objective":{"who":"","feels":"","sees_how":"","takes_steps":"","fallback":""},"opener":{"text":"","note":""},"iq_questions":[{"bank":"","question":"","timing":"","listen_for":""},{"bank":"","question":"","timing":"","listen_for":""},{"bank":"","question":"","timing":"","listen_for":""}],"watch_for":["",""],"watch_out":["",""],"next_actions":["","",""]}`;
@@ -631,7 +667,7 @@ function SearchReviewModal({ results, onAccept, onClose }) {
 
 // ─── SCREEN 1: DEAL ENTRY ──────────────────────
 function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode, codeError, clearCodeError }) {
-  const [form, setForm] = useState({ prospect: "", role: "", company: "", repCompany: "", opportunity: "" });
+  const [form, setForm] = useState({ prospect: "", role: "", company: "", repCompany: "", opportunity: "", relationship: "" });
   const [errors, setErrors] = useState({});
   const [codeInput, setCodeInput] = useState("");
   const [loadingCode, setLoadingCode] = useState(false);
@@ -662,6 +698,7 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
   const handleSubmit = () => {
     const errs = {};
     ["prospect", "role", "company", "repCompany"].forEach(k => { if (!form[k].trim()) errs[k] = true; });
+    if (!form.relationship) errs.relationship = true;
     if (Object.keys(errs).length) { setErrors(errs); return; }
     try { localStorage.setItem("semper_rep_company", form.repCompany.trim()); } catch { /* ignore */ }
     onComplete(form);
@@ -748,6 +785,30 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
               </div>
             ))}
           </div>
+
+          {/* Relationship — required. Reshapes how the analysis reads and plans the deal. */}
+          <div style={{ marginTop: "20px" }}>
+            <div style={{ fontSize: "10px", color: errors.relationship ? RED : "#888", fontFamily: MONO, letterSpacing: "0.12em", marginBottom: "8px" }}>
+              {errors.relationship ? "PICK ONE TO CONTINUE" : "RELATIONSHIP"}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              {[
+                { key: "new", label: "NEW PROSPECT", sub: "No relationship yet" },
+                { key: "existing", label: "EXISTING CUSTOMER", sub: "Relationship in place" },
+              ].map(opt => {
+                const on = form.relationship === opt.key;
+                return (
+                  <button key={opt.key}
+                    onClick={() => { setForm(p => ({ ...p, relationship: opt.key })); setErrors(e => ({ ...e, relationship: false })); }}
+                    style={{ textAlign: "left", background: on ? "rgba(204,0,0,0.12)" : "transparent", border: `1px solid ${on ? RED : (errors.relationship ? "rgba(204,0,0,0.5)" : "#333")}`, borderRadius: "4px", padding: "12px 14px", cursor: "pointer", transition: "all 0.15s" }}>
+                    <div style={{ fontSize: "13px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.08em", color: on ? "#fff" : "#bbb" }}>{opt.label}</div>
+                    <div style={{ fontSize: "10px", fontFamily: MONO, color: on ? "#fff" : "#666", marginTop: "3px" }}>{opt.sub}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div style={{ marginTop: "22px" }}>
             <Btn onClick={handleSubmit} style={{ width: "100%", padding: "14px" }}>BUILD THE MATRIX →</Btn>
           </div>
@@ -825,21 +886,25 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
     "NEEDS|RESULTS": `Based on what you know about ${deal.prospect}'s current performance pressures and public commitments as ${deal.role} at ${deal.company}, generate an intelligent hypothesis about what resources, tools, budget, or capabilities they likely need to close the gap between where they are and what they've committed to. Do NOT search the web. Reason from the distance between their current results and their stated goals.${needsRepContext} Return your hypothesis as: {"found": true, "intel": "Inferred: [your hypothesis]", "source": "inferred", "source_label": "Inferred from role and trajectory"}`,
   };
 
-  // Fetch + parse one cell's intel
+  // Fetch + parse one cell's intel. NEEDS cells are inference-only: they skip the
+  // web_search tool entirely (no round trip) and run leaner, which is most of the
+  // speed win on a full run.
   const searchOneCell = async (key, row, col) => {
     const existing = cells[key].trim();
+    const isInference = row === "NEEDS";
     const userContent = CELL_PROMPTS[key] + (existing ? `\n\nNote: The rep already knows this about the cell: "${existing}". Only surface new, additive information not already captured above.` : "");
     try {
+      const body = {
+        model: "claude-sonnet-4-6",
+        max_tokens: isInference ? 400 : 600,
+        system: SEARCH_SYSTEM_PROMPT,
+        messages: [{ role: "user", content: userContent }],
+      };
+      if (!isInference) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
       const resp = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 600,
-          system: SEARCH_SYSTEM_PROMPT,
-          tools: [{ type: "web_search_20250305", name: "web_search" }],
-          messages: [{ role: "user", content: userContent }],
-        }),
+        body: JSON.stringify(body),
       });
       const data = await resp.json();
       const textBlocks = (data.content || []).filter(b => b.type === "text");
@@ -869,20 +934,34 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
     setSearching(true);
     setSearchProgress("Searching public sources...");
 
-    const allKeys = [];
-    MATRIX_ROWS.forEach(row => MATRIX_COLS.forEach(col => allKeys.push({ key: `${row}|${col}`, row, col })));
+    const webKeys = [];
+    const inferKeys = [];
+    MATRIX_ROWS.forEach(row => MATRIX_COLS.forEach(col => {
+      const entry = { key: `${row}|${col}`, row, col };
+      (row === "NEEDS" ? inferKeys : webKeys).push(entry);
+    }));
 
     const results = [];
     let completed = 0;
-    const BATCH = 3;
+    const total = webKeys.length + inferKeys.length;
 
-    for (let i = 0; i < allKeys.length; i += BATCH) {
-      const batch = allKeys.slice(i, i + BATCH);
+    // Inference cells have no web round trip, so fire all three at once.
+    const inferPromise = Promise.all(inferKeys.map(({ key, row, col }) => searchOneCell(key, row, col)))
+      .then(r => { completed += r.length; setSearchProgress(`Searching... ${completed} of ${total} complete`); return r; });
+
+    // Web cells run concurrently in a wider batch; 6 at once is fine for one rep.
+    const BATCH = 6;
+    const webResultsNested = [];
+    for (let i = 0; i < webKeys.length; i += BATCH) {
+      const batch = webKeys.slice(i, i + BATCH);
       const batchResults = await Promise.all(batch.map(({ key, row, col }) => searchOneCell(key, row, col)));
-      results.push(...batchResults);
+      webResultsNested.push(...batchResults);
       completed += batch.length;
-      setSearchProgress(`Searching... ${completed} of 9 complete`);
+      setSearchProgress(`Searching... ${completed} of ${total} complete`);
     }
+
+    const inferResults = await inferPromise;
+    results.push(...webResultsNested, ...inferResults);
 
     setSearching(false);
     setSearchProgress(null);
@@ -1443,7 +1522,6 @@ ${actionsHTML}
                       <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: health.color, flexShrink: 0 }} />
                       <span style={{ fontSize: "16px", fontFamily: CONDENSED, fontWeight: "900", letterSpacing: "0.1em", color: health.color }}>{health.label}</span>
                     </div>
-                    <span title={health.tip} style={{ fontSize: "10px", color: "#666", fontFamily: MONO, cursor: "help", borderBottom: "1px dotted #444" }}>what does this mean?</span>
                   </div>
                   {analysis.matrix_health_note && (
                     <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.75", marginTop: "12px", maxWidth: "760px" }}>{analysis.matrix_health_note}</div>
