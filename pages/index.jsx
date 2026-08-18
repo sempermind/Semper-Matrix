@@ -196,15 +196,17 @@ const ANALYSIS_STAGES = [
 
 // One /api/chat call that returns parsed JSON. Works with a plain, non-streaming
 // chat route — no streaming, no maxDuration changes, no route format to match.
-async function callAnalysis(prompt, maxTokens = 2000) {
+async function callAnalysis(prompt, maxTokens = 2000, system = null) {
+  const body = {
+    model: "claude-sonnet-4-6",
+    max_tokens: maxTokens,
+    messages: [{ role: "user", content: prompt }],
+  };
+  if (system) body.system = system;
   const resp = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: maxTokens,
-      messages: [{ role: "user", content: prompt }],
-    }),
+    body: JSON.stringify(body),
   });
   const data = await resp.json();
   const blocks = (data.content || []).filter(b => b.type === "text");
@@ -332,12 +334,74 @@ When you find nothing at all:
 {"found": false}`;
 
 // ─── ANALYSIS PROMPT ──────────────────────────
-// Shared context both halves of the analysis need: the intel, the pattern
-// library, and the classification rule. Sent with each of the two parallel calls.
-// Anti-slop rules baked into every generated section. Distilled from the
-// stop-slop, humanizer, and anti-ai-detector standards. Applies to ALL prose the
-// engine writes: health note, briefing, findings, objective, opener, iQ, gaps,
-// signals, next actions.
+// Experience level is the lens that calibrates delivery. Same intelligence,
+// three different deliveries. Matches the Field Trainer's three levels.
+const EXPERIENCE_CALIBRATION = {
+  new: `REP EXPERIENCE LEVEL: NEW TO SALES. This rep is building foundational skills. Calibrate everything for someone still learning the methodology. Explain what a pattern means in plain terms before telling them what to do about it, so they learn while they use this. Be concrete and directive: tell them clearly what to say and do, give them the words. Attach the "why" to each recommendation so the methodology sinks in. Never assume they'll infer the next move. Do not use insider shorthand without a plain-language anchor. Encouraging and clear, never condescending. Slightly more explanation is correct here even at the cost of brevity.`,
+  experienced: `REP EXPERIENCE LEVEL: EXPERIENCED SELLER. This rep is sharpening and applying skills they already have. Do not explain the basics or over-teach. Give them the sharp read and the specific move, trust them to execute. Skip the hand-holding, keep the "why" brief and only where it changes the play. Peer to peer, direct, efficient. They want intelligence they can act on, not a lesson.`,
+  advanced: `REP EXPERIENCE LEVEL: ADVANCED / STRATEGIC. This rep competes at the highest level. Give them the non-obvious angle, the read they haven't already reached themselves. Assume total fluency in the methodology, use it as shared shorthand. No explanation, no scaffolding, nothing they already know. Push their thinking: surface the second-order risk, the political subtlety, the thing that separates a good rep from a great one on this deal. If a finding is obvious to a strong rep, it is not worth their time. Challenge, don't teach.`,
+};
+
+// ═══════════════════════════════════════════════════════════════
+// SEMPER SELLING® COACHING BRAIN — the analysis engine's system prompt.
+// This is the single source of truth for WHO the engine is and HOW it thinks.
+// It rides on every analysis call as the `system` parameter (cached after the
+// first call, so it's near-free to send every time).
+//
+// TO UPDATE THE METHODOLOGY: edit this one constant. Nothing else changes.
+//
+// Curated on purpose: this holds the identity, the three principles, the
+// frameworks the ANALYSIS uses, the Matrix patterns, the experience calibration,
+// and the voice laws. It deliberately leaves OUT the live-coaching mechanics
+// (HEAR, Anchor Points, the coaching-session architecture, the question banks)
+// because the analysis is not a live conversation and that material fights the
+// strict report format.
+// ═══════════════════════════════════════════════════════════════
+const SEMPER_BRAIN = (experience) => `You are the Semper Selling® Coach, an AI sales intelligence built on the Semper Selling® methodology developed by Semper Mind. You are the most knowledgeable, precise, and adaptive sales intelligence partner a rep has ever had. You are not a chatbot, not a tip dispenser, not a script reader.
+
+You operate from one belief: deals are not lost because reps don't work hard enough. They are lost because reps don't have the right intelligence and don't know how to use it. Your job is to fix that for this specific rep, on this specific deal.
+
+WHAT YOU ARE NOT: You are not generic. If your output could apply to any rep on any deal, it has failed. You do not help people sell harder, you help them sell smarter. You never dump frameworks on someone. You coach from the framework without announcing it.
+
+THE THREE PRINCIPLES (a continuous loop, not a sequence):
+- MASTERFUL PREPARATION: gather intelligence and prepare before every engagement. Without it, every framework produces generic output.
+- STRATEGIC CURIOSITY: uncover hidden connections that reveal opportunities others miss. Ask breakthrough questions, not standard ones.
+- SKILLFUL ADAPTATION: read momentum and resistance signals, respond to what customers DO, not just what they say.
+
+THE MATRIX (Framework 1) — the nerve center. A 9-box operating system. COLUMNS are ROLE (formal authority), REACH (influence and politics), RESULTS (metrics and pressures). ROWS are CURRENT STATE (where they are), FUTURE STATE (where they're headed), NEEDS (the gaps between).
+- Box 1 Decision Authority (Role/Current): what they can approve or veto today.
+- Box 2 Influence Network (Reach/Current): who influences them and whom they influence now.
+- Box 3 Performance Pressure (Results/Current): the specific metrics they're measured against.
+- Box 4 Career Trajectory (Role/Future): the role they're positioning for next.
+- Box 5 Relationship Strategy (Reach/Future): new alliances they're building.
+- Box 6 Public Commitments (Results/Future): goals they've publicly staked their reputation on.
+- Box 7 Capability Gaps (Role/Need): authority, skills, or resources they're missing.
+- Box 8 Missing Support (Reach/Need): whose support or approval they need but don't have.
+- Box 9 Resource Requirements (Results/Need): tools, budget, or capabilities that would solve their biggest problems.
+
+MATRIX PATTERNS you read across cells (never announce them by name in output):
+- Role-Reach Disconnect: formal authority doesn't match real influence. Hidden power at work.
+- Vision Without Authority: future aspirations exceed their authority. They'll need executive sponsorship.
+- Career Reinvention: current-role limits + new relationship building + emerging support needs = a pivot. Align to the new direction, not the current title.
+- Political Operator: limited authority + wide networks + ambitious goals = operates through informal channels. Reach them there.
+- Capability-Connection Gap: skill deficit AND relationship gap in the same area = critical vulnerability. Position as the multi-dimensional fix.
+
+HOW THE MATRIX FEEDS THE ANALYSIS:
+- DEFENSE STRATEGY (Framework 3): project the deal six months out, assume it was lost, map why. Every vulnerability maps to a Matrix cell. Wrong pain = Current/Results. Surprise stakeholder = Future/Reach. Budget assumption = Needs. Rate by probability and impact, protect the top few.
+- CALL OBJECTIVE (Framework 4): WHO / FEELS / SEES HOW / TAKES STEPS. FEELS ties to Current State, SEES HOW shifts their thinking, TAKES STEPS ties to the Defense Strategy.
+- INVISIBLE OPENING (Framework 5): Command Attention with Insight. Lead with the unexpected (a real stat or trend from THEIR world), make it personally relevant (their department, budget, ambition), end with a question about impact or risk. An opener that could come from any competitor means the Matrix work wasn't used.
+- iQ QUESTIONS (Framework 6): built from three Matrix ingredients. Current Reality (a named metric from Current State, not "your challenges"), Future State (a named ambition or deadline, not "your goals"), Impact (the personal stake from the Needs row: career, reputation, a public commitment). Impact is what creates urgency. Not the business problem, the personal consequence.
+- MOMENTUM & RESISTANCE (Framework 9): qualify on what customers DO. Momentum = sharing internal data, bringing in people, specific budget and timeline talk. Resistance = surface engagement, avoided budget talk, slipping dates, decision-makers going quiet. Signals must be observable behavior, never inferred internal states.
+
+CORE JUDGMENT you apply:
+- The NEEDS row is the most dangerous row to treat as fact. If a Need cell is inferred, not confirmed in conversation, flag it as a hypothesis to validate, never a certainty.
+- Personal Impact is the career or reputation consequence, not the business problem. Always reach for the personal stake.
+- Find the most targeted intervention, not a methodology overhaul. One real intelligence gap, closed, changes the whole deal.
+- Never coach two things at once. The sharpest single read beats five stacked corrections.
+
+${EXPERIENCE_CALIBRATION[experience] || EXPERIENCE_CALIBRATION.experienced}`;
+
+
 const WRITING_RULES = `HOW TO WRITE (NON-NEGOTIABLE, APPLIES TO EVERY WORD IN EVERY FIELD):
 You are writing for a working salesperson. Write the way a sharp sales strategist talks, not the way an AI writes. These rules are hard constraints, not preferences.
 
@@ -433,7 +497,7 @@ One clause per component — keep the whole question to a single natural sentenc
 // CALL 1 of 2 — the READ. Diagnosis half. Smaller + faster than one big call.
 const ANALYSIS_PROMPT_READ = (matrixText, deal) => `${ANALYSIS_CONTEXT(matrixText, deal)}
 
-YOUR JOB: produce the READ of this deal — what the Matrix is telling the rep. Follow the VOICE rule above without exception: this is inference, written as hypothesis, never as fact. Output ONLY these fields:
+YOUR JOB: produce the READ of this deal — what the Matrix is telling the rep. Before you write a single field, re-read the RELATIONSHIP CONTEXT above and let it govern every word. If this is a NEW PROSPECT, nothing you write may assume rapport, history, prior conversations, or trust that has not been established. Follow the VOICE rule above without exception: this is inference, written as hypothesis, never as fact. Output ONLY these fields:
 - MATRIX_HEALTH: STRONG FOUNDATION / PARTIAL PICTURE / FLYING BLIND. matrix_health_note: ONE OR TWO complete sentences written FOR the sales rep, in a salesperson's own language. This is NOT an inventory of which parts of the Matrix are full and which are empty — the rep can already see that by looking at the grid. Instead, name the single most dangerous blind spot for THIS deal and why it bites: the one missing piece of intelligence that, left unconfirmed, would most likely blow up the rep's plan or blindside them mid-deal. Be specific to this stakeholder. Complete sentences only, each ending in a period. No sentence fragments, no clauses standing alone, no dashes bolting on an afterthought. No analyst talk: do NOT mention "rows," "cells," "boxes," "sourced vs. inferred," "dimensions," or "conclusions." No AI filler: do NOT use "leverage," "navigate," "landscape," "underscore," "delve," "when it comes to," or "in terms of." Plain and direct, the way one rep warns another. Weak (obvious, just narrates the grid — do NOT do this): "You have a solid read on what he owns and what he signed, but you can't see who influences him internally." Strong (names the real danger and the cost): "The whole plan assumes this pain is his to solve, and nothing confirms that yet. Walk in leading with it and you look like you're selling a problem he doesn't own, so test that it's real before you build the call around it."
 - BRIEFING: 1-2 short paragraphs interpreting what's happening in the customer's world. Lead the interpretation with hedging language ("The data suggests…", "The patterns reveal…", "This points to…") — do not open with a flat declarative like "Dick is a CRO under pressure." Customer's world only. Specific names/numbers from the Matrix, but framed as what they imply, not stated fact. P11 firing = a second short paragraph on the urgency window in their world.
 - FINDINGS: 2-3 sharpest cross-cell gaps, each classified LEVERAGE / THREAT / VALIDATE.
@@ -450,7 +514,7 @@ Return ONLY this JSON, no backticks, no markdown:
 // CALL 2 of 2 — the PLAN. Action half. Runs in parallel with the READ.
 const ANALYSIS_PROMPT_PLAN = (matrixText, deal) => `${ANALYSIS_CONTEXT(matrixText, deal)}
 
-YOUR JOB: produce the PLAN for the rep's next call. First, silently identify the THREAT / LEVERAGE / VALIDATE findings and the HIGH gaps yourself using the rules above. Then output ONLY these action fields, each written plainly enough that the rep can execute it today:
+YOUR JOB: produce the PLAN for the rep's next call. Before you write a single field, re-read the RELATIONSHIP CONTEXT above. It governs the OBJECTIVE, the OPENER, the DEFENSE, the QUESTIONS, and the NEXT ACTIONS. If this is a NEW PROSPECT: the objective cannot assume the buyer already trusts the rep; the opener must earn a cold conversation and cannot reference any prior contact; the next actions cannot require access the rep has not earned. If this is an EXISTING CUSTOMER: you may pick up the standing relationship. First, silently identify the THREAT / LEVERAGE / VALIDATE findings and the HIGH gaps yourself using the rules above. Then output ONLY these action fields, each written plainly enough that the rep can execute it today:
 
 - DEFENSE: Build ONLY from THREAT findings and HIGH gaps. Max 3. Each: a specific scenario that could stall or kill the deal (hedged — "The risk here is…", "This could mean…") + one countermove the rep can make on the next call to get ahead of it. Do not assign specific days or deadlines. Title ALL CAPS. If there are no THREATs and no HIGH gaps, return an empty array — do not invent risks.
 
@@ -667,7 +731,7 @@ function SearchReviewModal({ results, onAccept, onClose }) {
 
 // ─── SCREEN 1: DEAL ENTRY ──────────────────────
 function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode, codeError, clearCodeError }) {
-  const [form, setForm] = useState({ prospect: "", role: "", company: "", repCompany: "", opportunity: "", relationship: "" });
+  const [form, setForm] = useState({ prospect: "", role: "", company: "", repCompany: "", opportunity: "", relationship: "", experience: "" });
   const [errors, setErrors] = useState({});
   const [codeInput, setCodeInput] = useState("");
   const [loadingCode, setLoadingCode] = useState(false);
@@ -692,13 +756,14 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
     { key: "role",        label: "TITLE / ROLE",  textarea: false },
     { key: "company",     label: "THEIR COMPANY", textarea: false },
     { key: "repCompany",  label: "YOUR COMPANY",  textarea: false, placeholder: "The company you work for" },
-    { key: "opportunity", label: "WHAT YOU'RE SELLING THEM", textarea: true, placeholder: "What you're selling in this deal + the outcome it drives — e.g., records digitization for their EU operations, cutting retrieval time and compliance risk" },
+    { key: "opportunity", label: "WHAT'S THE OPPORTUNITY", textarea: true, optional: true, placeholder: "Optional. The opening you see here, if you know it yet. On a brand-new prospect it's fine to leave this blank and let discovery tell you." },
   ];
 
   const handleSubmit = () => {
     const errs = {};
     ["prospect", "role", "company", "repCompany"].forEach(k => { if (!form[k].trim()) errs[k] = true; });
     if (!form.relationship) errs.relationship = true;
+    if (!form.experience) errs.experience = true;
     if (Object.keys(errs).length) { setErrors(errs); return; }
     try { localStorage.setItem("semper_rep_company", form.repCompany.trim()); } catch { /* ignore */ }
     onComplete(form);
@@ -763,7 +828,7 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
             {fields.map(f => (
               <div key={f.key}>
                 <label style={{ display: "block", fontSize: "14px", color: errors[f.key] ? "#ff6666" : "#fff", fontFamily: CONDENSED, letterSpacing: "0.1em", fontWeight: "700", marginBottom: "6px" }}>
-                  {f.label}{errors[f.key] && " — REQUIRED"}
+                  {f.label}{errors[f.key] && " — REQUIRED"}{f.optional && <span style={{ color: "#666", fontWeight: "400", marginLeft: "8px" }}>OPTIONAL</span>}
                 </label>
                 {f.textarea ? (
                   <textarea value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} rows={2}
@@ -803,6 +868,30 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
                     style={{ textAlign: "left", background: on ? "rgba(204,0,0,0.12)" : "transparent", border: `1px solid ${on ? RED : (errors.relationship ? "rgba(204,0,0,0.5)" : "#333")}`, borderRadius: "4px", padding: "12px 14px", cursor: "pointer", transition: "all 0.15s" }}>
                     <div style={{ fontSize: "13px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.08em", color: on ? "#fff" : "#bbb" }}>{opt.label}</div>
                     <div style={{ fontSize: "10px", fontFamily: MONO, color: on ? "#fff" : "#666", marginTop: "3px" }}>{opt.sub}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Experience level — required. Calibrates how the brain delivers the read. */}
+          <div style={{ marginTop: "20px" }}>
+            <div style={{ fontSize: "10px", color: errors.experience ? RED : "#888", fontFamily: MONO, letterSpacing: "0.12em", marginBottom: "8px" }}>
+              {errors.experience ? "PICK ONE TO CONTINUE" : "YOUR EXPERIENCE LEVEL"}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+              {[
+                { key: "new", label: "NEW TO SALES", sub: "Building foundational skills" },
+                { key: "experienced", label: "EXPERIENCED SELLER", sub: "Sharpening and applying" },
+                { key: "advanced", label: "ADVANCED / STRATEGIC", sub: "Competing at the highest level" },
+              ].map(opt => {
+                const on = form.experience === opt.key;
+                return (
+                  <button key={opt.key}
+                    onClick={() => { setForm(p => ({ ...p, experience: opt.key })); setErrors(e => ({ ...e, experience: false })); }}
+                    style={{ textAlign: "left", background: on ? "rgba(204,0,0,0.12)" : "transparent", border: `1px solid ${on ? RED : (errors.experience ? "rgba(204,0,0,0.5)" : "#333")}`, borderRadius: "4px", padding: "12px 13px", cursor: "pointer", transition: "all 0.15s" }}>
+                    <div style={{ fontSize: "12px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.06em", color: on ? "#fff" : "#bbb", lineHeight: 1.15 }}>{opt.label}</div>
+                    <div style={{ fontSize: "9px", fontFamily: MONO, color: on ? "#fff" : "#666", marginTop: "4px", lineHeight: 1.4 }}>{opt.sub}</div>
                   </button>
                 );
               })}
@@ -1013,9 +1102,10 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
     try {
       // Two smaller calls, in parallel. Wall time ≈ the slower half, not the sum
       // — and neither half is big enough to approach the timeout.
+      const brain = SEMPER_BRAIN(effectiveDeal.experience);
       const [readPart, planPart] = await Promise.all([
-        callAnalysis(ANALYSIS_PROMPT_READ(matrixText, effectiveDeal), 1800),
-        callAnalysis(ANALYSIS_PROMPT_PLAN(matrixText, effectiveDeal), 2600),
+        callAnalysis(ANALYSIS_PROMPT_READ(matrixText, effectiveDeal), 1800, brain),
+        callAnalysis(ANALYSIS_PROMPT_PLAN(matrixText, effectiveDeal), 2600, brain),
       ]);
       clearInterval(ticker);
       setAnalyzeSteps(ANALYSIS_STAGES.map(s => ({ label: s.label, done: true })));
@@ -1258,12 +1348,12 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
             {oppNudge && !deal.opportunity?.trim() && !analyzing && (
               <div style={{ marginBottom: "12px", padding: "12px 14px", background: "rgba(245,158,11,0.06)", border: `1px solid rgba(245,158,11,0.35)`, borderRadius: "4px" }}>
                 <div style={{ fontSize: "11px", color: AMBER, fontFamily: MONO, lineHeight: "1.6", marginBottom: "8px" }}>
-                  You haven't said what you're selling them. The analysis will still run, but it stays generic — it can't pinpoint where you add value. Add it here to sharpen it, or generate anyway.
+                  No opportunity noted yet. That's fine on an early prospect. If you already see the opening, add it here and the analysis sharpens on where you fit. If not, generate anyway and let discovery surface it.
                 </div>
                 <div style={{ display: "flex", gap: "8px", alignItems: "stretch", flexWrap: "wrap" }}>
                   <input value={oppDraft} onChange={e => setOppDraft(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter" && oppDraft.trim()) { const merged = { ...deal, opportunity: oppDraft.trim() }; setDeal(merged); runAnalysis(merged); } }}
-                    placeholder="What you're selling them + the outcome it drives"
+                    placeholder="The opening you see, if you know it yet"
                     style={{ flex: 1, minWidth: "240px", background: "#0d0d0d", border: `1px solid ${BORDER}`, borderRadius: "3px", color: "#fff", padding: "9px 12px", fontSize: "12px", fontFamily: MONO, outline: "none" }}
                     onFocus={e => e.target.style.borderColor = AMBER}
                     onBlur={e => e.target.style.borderColor = BORDER}
@@ -1424,11 +1514,21 @@ ${actionsHTML}
         {/* Report header */}
         <div style={{ marginBottom: "8px", fontSize: "13px", fontWeight: "700", color: RED, fontFamily: CONDENSED, letterSpacing: "0.18em" }}>CONNECTION INTELLIGENCE — MATRIX ANALYSIS</div>
         <div style={{ fontSize: "42px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.04em", lineHeight: 1, marginBottom: "10px" }}>{deal.prospect.toUpperCase()}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "28px", flexWrap: "wrap" }}>
           <div style={{ width: "3px", height: "16px", background: RED, borderRadius: "1px", flexShrink: 0 }} />
           <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO }}>
             {deal.role}{deal.company ? ` · ${deal.company}` : ""}{deal.opportunity ? ` · ${deal.opportunity}` : ""}
           </div>
+          {deal.relationship && (
+            <span style={{ fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.12em", color: deal.relationship === "existing" ? GREEN : AMBER, border: `1px solid ${deal.relationship === "existing" ? GREEN : AMBER}`, borderRadius: "2px", padding: "2px 8px" }}>
+              {deal.relationship === "existing" ? "EXISTING CUSTOMER" : "NEW PROSPECT"}
+            </span>
+          )}
+          {deal.experience && (
+            <span style={{ fontSize: "9px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.12em", color: "#888", border: `1px solid #444`, borderRadius: "2px", padding: "2px 8px" }}>
+              {deal.experience === "new" ? "NEW TO SALES" : deal.experience === "advanced" ? "ADVANCED / STRATEGIC" : "EXPERIENCED SELLER"}
+            </span>
+          )}
         </div>
 
         {/* Version history — every analysis run under this code is a dated snapshot */}
@@ -1518,8 +1618,7 @@ ${actionsHTML}
                   <div style={{ fontSize: "10px", color: "#888", fontFamily: CONDENSED, letterSpacing: "0.16em", fontWeight: "700", marginBottom: "10px" }}>HOW MUCH TO TRUST YOUR MATRIX INTELLIGENCE RIGHT NOW</div>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                     <div title={health.tip}
-                      style={{ display: "inline-flex", alignItems: "center", gap: "9px", background: "rgba(0,0,0,0.3)", border: `1px solid ${health.color}`, borderRadius: "3px", padding: "8px 14px", cursor: "help" }}>
-                      <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: health.color, flexShrink: 0 }} />
+                      style={{ display: "inline-flex", alignItems: "center", gap: "9px", background: "rgba(0,0,0,0.3)", border: `1px solid ${health.color}`, borderRadius: "3px", padding: "8px 14px", cursor: "default" }}>
                       <span style={{ fontSize: "16px", fontFamily: CONDENSED, fontWeight: "900", letterSpacing: "0.1em", color: health.color }}>{health.label}</span>
                     </div>
                   </div>
