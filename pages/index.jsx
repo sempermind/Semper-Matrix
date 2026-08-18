@@ -398,10 +398,15 @@ One clause per component — keep the whole question to a single natural sentenc
 const ANALYSIS_PROMPT_READ = (matrixText, deal) => `${ANALYSIS_CONTEXT(matrixText, deal)}
 
 YOUR JOB: produce the READ of this deal — what the Matrix is telling the rep. Follow the VOICE rule above without exception: this is inference, written as hypothesis, never as fact. Output ONLY these fields:
-- MATRIX_HEALTH: STRONG FOUNDATION / PARTIAL PICTURE / FLYING BLIND. matrix_health_note: ONE OR TWO complete sentences written FOR the sales rep, in a salesperson's own language. Say what they have a solid read on, what is still dark, and the practical implication for the deal. Complete sentences only, each ending in a period. No sentence fragments, no clauses standing alone, no dashes used to bolt on an afterthought. No analyst talk: do NOT mention "rows," "cells," "boxes," "sourced vs. inferred," "dimensions," or "conclusions." No AI filler: do NOT use "leverage," "navigate," "landscape," "underscore," "delve," "when it comes to," or "in terms of." Plain, direct, the way one rep briefs another. Tone to match: "You have a clear picture of what he owns and the pressure he is under. Where you are still dark is who influences him internally, so confirm his coalition before you build the deal around him."
+- MATRIX_HEALTH: STRONG FOUNDATION / PARTIAL PICTURE / FLYING BLIND. matrix_health_note: ONE OR TWO complete sentences written FOR the sales rep, in a salesperson's own language. This is NOT an inventory of which parts of the Matrix are full and which are empty — the rep can already see that by looking at the grid. Instead, name the single most dangerous blind spot for THIS deal and why it bites: the one missing piece of intelligence that, left unconfirmed, would most likely blow up the rep's plan or blindside them mid-deal. Be specific to this stakeholder. Complete sentences only, each ending in a period. No sentence fragments, no clauses standing alone, no dashes bolting on an afterthought. No analyst talk: do NOT mention "rows," "cells," "boxes," "sourced vs. inferred," "dimensions," or "conclusions." No AI filler: do NOT use "leverage," "navigate," "landscape," "underscore," "delve," "when it comes to," or "in terms of." Plain and direct, the way one rep warns another. Weak (obvious, just narrates the grid — do NOT do this): "You have a solid read on what he owns and what he signed, but you can't see who influences him internally." Strong (names the real danger and the cost): "The whole plan assumes this pain is his to solve, and nothing confirms that yet. Walk in leading with it and you look like you're selling a problem he doesn't own, so test that it's real before you build the call around it."
 - BRIEFING: 1-2 short paragraphs interpreting what's happening in the customer's world. Lead the interpretation with hedging language ("The data suggests…", "The patterns reveal…", "This points to…") — do not open with a flat declarative like "Dick is a CRO under pressure." Customer's world only. Specific names/numbers from the Matrix, but framed as what they imply, not stated fact. P11 firing = a second short paragraph on the urgency window in their world.
-- FINDINGS: 2-3 sharpest cross-cell gaps, each classified LEVERAGE / THREAT / VALIDATE. Headline ALL CAPS, max 8 words, specific to this deal. Body: 2-3 sentences that name the two data points and then hedge what the gap between them reveals ("This suggests…", "The pattern points to…"). No box refs. Most urgent first.
-- GAPS: the intelligence that's missing and why it costs the rep. Empty/thin cells only, max 4, HIGH or MEDIUM. For each: "cell" = the plain-English name of the missing area (e.g., "Influence Network", "Relationship Strategy", "Public Commitments", "Missing Support") — NEVER a box number like "Box 2". "note" = plain-language statement of what you don't know and why it matters to the deal. "ask" = ONE question the rep can say out loud to fill it, built with the INSIGHT QUESTION CONSTRUCTION above — anchor it in something you DO know (their current reality), connect toward where they're heading, and probe the missing piece. Do not label it "iQ." Keep it under ~30 words so it's easy to say on a call.
+- FINDINGS: 2-3 sharpest cross-cell gaps, each classified LEVERAGE / THREAT / VALIDATE.
+  HEADLINE — read this twice. The headline is the one line a rep scans to know what this finding IS and why they care. It must be plain sales language a rep grasps in one read, specific to THIS stakeholder and THIS deal, and it must state the actual situation, not a clever abstraction. ALL CAPS, max 9 words.
+  A good headline names the real thing: who, what, and the stakes, in words one rep would say to another. It is insightful and specific, never generic.
+  RIGHT (plain, specific, a rep gets it instantly): "HE SIGNED THE CONTRACTS, SO THE RISK IS HIS", "HIS BUDGET AUTHORITY STOPS SHORT OF THIS DEAL", "NOBODY BELOW HIM IS MAPPED YET", "THE ACQUISITION OPENS A DOOR THAT WON'T STAY OPEN", "YOU'RE ASSUMING A PAIN HE HASN'T CONFIRMED".
+  WRONG (abstract analyst-speak a rep can't act on — never write like this): "DIGITIZATION STORY HAS A DOCUMENTED LIABILITY TAIL", "COALITION RISK BELOW DECISION AUTHORITY", "COHERENT TRAJECTORY SIGNAL PRESENT", "VALUE PROPOSITION EXPOSURE AT SCALE". If the headline uses a noun phrase a rep would have to decode, rewrite it as the plain thing it's actually saying.
+  Body: 2-3 sentences that name the two real data points from the deal and then, in hedged language, say what the gap between them likely means and why it matters to the rep. Follow the VOICE rule. No box or cell references. Most urgent finding first.
+- GAPS: the intelligence that's missing and why it could cost the rep. Empty/thin cells only, max 4, HIGH or MEDIUM. For each: "cell" = the plain-English name of the missing area (e.g., "Influence Network", "Relationship Strategy", "Public Commitments", "Missing Support") — NEVER a box number like "Box 2". "note" = two parts. FIRST, state plainly what the rep does not know — this is a fact about their own intel, so state it directly ("You don't know who shapes his decisions internally"). SECOND, when you describe what that missing intel could COST — the consequence, the risk, what might go wrong — you MUST frame it as a possibility the rep should weigh, never as a certainty. Do NOT write "you will not see it coming" or "this changes everything" or "you cannot assess" as flat predictions. Write the consequence as risk: "the risk is…", "that could mean…", "if that's the case, you could…", "this may leave you…". The gap itself is fact; the fallout is a hypothesis. "ask" = ONE question the rep can say out loud to fill it, built with the INSIGHT QUESTION CONSTRUCTION above — anchor it in something you DO know (their current reality), connect toward where they're heading, and probe the missing piece. Do not label it "iQ." Keep it under ~30 words so it's easy to say on a call.
 
 Return ONLY this JSON, no backticks, no markdown:
 {"matrix_health":"","matrix_health_note":"","briefing":[""],"findings":[{"classification":"","headline":"","finding":""}],"gaps":[{"cell":"","label":"","severity":"","note":"","ask":""}]}`;
@@ -785,7 +790,6 @@ function AnalysisLoader({ steps }) {
 
 // ─── SCREEN 2: MATRIX EDITOR ──────────────────
 function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources, onComplete, onBack, code, cloudStatus, versions = [], reopenDiff, onDismissReopenDiff, onSaveVersion }) {
-  const patterns = detectPatterns(cells);
   const [versionSaved, setVersionSaved] = useState(false);
   const [focused, setFocused] = useState(null);
   const [showCodeNote, setShowCodeNote] = useState(true);
@@ -1075,24 +1079,6 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
             </div>
           )}
 
-          {/* PATTERNS PRESENT — hard-coded off the boxes, no model call */}
-          {patterns.length > 0 && (
-            <div style={{ marginBottom: "16px", background: "#0f0f0f", border: `1px solid #1e1e1e`, borderRadius: "4px", padding: "12px 14px" }}>
-              <div style={{ fontSize: "10px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700", marginBottom: "9px" }}>
-                PATTERNS PRESENT · {patterns.length}/12
-                <span style={{ color: "#fff", fontFamily: MONO, letterSpacing: "0", fontWeight: "400", marginLeft: "10px" }}>free read, no analysis spent</span>
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
-                {patterns.map(p => (
-                  <span key={p.id} title={`${p.read}  ·  MOVE: ${p.move}`}
-                    style={{ fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.08em", color: "#fff", background: "rgba(204,0,0,0.14)", border: `1px solid ${RED}`, borderRadius: "3px", padding: "4px 9px", cursor: "default" }}>
-                    {p.name.toUpperCase()}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Column headers */}
           <div style={{ display: "grid", gridTemplateColumns: "130px 1fr 1fr 1fr", gap: "5px", marginBottom: "5px" }}>
             <div />
@@ -1252,9 +1238,9 @@ function SectionTag({ children }) {
 }
 
 const CLASS_META = {
-  LEVERAGE: { color: GREEN, label: "LEVERAGE" },
-  THREAT: { color: RED, label: "THREAT" },
-  VALIDATE: { color: AMBER, label: "VALIDATE" },
+  LEVERAGE: { color: GREEN, label: "LEVERAGE", tip: "Something here works in your favor. An opening to advance the deal, a motivated buyer, or alignment you can press on this call." },
+  THREAT: { color: RED, label: "THREAT", tip: "Something here works against you. A risk that could stall or kill the deal if you don't get ahead of it. Handle it before it surfaces on its own." },
+  VALIDATE: { color: AMBER, label: "VALIDATE", tip: "A strong hunch you can't confirm yet. It could be true, but it rests on inference, not sourced intel. Confirm it on the next call before you build around it." },
 };
 
 // ─── SCREEN 3: ANALYSIS REPORT ─────────────────
@@ -1431,23 +1417,33 @@ ${actionsHTML}
               </div>
             )}
 
-            {/* Matrix Health — a confidence gauge, not a briefing. Status word
-                reads in half a second; the note names the biggest hole in plain
-                sales language. */}
+            {/* Matrix intelligence confidence — a gauge, not a briefing. Status
+                word reads in half a second; hover re-teaches what each level means. */}
             {(analysis.matrix_health || analysis.matrix_health_note) && (() => {
               const raw = (analysis.matrix_health || "").toUpperCase();
-              const health = raw.includes("STRONG") ? { label: "STRONG FOUNDATION", color: GREEN }
-                : raw.includes("FLYING") || raw.includes("BLIND") ? { label: "FLYING BLIND", color: RED }
-                : raw.includes("PARTIAL") ? { label: "PARTIAL PICTURE", color: AMBER }
-                : { label: raw || "PARTIAL PICTURE", color: AMBER };
+              const health = raw.includes("STRONG") ? {
+                  label: "STRONG FOUNDATION", color: GREEN,
+                  tip: "You have real, confirmed intel across most of the Matrix. Solid enough to build your call plan and your deal strategy on. Keep it current as things move.",
+                } : raw.includes("FLYING") || raw.includes("BLIND") ? {
+                  label: "FLYING BLIND", color: RED,
+                  tip: "Most of the Matrix is empty or unconfirmed. Anything below is a starting hypothesis, not a plan. Treat this call as discovery and fill the blanks before you commit to a strategy.",
+                } : raw.includes("PARTIAL") ? {
+                  label: "PARTIAL PICTURE", color: AMBER,
+                  tip: "You have real intel in some areas and blanks in others. Enough to plan a smart call, not enough to bet the deal. Confirm the dark spots before you build the whole approach around them.",
+                } : {
+                  label: raw || "PARTIAL PICTURE", color: AMBER,
+                  tip: "You have real intel in some areas and blanks in others. Enough to plan a smart call, not enough to bet the deal. Confirm the dark spots before you build the whole approach around them.",
+                };
               return (
                 <div style={{ marginBottom: "36px", paddingBottom: "28px", borderBottom: "1px solid #1a1a1a" }}>
-                  <div style={{ fontSize: "10px", color: "#888", fontFamily: CONDENSED, letterSpacing: "0.16em", fontWeight: "700", marginBottom: "10px" }}>HOW MUCH TO TRUST THIS READ</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: "9px", background: "rgba(0,0,0,0.3)", border: `1px solid ${health.color}`, borderRadius: "3px", padding: "8px 14px" }}>
+                  <div style={{ fontSize: "10px", color: "#888", fontFamily: CONDENSED, letterSpacing: "0.16em", fontWeight: "700", marginBottom: "10px" }}>HOW MUCH TO TRUST YOUR MATRIX INTELLIGENCE RIGHT NOW</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <div title={health.tip}
+                      style={{ display: "inline-flex", alignItems: "center", gap: "9px", background: "rgba(0,0,0,0.3)", border: `1px solid ${health.color}`, borderRadius: "3px", padding: "8px 14px", cursor: "help" }}>
                       <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: health.color, flexShrink: 0 }} />
                       <span style={{ fontSize: "16px", fontFamily: CONDENSED, fontWeight: "900", letterSpacing: "0.1em", color: health.color }}>{health.label}</span>
                     </div>
+                    <span title={health.tip} style={{ fontSize: "10px", color: "#666", fontFamily: MONO, cursor: "help", borderBottom: "1px dotted #444" }}>what does this mean?</span>
                   </div>
                   {analysis.matrix_health_note && (
                     <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.75", marginTop: "12px", maxWidth: "760px" }}>{analysis.matrix_health_note}</div>
@@ -1466,14 +1462,14 @@ ${actionsHTML}
                 {(analysis.findings||[]).length > 0 && (
                   <div style={{ marginTop: "28px", paddingTop: "24px", borderTop: "1px solid #1e1e1e" }}>
                     {(analysis.findings||[]).map((f, i) => {
-                      const cm = CLASS_META[f.classification] || { color: RED, label: null };
+                      const cm = CLASS_META[f.classification] || { color: RED, label: null, tip: null };
                       const headline = typeof f === "object" ? f.headline : null;
                       const text = typeof f === "object" ? f.finding : f;
                       return (
                         <div key={i} style={{ marginBottom: "22px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "7px" }}>
                             {cm.label && (
-                              <span style={{ fontSize: "9px", fontWeight: "700", color: "#000", background: cm.color, borderRadius: "2px", padding: "2px 8px", letterSpacing: "0.14em", fontFamily: CONDENSED }}>{cm.label}</span>
+                              <span title={cm.tip || undefined} style={{ fontSize: "9px", fontWeight: "700", color: "#000", background: cm.color, borderRadius: "2px", padding: "2px 8px", letterSpacing: "0.14em", fontFamily: CONDENSED, cursor: cm.tip ? "help" : "default" }}>{cm.label}</span>
                             )}
                             {headline && <div style={{ fontSize: "11px", fontWeight: "700", color: cm.color, fontFamily: CONDENSED, letterSpacing: "0.16em" }}>{(headline||"").toUpperCase()}</div>}
                           </div>
