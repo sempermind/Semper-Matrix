@@ -46,6 +46,139 @@ const cloudLoad = async (code) => {
   } catch { return null; }
 };
 
+// ═══════════════════════════════════════════════════════════════
+// VERSION MEMORY LAYER
+// Bolts onto the existing tool. A session now carries a `versions` array:
+// each analysis a rep runs becomes a dated snapshot instead of overwriting.
+// Everything here is pure JS or storage — no model calls, no API cost.
+// ═══════════════════════════════════════════════════════════════
+
+// Push a dated snapshot onto the session's version stack. Called at the moment
+// analysis completes, so a version = "the Matrix as it stood when the rep last
+// ran the read." De-dupes: if nothing in the boxes changed since the last
+// snapshot, we update its analysis in place rather than stacking a twin.
+function pushVersion(prevVersions, cells, aiSources, analysis) {
+  const versions = Array.isArray(prevVersions) ? [...prevVersions] : [];
+  const last = versions[versions.length - 1];
+  const snapshot = {
+    savedAt: new Date().toISOString(),
+    cells: { ...cells },
+    aiSources: { ...aiSources },
+    analysis: analysis || null,
+  };
+  if (last && cellsEqual(last.cells, cells)) {
+    versions[versions.length - 1] = { ...snapshot, savedAt: last.savedAt };
+  } else {
+    versions.push(snapshot);
+  }
+  return versions;
+}
+
+function cellsEqual(a, b) {
+  if (!a || !b) return false;
+  return MATRIX_ROWS.every(row => MATRIX_COLS.every(col => {
+    const k = `${row}|${col}`;
+    return (a[k] || "").trim() === (b[k] || "").trim();
+  }));
+}
+
+function daysSince(iso) {
+  if (!iso) return null;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+}
+
+function agoLabel(iso) {
+  const d = daysSince(iso);
+  if (d === null) return "";
+  if (d === 0) return "today";
+  if (d === 1) return "yesterday";
+  return `${d} days ago`;
+}
+
+// "What happened since last time" — pure diff of two snapshots' cells.
+// Closed Needs read as advances, new Needs as fresh risk, filled boxes as new
+// intelligence. No model involved.
+function diffVersions(prevCells, currCells) {
+  const events = [];
+  MATRIX_ROWS.forEach(row => {
+    MATRIX_COLS.forEach(col => {
+      const key = `${row}|${col}`;
+      const before = (prevCells?.[key] || "").trim();
+      const after = (currCells?.[key] || "").trim();
+      const meta = MATRIX_META[key];
+      const isNeed = row === "NEEDS";
+      if (!before && after) {
+        events.push({
+          kind: isNeed ? "need-new" : "filled", key, label: meta.label,
+          text: isNeed
+            ? `New Need surfaced — ${meta.label}. Fresh risk, or a fresh opening.`
+            : `${meta.label} filled — new intelligence you didn't have last time.`,
+        });
+      } else if (before && !after) {
+        events.push({
+          kind: isNeed ? "need-closed" : "cleared", key, label: meta.label,
+          text: isNeed
+            ? `Need closed — ${meta.label}. That's the deal advancing.`
+            : `${meta.label} cleared. You pulled intelligence here.`,
+        });
+      } else if (before && after && before !== after) {
+        events.push({
+          kind: "changed", key, label: meta.label,
+          text: `${meta.label} updated — your read on this shifted.`,
+        });
+      }
+    });
+  });
+  return events;
+}
+
+// The twelve patterns — hard-coded detection off the boxes. A pattern fires
+// only when every box it reads across is populated, so a guess never becomes a
+// pattern. Rules-based and free.
+const _h = (c, k) => !!(c[k] || "").trim();
+const MATRIX_PATTERNS = [
+  { id: "authority-ceiling", name: "Authority Ceiling", present: c => _h(c, "CURRENT STATE|ROLE") && _h(c, "FUTURE STATE|RESULTS"),
+    read: "They're on the hook for public results that sit above what they can approve alone. Real pressure, and the authority to relieve it isn't fully theirs.",
+    move: "Find the person above them who can clear the path, and give them something that makes the sponsor look good." },
+  { id: "shadow-power", name: "Shadow Power", present: c => _h(c, "CURRENT STATE|ROLE") && _h(c, "CURRENT STATE|REACH"),
+    read: "Their title and their actual pull may not match. Influence networks often drive the decision more than the org chart.",
+    move: "Confirm who really shapes this call before you invest in the name on the door." },
+  { id: "relationship-engine", name: "Relationship Engine", present: c => _h(c, "CURRENT STATE|REACH") && _h(c, "CURRENT STATE|RESULTS"),
+    read: "Their results run through people, not process. How they hit their numbers tells you how they'll evaluate you.",
+    move: "Bring proof that travels through relationships, not just a spec sheet." },
+  { id: "deliberate-climb", name: "Deliberate Climb", present: c => _h(c, "FUTURE STATE|ROLE") && _h(c, "FUTURE STATE|REACH"),
+    read: "The role they're chasing and the alliances they're building point the same direction. A planned move, not a wish.",
+    move: "Attach your solution to where they're going. Make it part of the story of their next role." },
+  { id: "exposed-promise", name: "Exposed Promise", present: c => _h(c, "FUTURE STATE|RESULTS") && _h(c, "FUTURE STATE|ROLE"),
+    read: "They've staked a public commitment on an outcome their current authority may not reach. Big promise, unfinished path to deliver it.",
+    move: "Position yourself as the way they keep the promise. That urgency is already theirs." },
+  { id: "reputation-stake", name: "Reputation Stake", present: c => _h(c, "FUTURE STATE|RESULTS") && _h(c, "CURRENT STATE|RESULTS"),
+    read: "There's daylight between what they're measured on today and what they've promised publicly. That gap is where the anxiety lives.",
+    move: "Aim discovery at the gap, not the current number." },
+  { id: "double-exposure", name: "Double Exposure", present: c => _h(c, "NEEDS|ROLE") && _h(c, "NEEDS|REACH"),
+    read: "Short on both capability and the relationships to cover for it. Exposed on two fronts at once.",
+    move: "This is a champion play. They need a partner more than a product." },
+  { id: "borrowed-capability", name: "Borrowed Capability", present: c => _h(c, "CURRENT STATE|REACH") && _h(c, "NEEDS|ROLE"),
+    read: "Strong network, real capability gap. People like this rent the capability rather than build it.",
+    move: "Frame the buy as the fastest way to close the gap without losing momentum." },
+  { id: "unsupported-mandate", name: "Unsupported Mandate", present: c => _h(c, "FUTURE STATE|RESULTS") && _h(c, "NEEDS|RESULTS"),
+    read: "High expectations with no infrastructure underneath them. The kind of setup where an outside solution stops being optional.",
+    move: "Hand them the business case they'll need to get it funded." },
+  { id: "champion-gap", name: "Champion Gap", present: c => _h(c, "FUTURE STATE|ROLE") && _h(c, "NEEDS|REACH"),
+    read: "Reaching for a bigger role, missing the sponsor to get there.",
+    move: "Help them build the alliance. Introductions and air cover buy more loyalty than discounts." },
+  { id: "coherent-trajectory", name: "Coherent Trajectory", present: c => _h(c, "CURRENT STATE|RESULTS") && _h(c, "FUTURE STATE|RESULTS") && _h(c, "NEEDS|RESULTS"),
+    read: "Current results, future goals, and stated needs line up into one story. When the Results column is coherent, the deal has a spine.",
+    move: "Mirror the story back and place your solution at the turn from today's number to the promised one." },
+  { id: "in-transition", name: "In Transition", present: c => _h(c, "FUTURE STATE|ROLE") && _h(c, "FUTURE STATE|REACH") && _h(c, "NEEDS|ROLE"),
+    read: "New role forming, new relationships forming, new capability needs. Someone actively reinventing their position.",
+    move: "Sell to where they're going, not where they are." },
+];
+
+function detectPatterns(cells) {
+  return MATRIX_PATTERNS.filter(p => p.present(cells));
+}
+
 // ─── ANALYSIS PROGRESS STAGES ──────────────────
 // The analysis runs as two smaller calls in parallel (a READ and a PLAN), so
 // neither can hit the function timeout. These stages drive the loader's ticks.
@@ -240,7 +373,15 @@ CLASSIFY EVERY FINDING before anything feeds downstream — this is the core log
 A pattern existing does NOT make it a risk. Do not manufacture threats to fill a quota.
 
 VOICE — CRITICAL, APPLIES TO EVERY WORD YOU WRITE:
-This is an intelligence assessment, not a dossier of facts. You are inferring what's happening beneath the surface — so never state your interpretation as fact. Verifiable items pulled straight from the Matrix (their title, a number, a date they signed something) can be stated plainly. But the moment you interpret what those facts MEAN, hedge it — and vary the hedge so it never sounds like a template: "The data suggests…", "The patterns reveal…", "This points to…", "It appears…", "One read of this is…", "The gap between X and Y suggests…", "This likely means…". A rep should feel they're reading a sharp analyst's read they can confirm, not a biography. Write plainly enough that a busy sales rep gets it in one pass and can act on it today — no jargon, no box/pattern numbers, no theory.
+This is an intelligence assessment, not a dossier of facts. You are inferring what is happening beneath the surface, so you must never state an interpretation as fact.
+
+THE RULE: Anything that is verifiable straight from the Matrix — their title, a metric they own, a date they signed something, a person they report to — you may state plainly, because it is fact. The moment you move from a fact to what that fact MEANS for the deal, you must frame it as a read, not a truth. Every interpretive sentence has to carry a hedge that makes clear this is your assessment the rep should confirm.
+
+USE THIS LANGUAGE, and vary it so no two interpretations open the same way: "The pattern suggests…", "The data points to…", "What we're seeing in the correlations is…", "The gap between X and Y suggests…", "This points to…", "One read of this is…", "It appears…", "This likely means…", "The signals here lean toward…". 
+
+NEVER write an interpretation as a flat declarative. Wrong: "Dick is threatened by the new VP." Right: "The pattern suggests Dick may see the new VP as a threat." Wrong: "She has no budget authority." Right: "The data points to her needing sign-off above her for a spend this size." If you catch yourself stating what someone feels, wants, fears, or intends as settled fact, stop and reframe it as a read. The only exception is a fact lifted verbatim from a populated Matrix cell.
+
+A rep should feel they are reading a sharp analyst's read they can confirm on the next call, not a biography. Write plainly enough that a busy rep gets it in one pass and can act on it today. No jargon, no box or pattern numbers, no theory.
 
 INSIGHT QUESTION CONSTRUCTION — used for BOTH the iQ Questions section AND the "ask" question inside each Intelligence Gap. Never label these as "iQ" in the output; they just read as sharp questions.
 A true insight question holds ONE Current Reality + ONE Future State + ONE Personal Impact, and lives ENTIRELY in the customer's world — never name a solution, product, or what they "need."
@@ -257,7 +398,7 @@ One clause per component — keep the whole question to a single natural sentenc
 const ANALYSIS_PROMPT_READ = (matrixText, deal) => `${ANALYSIS_CONTEXT(matrixText, deal)}
 
 YOUR JOB: produce the READ of this deal — what the Matrix is telling the rep. Follow the VOICE rule above without exception: this is inference, written as hypothesis, never as fact. Output ONLY these fields:
-- MATRIX_HEALTH: STRONG FOUNDATION / PARTIAL PICTURE / FLYING BLIND. matrix_health_note: ONE plain sentence written FOR the sales rep, in their own language — what they've got a solid read on, what's still dark, and the practical implication for the deal. Do NOT talk about "rows," "cells," "sourced vs. inferred," "dimensions," or "conclusions being pushed" — that's analyst talk. Sales talk only. Tone to match: "You've got a clear picture of what he owns and the pressure he's under, but you're blind on who influences him internally — confirm his coalition before you build the deal around him."
+- MATRIX_HEALTH: STRONG FOUNDATION / PARTIAL PICTURE / FLYING BLIND. matrix_health_note: ONE OR TWO complete sentences written FOR the sales rep, in a salesperson's own language. Say what they have a solid read on, what is still dark, and the practical implication for the deal. Complete sentences only, each ending in a period. No sentence fragments, no clauses standing alone, no dashes used to bolt on an afterthought. No analyst talk: do NOT mention "rows," "cells," "boxes," "sourced vs. inferred," "dimensions," or "conclusions." No AI filler: do NOT use "leverage," "navigate," "landscape," "underscore," "delve," "when it comes to," or "in terms of." Plain, direct, the way one rep briefs another. Tone to match: "You have a clear picture of what he owns and the pressure he is under. Where you are still dark is who influences him internally, so confirm his coalition before you build the deal around him."
 - BRIEFING: 1-2 short paragraphs interpreting what's happening in the customer's world. Lead the interpretation with hedging language ("The data suggests…", "The patterns reveal…", "This points to…") — do not open with a flat declarative like "Dick is a CRO under pressure." Customer's world only. Specific names/numbers from the Matrix, but framed as what they imply, not stated fact. P11 firing = a second short paragraph on the urgency window in their world.
 - FINDINGS: 2-3 sharpest cross-cell gaps, each classified LEVERAGE / THREAT / VALIDATE. Headline ALL CAPS, max 8 words, specific to this deal. Body: 2-3 sentences that name the two data points and then hedge what the gap between them reveals ("This suggests…", "The pattern points to…"). No box refs. Most urgent first.
 - GAPS: the intelligence that's missing and why it costs the rep. Empty/thin cells only, max 4, HIGH or MEDIUM. For each: "cell" = the plain-English name of the missing area (e.g., "Influence Network", "Relationship Strategy", "Public Commitments", "Missing Support") — NEVER a box number like "Box 2". "note" = plain-language statement of what you don't know and why it matters to the deal. "ask" = ONE question the rep can say out loud to fill it, built with the INSIGHT QUESTION CONSTRUCTION above — anchor it in something you DO know (their current reality), connect toward where they're heading, and probe the missing piece. Do not label it "iQ." Keep it under ~30 words so it's easy to say on a call.
@@ -643,7 +784,9 @@ function AnalysisLoader({ steps }) {
 }
 
 // ─── SCREEN 2: MATRIX EDITOR ──────────────────
-function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources, onComplete, onBack, code, cloudStatus }) {
+function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources, onComplete, onBack, code, cloudStatus, versions = [], reopenDiff, onDismissReopenDiff, onSaveVersion }) {
+  const patterns = detectPatterns(cells);
+  const [versionSaved, setVersionSaved] = useState(false);
   const [focused, setFocused] = useState(null);
   const [showCodeNote, setShowCodeNote] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
@@ -897,6 +1040,59 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
             </div>
           )}
 
+          {/* WHAT HAPPENED SINCE LAST TIME — shown once on reopen when prior versions exist */}
+          {reopenDiff && (
+            <div style={{ marginBottom: "16px", background: "#0f0f0f", border: `1px solid ${BORDER}`, borderLeft: `3px solid ${GREEN}`, borderRadius: "4px", overflow: "hidden" }}>
+              <div style={{ padding: "10px 14px", borderBottom: `1px solid #1a1a1a`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                <div style={{ fontSize: "11px", color: GREEN, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700" }}>
+                  WHAT HAPPENED SINCE LAST TIME
+                  <span style={{ color: "#fff", fontFamily: MONO, letterSpacing: "0", fontWeight: "400", marginLeft: "10px" }}>
+                    v{reopenDiff.versionCount} · last saved {agoLabel(reopenDiff.since)}
+                  </span>
+                </div>
+                <button onClick={onDismissReopenDiff} style={{ background: "transparent", border: "none", color: "#888", fontSize: "16px", cursor: "pointer", lineHeight: 1, flexShrink: 0 }}>×</button>
+              </div>
+              <div style={{ padding: "12px 14px" }}>
+                {reopenDiff.events.length === 0 ? (
+                  <div style={{ fontSize: "12px", color: "#fff", fontFamily: MONO, lineHeight: "1.6" }}>
+                    Nothing's changed in the boxes since your last save. Pick up where you left off.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {reopenDiff.events.map((e, i) => {
+                      const clr = e.kind === "need-closed" ? GREEN : e.kind === "need-new" ? AMBER : "#fff";
+                      const glyph = e.kind === "need-closed" ? "▲" : e.kind === "need-new" ? "◆" : e.kind === "cleared" ? "○" : "●";
+                      return (
+                        <div key={i} style={{ display: "flex", gap: "9px", alignItems: "flex-start" }}>
+                          <span style={{ color: clr, fontFamily: MONO, fontSize: "12px", lineHeight: 1.5, flexShrink: 0 }}>{glyph}</span>
+                          <span style={{ color: clr, fontFamily: MONO, fontSize: "12px", lineHeight: 1.5 }}>{e.text}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* PATTERNS PRESENT — hard-coded off the boxes, no model call */}
+          {patterns.length > 0 && (
+            <div style={{ marginBottom: "16px", background: "#0f0f0f", border: `1px solid #1e1e1e`, borderRadius: "4px", padding: "12px 14px" }}>
+              <div style={{ fontSize: "10px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700", marginBottom: "9px" }}>
+                PATTERNS PRESENT · {patterns.length}/12
+                <span style={{ color: "#fff", fontFamily: MONO, letterSpacing: "0", fontWeight: "400", marginLeft: "10px" }}>free read, no analysis spent</span>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
+                {patterns.map(p => (
+                  <span key={p.id} title={`${p.read}  ·  MOVE: ${p.move}`}
+                    style={{ fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.08em", color: "#fff", background: "rgba(204,0,0,0.14)", border: `1px solid ${RED}`, borderRadius: "3px", padding: "4px 9px", cursor: "default" }}>
+                    {p.name.toUpperCase()}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Column headers */}
           <div style={{ display: "grid", gridTemplateColumns: "130px 1fr 1fr 1fr", gap: "5px", marginBottom: "5px" }}>
             <div />
@@ -1018,6 +1214,21 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
               <Btn onClick={handleGenerate} disabled={filled === 0 || analyzing} style={{ minWidth: "300px" }}>
                 {analyzing ? "[ Analyzing your intelligence... ]" : "GENERATE MATRIX ANALYSIS →"}
               </Btn>
+              <button
+                onClick={() => {
+                  if (filled === 0 || analyzing) return;
+                  onSaveVersion?.(cells, aiSources);
+                  setVersionSaved(true);
+                  setTimeout(() => setVersionSaved(false), 2200);
+                }}
+                disabled={filled === 0 || analyzing}
+                title="Stamp the current Matrix as a dated version without running analysis. Costs nothing."
+                style={{ background: versionSaved ? "rgba(34,197,94,0.12)" : "transparent", border: `1px solid ${versionSaved ? GREEN : "#333"}`, color: versionSaved ? GREEN : "#aaa", borderRadius: "3px", padding: "8px 14px", cursor: filled === 0 || analyzing ? "not-allowed" : "pointer", fontSize: "10px", fontFamily: CONDENSED, fontWeight: "700", letterSpacing: "0.12em", opacity: filled === 0 || analyzing ? 0.4 : 1, transition: "all 0.15s", whiteSpace: "nowrap" }}
+                onMouseEnter={e => { if (filled === 0 || analyzing || versionSaved) return; e.currentTarget.style.borderColor = RED; e.currentTarget.style.color = "#fff"; }}
+                onMouseLeave={e => { if (versionSaved) return; e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#aaa"; }}
+              >
+                {versionSaved ? "✓ VERSION SAVED" : "⎘ SAVE VERSION"}
+              </button>
               <span style={{ fontSize: "11px", color: "#888", fontFamily: MONO }}>
                 {filled === 0 && "Fill in at least one cell to continue"}
                 {filled > 0 && filled < 9 && `${9 - filled} empty ${9 - filled === 1 ? "cell" : "cells"} will surface as discovery gaps`}
@@ -1047,7 +1258,7 @@ const CLASS_META = {
 };
 
 // ─── SCREEN 3: ANALYSIS REPORT ─────────────────
-function AnalysisScreen({ deal, analysis, aiSources, cells, code, cloudStatus, onBack, onRedo }) {
+function AnalysisScreen({ deal, analysis, aiSources, cells, code, cloudStatus, versions = [], onBack, onRedo }) {
   const hasAnalysis = !!analysis;
   const [showMatrix, setShowMatrix] = useState(false);
 
@@ -1155,6 +1366,29 @@ ${actionsHTML}
           </div>
         </div>
 
+        {/* Version history — every analysis run under this code is a dated snapshot */}
+        {versions.length > 1 && (
+          <div style={{ marginBottom: "24px", background: "#0f0f0f", border: `1px solid #1e1e1e`, borderRadius: "4px", padding: "11px 14px" }}>
+            <div style={{ fontSize: "10px", color: RED, fontFamily: CONDENSED, letterSpacing: "0.14em", fontWeight: "700", marginBottom: "8px" }}>
+              MATRIX HISTORY · {versions.length} VERSIONS
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+              {versions.map((v, i) => {
+                const isLatest = i === versions.length - 1;
+                const analyzed = !!v.analysis;
+                const fill = MATRIX_ROWS.reduce((n, r) => n + MATRIX_COLS.reduce((m, c) => m + ((v.cells?.[`${r}|${c}`] || "").trim() ? 1 : 0), 0), 0);
+                return (
+                  <div key={i} title={`${new Date(v.savedAt).toLocaleString()}${analyzed ? " · analysis run" : " · intel only"}`}
+                    style={{ fontSize: "10px", fontFamily: MONO, color: isLatest ? "#fff" : "#888", background: isLatest ? "rgba(204,0,0,0.14)" : "transparent", border: `1px solid ${isLatest ? RED : "#2a2a2a"}`, borderRadius: "3px", padding: "4px 9px", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span>v{i + 1} · {agoLabel(v.savedAt)} · {fill}/9</span>
+                    <span title={analyzed ? "analysis run" : "intel only, no analysis"} style={{ color: analyzed ? GREEN : "#666", fontSize: "9px" }}>{analyzed ? "◆" : "○"}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {!hasAnalysis ? (
           <div style={{ padding: "60px 0", textAlign: "center" }}>
             <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO }}>Analysis unavailable. Check your connection and try again.</div>
@@ -1197,13 +1431,30 @@ ${actionsHTML}
               </div>
             )}
 
-            {/* Matrix Health */}
-            {analysis.matrix_health_note && (
-              <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "36px", paddingBottom: "28px", borderBottom: "1px solid #1a1a1a" }}>
-                <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: RED, flexShrink: 0, marginTop: "5px" }} />
-                <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, fontStyle: "italic", lineHeight: "1.75" }}>{analysis.matrix_health_note}</div>
-              </div>
-            )}
+            {/* Matrix Health — a confidence gauge, not a briefing. Status word
+                reads in half a second; the note names the biggest hole in plain
+                sales language. */}
+            {(analysis.matrix_health || analysis.matrix_health_note) && (() => {
+              const raw = (analysis.matrix_health || "").toUpperCase();
+              const health = raw.includes("STRONG") ? { label: "STRONG FOUNDATION", color: GREEN }
+                : raw.includes("FLYING") || raw.includes("BLIND") ? { label: "FLYING BLIND", color: RED }
+                : raw.includes("PARTIAL") ? { label: "PARTIAL PICTURE", color: AMBER }
+                : { label: raw || "PARTIAL PICTURE", color: AMBER };
+              return (
+                <div style={{ marginBottom: "36px", paddingBottom: "28px", borderBottom: "1px solid #1a1a1a" }}>
+                  <div style={{ fontSize: "10px", color: "#888", fontFamily: CONDENSED, letterSpacing: "0.16em", fontWeight: "700", marginBottom: "10px" }}>HOW MUCH TO TRUST THIS READ</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "9px", background: "rgba(0,0,0,0.3)", border: `1px solid ${health.color}`, borderRadius: "3px", padding: "8px 14px" }}>
+                      <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: health.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: "16px", fontFamily: CONDENSED, fontWeight: "900", letterSpacing: "0.1em", color: health.color }}>{health.label}</span>
+                    </div>
+                  </div>
+                  {analysis.matrix_health_note && (
+                    <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, lineHeight: "1.75", marginTop: "12px", maxWidth: "760px" }}>{analysis.matrix_health_note}</div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* WHAT THE MATRIX IS TELLING YOU */}
             {((Array.isArray(analysis.briefing) ? analysis.briefing.length > 0 : !!analysis.briefing) || (analysis.findings||[]).length > 0) && (
@@ -1392,6 +1643,8 @@ export default function App() {
   const [cells, setCells] = useState(emptyMatrix);
   const [aiSources, setAiSources] = useState({});
   const [result, setResult] = useState(null);
+  const [versions, setVersions] = useState([]);        // dated snapshots under this code
+  const [reopenDiff, setReopenDiff] = useState(null);  // "what happened" shown once on reopen
   const [resumeInfo, setResumeInfo] = useState(null);
   const [hydrated, setHydrated] = useState(false);
   const [code, setCode] = useState(null);
@@ -1415,7 +1668,7 @@ export default function App() {
   // under the resume code so the Matrix reopens on any device.
   useEffect(() => {
     if (!hydrated || !deal || !code) return;
-    const session = { screen, deal, cells, aiSources, result, code };
+    const session = { screen, deal, cells, aiSources, result, code, versions };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     } catch { /* storage full or unavailable — fail quietly */ }
@@ -1429,17 +1682,29 @@ export default function App() {
     }, 1200);
 
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [hydrated, screen, deal, cells, aiSources, result, code]);
+  }, [hydrated, screen, deal, cells, aiSources, result, code, versions]);
 
   const resumeSession = () => {
+    const v = resumeInfo.versions || [];
     setDeal(resumeInfo.deal);
     setCells(resumeInfo.cells || emptyMatrix());
     setAiSources(resumeInfo.aiSources || {});
     setResult(resumeInfo.result || null);
+    setVersions(v);
+    setReopenDiff(buildReopenDiff(v, resumeInfo.cells));
     setCode(resumeInfo.code || genCode());
     setScreen(resumeInfo.screen && resumeInfo.screen !== "deal" ? resumeInfo.screen : "matrix");
     setResumeInfo(null);
   };
+
+  // On reopen: if there's at least one saved version, show what happened since
+  // the last saved snapshot. Pure diff, no model call.
+  function buildReopenDiff(v, liveCells) {
+    if (!v || v.length === 0) return null;
+    const lastSnap = v[v.length - 1];
+    const events = diffVersions(lastSnap.cells, liveCells || lastSnap.cells);
+    return { since: lastSnap.savedAt, events, versionCount: v.length };
+  }
 
   const discardSession = () => {
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
@@ -1451,8 +1716,29 @@ export default function App() {
     setCells(emptyMatrix());
     setAiSources({});
     setResult(null);
+    setVersions([]);
+    setReopenDiff(null);
     setCode(genCode());
     setScreen("matrix");
+  };
+
+  // Manual "Save version" — stamps the current boxes as a dated version WITHOUT
+  // running analysis (costs nothing). Analysis stays null on a manual version;
+  // it's purely "here's where the intel stood." On dedupe (boxes unchanged since
+  // the last snapshot) we keep that snapshot's analysis rather than nulling it,
+  // and just refresh its timestamp.
+  const saveManualVersion = (c, srcs) => {
+    setVersions(prev => {
+      const v = Array.isArray(prev) ? [...prev] : [];
+      const last = v[v.length - 1];
+      if (last && cellsEqual(last.cells, c)) {
+        v[v.length - 1] = { ...last, savedAt: new Date().toISOString(), cells: { ...c }, aiSources: { ...srcs } };
+        return v;
+      }
+      v.push({ savedAt: new Date().toISOString(), cells: { ...c }, aiSources: { ...srcs }, analysis: null });
+      return v;
+    });
+    setReopenDiff(null);
   };
 
   // Reopen a Matrix from any device using its resume code.
@@ -1461,10 +1747,13 @@ export default function App() {
     const full = clean.startsWith("SEMPER-") ? clean : `SEMPER-${clean}`;
     const session = await cloudLoad(full);
     if (!session) { setCodeError(true); return; }
+    const v = session.versions || [];
     setDeal(session.deal);
     setCells(session.cells || emptyMatrix());
     setAiSources(session.aiSources || {});
     setResult(session.result || null);
+    setVersions(v);
+    setReopenDiff(buildReopenDiff(v, session.cells));
     setCode(session.code || full);
     setResumeInfo(null);
     setScreen(session.screen && session.screen !== "deal" ? session.screen : "matrix");
@@ -1500,8 +1789,16 @@ export default function App() {
           setAiSources={setAiSources}
           code={code}
           cloudStatus={cloudStatus}
+          versions={versions}
+          reopenDiff={reopenDiff}
+          onDismissReopenDiff={() => setReopenDiff(null)}
+          onSaveVersion={saveManualVersion}
           onBack={() => setScreen("deal")}
           onComplete={(c, matrixText, analysis, srcs) => {
+            // Every completed analysis becomes a dated version. Pure storage.
+            const nextVersions = pushVersion(versions, c, srcs, analysis);
+            setVersions(nextVersions);
+            setReopenDiff(null); // consumed — the current run is now the latest
             setResult({ cells: c, matrixText, analysis, aiSources: srcs });
             setScreen("analysis");
           }}
@@ -1521,6 +1818,7 @@ export default function App() {
           cells={result?.cells}
           code={code}
           cloudStatus={cloudStatus}
+          versions={versions}
           onBack={() => setScreen("matrix")}
           onRedo={() => setScreen("matrix")}
         />
