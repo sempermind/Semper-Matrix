@@ -365,10 +365,12 @@ DISTRIBUTING WHAT YOU FIND across the 9 cells:
 - NEEDS|RESULTS (Resource Requirements): infer what budget, tools, or resources they'd need to hit their stated commitments. Mark inferred.
 
 RULES:
+- NEVER fabricate specific figures. Headcount, team size, revenue, budget, growth rates, dates: include a specific number ONLY if you found it in an actual source. Do not derive a number from another number (do not turn "$24.6M revenue" into "roughly a 35-person team"). Do not estimate company size, sales team size, or any count from role type or revenue. If you did not find the number, do not state one. A fabricated number that reads as fact is the single worst failure you can produce, because a rep will repeat it to someone who knows the truth.
+- If a figure would genuinely help but you only have an estimate, either leave it out or write it as an explicit estimate ("likely a small team, though headcount is not confirmed"), never as a hard number.
 - The six non-NEEDS cells must be filled from sourced web intel where it exists. Each gets its own source URL and label.
 - The three NEEDS cells are inference from what you found. Prefix intel with "Inferred:" and set source to "inferred".
 - If you genuinely found nothing for a sourced cell after real effort, leave it empty rather than padding it. An honest gap beats a fabricated fact.
-- Keep each cell's intel to 1-2 specific sentences. Facts, names, numbers, dates. No filler.
+- Keep each cell's intel to 1-2 specific sentences. Facts, names, numbers, dates you actually sourced. No filler.
 - Strip all citation tags from output.
 
 OUTPUT — return ONLY valid JSON, no markdown, no backticks, no preamble. Exactly this shape:
@@ -431,7 +433,11 @@ THE MATRIX (Framework 1) — the nerve center. A 9-box operating system. COLUMNS
 - Box 8 Missing Support (Reach/Need): whose support or approval they need but don't have.
 - Box 9 Resource Requirements (Results/Need): tools, budget, or capabilities that would solve their biggest problems.
 
-THE 12 MATRIX PATTERNS — this is your core analytical engine. You reason from these across cells to produce every finding. Recognizing a pattern is only useful if it changes what the rep does next, so each one carries a move. NEVER announce a pattern by name in your output; use its logic, speak in plain deal terms. Each pattern lists its box fingerprint, what it reveals, the business risk, the move, and what it feeds.
+THE 12 MATRIX PATTERNS — this is your core analytical engine. You reason from these across cells to produce every finding. Recognizing a pattern is only useful if it changes what the rep does next, so each one carries a move.
+
+ABSOLUTE OUTPUT RULE: the patterns are your PRIVATE reasoning. NEVER let them appear in what the rep reads. Do not name a pattern ("Authority Ceiling," "Coalition Risk"). Do not number a pattern ("P11," "P6," "Pattern 9," "pattern eleven fires here"). Do not reference the framework at all. The rep never learns a pattern exists. You use the pattern's logic silently and speak only the plain-deal insight it produced. If you catch yourself about to write "P" followed by a number, or any pattern label, stop and replace it with the actual insight in the rep's language. A single leaked "P11" makes the whole report read like machine output and breaks trust.
+
+Each pattern below lists its box fingerprint, what it reveals, the business risk, the move, and what it feeds.
 
 POLITICAL DYNAMICS
 1. Decision Authority vs. Actual Influence — Boxes 1 + 2. Feeds: Stakeholder Strategy. Cross what they can formally approve against who actually shapes the decision. When title and influence don't line up, a hidden power dynamic is driving the deal. RISK: selling to the wrong person and feeling good about it, because the meetings are pleasant and going nowhere; a signature is not the same as momentum. MOVE: if they have the title but weak influence, find the internal champion with real pull and map them; if they have influence but no title, stop seeking their approval and arm them to sell it upward for you.
@@ -547,6 +553,8 @@ THE RULE: Anything that is verifiable straight from the Matrix — their title, 
 USE THIS LANGUAGE, and vary it so no two interpretations open the same way: "The pattern suggests…", "The data points to…", "What we're seeing in the correlations is…", "The gap between X and Y suggests…", "This points to…", "One read of this is…", "It appears…", "This likely means…", "The signals here lean toward…". 
 
 NEVER write an interpretation as a flat declarative. Wrong: "Dick is threatened by the new VP." Right: "The pattern suggests Dick may see the new VP as a threat." Wrong: "She has no budget authority." Right: "The data points to her needing sign-off above her for a spend this size." If you catch yourself stating what someone feels, wants, fears, or intends as settled fact, stop and reframe it as a read. The only exception is a fact lifted verbatim from a populated Matrix cell.
+
+NUMBERS DISCIPLINE: only state a specific figure (headcount, team size, revenue, budget, growth rate, date) if that exact figure appears in a populated Matrix cell. Never derive or estimate a number and present it as fact. Do not turn a revenue figure into a team size, do not guess how many people are in a role or on a team, do not infer company size from anything. If a number is not in the Matrix and you find yourself wanting to state one, either leave it out or mark it plainly as an estimate the rep must verify ("a small sales team, though the exact size is not confirmed"). A confident wrong number destroys the rep's credibility the moment they repeat it to someone who knows the real figure.
 
 A rep should feel they are reading a sharp analyst's read they can confirm on the next call, not a biography. Write plainly enough that a busy rep gets it in one pass and can act on it today. No jargon, no box or pattern numbers, no theory.
 
@@ -988,7 +996,7 @@ function AnalysisLoader({ steps }) {
         <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar2 1.1s ease-in-out infinite", animationDelay: "0.18s" }} />
         <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar3 1.1s ease-in-out infinite", animationDelay: "0.36s" }} />
       </div>
-      <img src={LOGO} alt="Semper Selling" style={{ height: "40px", width: "auto", display: "block", margin: "0 auto 12px" }} />
+      <img src={LOGO} alt="Semper Selling" style={{ height: "72px", width: "auto", display: "block", margin: "0 auto 16px" }} />
       <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, letterSpacing: "0.06em" }}>Analyzing your intelligence...</div>
 
       {steps && steps.length > 0 && (
