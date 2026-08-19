@@ -11,6 +11,10 @@ const BORDER = "#2a2a2a";
 const MONO = "'IBM Plex Mono', monospace";
 const CONDENSED = "'Barlow Condensed', sans-serif";
 
+// Semper Selling logo, embedded as a data URI so the tool stays self-contained
+// (no external image dependency). Trimmed and downscaled from the source PNG.
+const LOGO = "data:image/png;base64,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";
+
 const STORAGE_KEY = "semper_matrix_session_v1";
 
 // ─── RESUME CODE + CLOUD SAVE ──────────────────
@@ -333,6 +337,54 @@ When you find nothing but can infer from role/company context:
 When you find nothing at all:
 {"found": false}`;
 
+// ─── SINGLE-RECON SCRAPE ──────────────────────────
+// One web call replaces six blind per-cell calls. It searches the COMPANY and
+// the PERSON as much as it needs, then distributes everything it found across
+// all nine cells in one shot. This is a GATHERING job, not an analysis job: it
+// collects clean facts. It does NOT reason about patterns or strategy — the
+// analysis brain does that afterward, so the scrape must stay factual.
+const RECON_SYSTEM_PROMPT = `You are a sales intelligence researcher for the Semper Selling® methodology. Your job is to research one stakeholder and their company thoroughly using web search, then organize what you found into a 9-cell Connection Intelligence Matrix.
+
+YOU ARE GATHERING FACTS, NOT ANALYZING. Do not interpret strategy, do not reason about sales patterns, do not editorialize. Collect specific, publicly verifiable information and place it in the right cell. The analysis happens later, by someone else.
+
+RESEARCH APPROACH (this order matters):
+1. START WITH THE COMPANY. Search the company first: recent news, funding, acquisitions, earnings, leadership changes, strategic initiatives, regulatory filings, product launches. Company-level intel is often the most reliable and it colors every cell about the person. Spend real effort here.
+2. THEN THE PERSON. Search the person by name plus company. Then reformulate: name plus their function, name plus a known initiative, the company leadership or team page, conference agendas, podcasts, trade press, interviews, bylined articles, regulatory or investor filings that name them.
+3. REFORMULATE WHEN EMPTY. If a search returns thin results, do NOT give up. Try a different query, a different source type, a different angle. A hard-to-find mid-level buyer usually takes three or four tries. Exhaust the angles before concluding nothing exists.
+4. GO WHERE THIS PERSON LEAVES A TRAIL. Different roles surface in different places: executives in earnings calls and press, technical leaders in conference talks and GitHub, sales leaders in LinkedIn and podcasts, compliance leaders in regulatory filings. Search the sources that fit this role.
+
+DISTRIBUTING WHAT YOU FIND across the 9 cells:
+- CURRENT STATE|ROLE (Decision Authority): their current title, scope, what they can approve, budget authority, reporting line.
+- CURRENT STATE|REACH (Influence Network): who they report to, work with, influence, or are influenced by; board seats, cross-functional ties.
+- CURRENT STATE|RESULTS (Performance Pressure): metrics, targets, or outcomes they're accountable for; company performance pressures on their function.
+- FUTURE STATE|ROLE (Career Trajectory): recent promotions, expanded scope, where they appear to be heading, ambitions they've signaled.
+- FUTURE STATE|REACH (Relationship Strategy): new alliances, partnerships, board or advisory roles, networks they're actively building.
+- FUTURE STATE|RESULTS (Public Commitments): specific goals, targets, or promises they've stated publicly in press, earnings, interviews, or posts.
+- NEEDS|ROLE (Capability Gaps): infer from the gap between their role and trajectory what authority, skills, or capability they likely lack. Mark inferred.
+- NEEDS|REACH (Missing Support): infer whose support or buy-in they likely need but don't yet have. Mark inferred.
+- NEEDS|RESULTS (Resource Requirements): infer what budget, tools, or resources they'd need to hit their stated commitments. Mark inferred.
+
+RULES:
+- The six non-NEEDS cells must be filled from sourced web intel where it exists. Each gets its own source URL and label.
+- The three NEEDS cells are inference from what you found. Prefix intel with "Inferred:" and set source to "inferred".
+- If you genuinely found nothing for a sourced cell after real effort, leave it empty rather than padding it. An honest gap beats a fabricated fact.
+- Keep each cell's intel to 1-2 specific sentences. Facts, names, numbers, dates. No filler.
+- Strip all citation tags from output.
+
+OUTPUT — return ONLY valid JSON, no markdown, no backticks, no preamble. Exactly this shape:
+{
+  "CURRENT STATE|ROLE": {"found": true, "intel": "...", "source": "https://...", "source_label": "Source · 2025"},
+  "CURRENT STATE|REACH": {"found": false},
+  "CURRENT STATE|RESULTS": {"found": true, "intel": "...", "source": "https://...", "source_label": "..."},
+  "FUTURE STATE|ROLE": {...},
+  "FUTURE STATE|REACH": {...},
+  "FUTURE STATE|RESULTS": {...},
+  "NEEDS|ROLE": {"found": true, "intel": "Inferred: ...", "source": "inferred", "source_label": "Inferred from role and trajectory"},
+  "NEEDS|REACH": {"found": true, "intel": "Inferred: ...", "source": "inferred", "source_label": "Inferred from role and trajectory"},
+  "NEEDS|RESULTS": {"found": true, "intel": "Inferred: ...", "source": "inferred", "source_label": "Inferred from role and trajectory"}
+}
+Every one of the nine keys must be present. Use {"found": false} for any sourced cell you couldn't fill.`;
+
 // ─── ANALYSIS PROMPT ──────────────────────────
 // Experience level is the lens that calibrates delivery. Same intelligence,
 // three different deliveries. Matches the Field Trainer's three levels.
@@ -379,12 +431,27 @@ THE MATRIX (Framework 1) — the nerve center. A 9-box operating system. COLUMNS
 - Box 8 Missing Support (Reach/Need): whose support or approval they need but don't have.
 - Box 9 Resource Requirements (Results/Need): tools, budget, or capabilities that would solve their biggest problems.
 
-MATRIX PATTERNS you read across cells (never announce them by name in output):
-- Role-Reach Disconnect: formal authority doesn't match real influence. Hidden power at work.
-- Vision Without Authority: future aspirations exceed their authority. They'll need executive sponsorship.
-- Career Reinvention: current-role limits + new relationship building + emerging support needs = a pivot. Align to the new direction, not the current title.
-- Political Operator: limited authority + wide networks + ambitious goals = operates through informal channels. Reach them there.
-- Capability-Connection Gap: skill deficit AND relationship gap in the same area = critical vulnerability. Position as the multi-dimensional fix.
+THE 12 MATRIX PATTERNS — this is your core analytical engine. You reason from these across cells to produce every finding. Recognizing a pattern is only useful if it changes what the rep does next, so each one carries a move. NEVER announce a pattern by name in your output; use its logic, speak in plain deal terms. Each pattern lists its box fingerprint, what it reveals, the business risk, the move, and what it feeds.
+
+POLITICAL DYNAMICS
+1. Decision Authority vs. Actual Influence — Boxes 1 + 2. Feeds: Stakeholder Strategy. Cross what they can formally approve against who actually shapes the decision. When title and influence don't line up, a hidden power dynamic is driving the deal. RISK: selling to the wrong person and feeling good about it, because the meetings are pleasant and going nowhere; a signature is not the same as momentum. MOVE: if they have the title but weak influence, find the internal champion with real pull and map them; if they have influence but no title, stop seeking their approval and arm them to sell it upward for you.
+2. Authority Ceiling — Boxes 1 + 9. Feeds: Stakeholder Strategy, Deal Defense Strategy. Cross what the solution will cost or require against what this person can approve alone. Box 9 implying real investment plus Box 1 showing limited authority means a level above them has not been engaged. RISK: selling at the wrong altitude; the warmest relationship with someone who cannot sign the check produces no deal. MOVE: get honest early about check size versus approval limit, build a clean path to the real approver led by your contact so it does not look like you went around them, and put "never engaged the real approver" on the Defense Strategy.
+3. Coalition Risk — Boxes 2 + 8. Feeds: Deal Defense Strategy. Cross who shapes this person's thinking against who has not bought in. The overlap is exactly where internal resistance will come from, in a room you are not in. RISK: this is the political map of the deal; it shows where the conversation turns against you when you are not there to defend it. MOVE: find the person or function that both influences your contact and has not been sold, and reach them before the internal conversation happens without you. Resistance handled early is cheap; resistance met at the approval meeting is usually fatal.
+
+STAKEHOLDER MOTIVATION
+4. Personal Motivation Driver — Boxes 3 + 4 + 6. Feeds: Opening Insight, iQ Questions, Legacy Lens. Find where what they are measured on, what they have publicly promised, and where they want their career to go all point at the same thing. That intersection is what they actually care about, underneath the stated business problem. RISK: this is the emotional center of the deal; it is what you sell to, not around. The business case is the cover story; this is the real one. MOVE: build the opening insight and the reframe on the intersection, not the surface pain. When the three point in different directions instead of converging, you are in Stated Goals vs. Real Goals and the move changes.
+5. Current State to Future State Gap — Boxes 1+2+3 (Current State row) vs 4+5+6 (Future State row). Feeds: Qualification, Forecast. Measure the distance between where this person is today and where they are trying to get. A wide gap means real urgency and motivation; a narrow gap means incremental and probably not a priority right now. RISK: your honest read on whether the deal is real or a someday, and whether you are a bridge they need or a vendor they will get around to. MOVE: size the gap before spending the quarter. Wide gap, lean in as the bridge because the urgency is theirs and it will pull the deal forward. Narrow gap, qualify it down or park it, because the timeline belongs to you, not them.
+6. Stated Goals vs. Real Goals — Boxes 3 + 4 + 6. Feeds: Legacy Lens, Positioning. Check whether what they are measured on, what they have publicly committed to, and where they want their career to go actually agree. When they diverge, the stated business goal is not the real motivation. RISK: you can be selling hard and well against the official objective while the person across the table is quietly optimizing for something else, and lose a deal you were sure you were winning. MOVE: when the three split, follow Box 4, because where someone wants their career to go usually beats what they are currently measured on. Reframe your value against where they are personally headed. This is the mirror of Personal Motivation Driver: there the three converge and you sell to the intersection, here they split and you follow the career.
+
+DEAL EXECUTION
+7. Primary Deal Vulnerabilities — Boxes 7 + 8 + 9 (the full Needs row). Feeds: Deal Defense Strategy. Look at what is missing across all three Needs cells at once. When capability, support, and resources are all thin at the same time, the deal is fragile no matter how good the relationship feels. RISK: this deal can die from the inside before you ever get a no, and a strong relationship hides it, which is what makes it dangerous. MOVE: take the thinnest of the three cells and build a concrete preventive action against it now. If Box 9 shows budget they do not have and Box 8 shows no executive sponsor, engineer the sponsor conversation now, do not diagnose the stall after the proposal goes quiet.
+8. Buying Momentum Assessment — Boxes 6 + 7 + 9. Feeds: Forecast. Cross what they have publicly committed to against whether they have the capability and resources to deliver it. A public commitment with no capability is someone who needs to act but may not be able to; with partial capability, someone who is close and needs the right solution to finish. RISK: an honest read on whether the deal has its own engine or whether you are the only one pushing it. MOVE: if you are the only one pushing, stop calling it committed on the forecast. A real public commitment sitting on partial capability is one of the best deals in the pipeline, so resource it like one.
+9. Timeline Credibility — Boxes 6 + 7 + 9. Feeds: Forecast. Same three boxes as Buying Momentum Assessment, different question: that one asks whether there is an engine, this asks whether the date is real. Check their stated deadline against whether the internal capability and resources exist to actually hit it. When those do not match, the timeline is aspirational, not a real date. RISK: this decides whether you build your forecast on their stated date or discount it and plan around the truth. MOVE: do not take the date at face value. If the deadline outruns their capability to hit it alone, the real date is later, or they need you to make it happen. One read fixes your forecast, the other hands you your urgency.
+
+GROWTH & COMPETITIVE POSITION
+10. Unengaged Stakeholder Risk — Boxes 2 + 5 + 8. Feeds: Stakeholder Strategy, Deal Defense Strategy. Pull every name and function that shows up across these three boxes, then check them against the people the rep has actually talked to. The gap is a list of people who matter to the deal and do not know the rep exists. RISK: the late-stage surprise is already sitting in the Matrix; the stakeholder who blindsides the rep in month four is usually visible in month one. MOVE: the names not yet engaged become the engagement plan. Put the most dangerous one on the Defense Strategy as a named risk, and ask the champion for a warm introduction now, while it is a favor, instead of later, when it is a rescue.
+11. Breakthrough Question Indicator — Boxes 3 + 7 + 9. Feeds: Opening Insight, iQ Questions. Find the sharpest tension point, where the pressure they are carrying connects most directly to the thing they are missing. That is where a single well-built question opens a conversation no competitor has bothered to have. RISK: this is not generic discovery; it is the one question this person has not been asked and will remember the rep for asking. MOVE: this is the iQ setup. Current Reality comes from Box 3, the missing piece from Boxes 7 and 9, and you build the question that makes the gap between them impossible to ignore.
+12. Competitive Vulnerability Window — Boxes 4 + 5. Feeds: Stakeholder Strategy, Competitive Strategy. Look for someone positioning for a bigger role while building new external relationships at the same time. That combination signals a person open to new vendors as part of their own repositioning. RISK: opportunity and threat ride in on the same signal. It is the way in if the rep speaks to where they are going; it is the exposure if a competitor gets there first with a career-narrative pitch. MOVE: sell to the job they want, not the job they have, and do it now rather than later. Put "a competitor walks in with a career pitch" on the Defense Strategy and move faster than on a static account, because a person in motion is a person a rival can also read.
 
 HOW THE MATRIX FEEDS THE ANALYSIS:
 - DEFENSE STRATEGY (Framework 3): project the deal six months out, assume it was lost, map why. Every vulnerability maps to a Matrix cell. Wrong pain = Current/Results. Surprise stakeholder = Future/Reach. Budget assumption = Needs. Rate by probability and impact, protect the top few.
@@ -773,7 +840,7 @@ function DealScreen({ onComplete, resumeInfo, onResume, onDiscard, onResumeCode,
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
       <div style={{ width: "100%", maxWidth: "560px" }}>
         <div style={{ marginBottom: "32px" }}>
-          <div style={{ fontSize: "11px", color: RED, fontFamily: MONO, letterSpacing: "0.14em", marginBottom: "8px" }}>SEMPER SELLING®</div>
+          <img src={LOGO} alt="Semper Selling" style={{ height: "34px", width: "auto", display: "block", marginBottom: "12px" }} />
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
             <div style={{ fontSize: "36px", fontWeight: "900", color: "#fff", fontFamily: CONDENSED, letterSpacing: "0.06em", lineHeight: 1.1 }}>CONNECTION INTELLIGENCE<br />MATRIX</div>
             <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginTop: "2px", opacity: 0.9 }}>
@@ -921,7 +988,7 @@ function AnalysisLoader({ steps }) {
         <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar2 1.1s ease-in-out infinite", animationDelay: "0.18s" }} />
         <div style={{ width: "22px", background: "linear-gradient(to top, #880000, #FF2222)", borderRadius: "2px 2px 0 0", animation: "bar3 1.1s ease-in-out infinite", animationDelay: "0.36s" }} />
       </div>
-      <div style={{ fontSize: "22px", color: RED, fontFamily: CONDENSED, fontWeight: "900", letterSpacing: "0.14em", marginBottom: "10px" }}>SEMPER SELLING®</div>
+      <img src={LOGO} alt="Semper Selling" style={{ height: "40px", width: "auto", display: "block", margin: "0 auto 12px" }} />
       <div style={{ fontSize: "13px", color: "#fff", fontFamily: MONO, letterSpacing: "0.06em" }}>Analyzing your intelligence...</div>
 
       {steps && steps.length > 0 && (
@@ -1018,39 +1085,61 @@ function MatrixScreen({ deal, setDeal, cells, setCells, aiSources, setAiSources,
     }
   };
 
-  // ── AI SEARCH — batched 3 at a time so a full room doesn't hit rate limits ──
+  // ── AI SEARCH — one recon call researches company + person, fills all 9 cells ──
   const handleSearch = async () => {
     setSearching(true);
-    setSearchProgress("Searching public sources...");
+    setSearchProgress("Researching the company and stakeholder...");
 
-    const webKeys = [];
-    const inferKeys = [];
-    MATRIX_ROWS.forEach(row => MATRIX_COLS.forEach(col => {
-      const entry = { key: `${row}|${col}`, row, col };
-      (row === "NEEDS" ? inferKeys : webKeys).push(entry);
-    }));
+    const reconUser = `Research this stakeholder and their company, then fill the 9-cell Matrix.
 
+STAKEHOLDER: ${deal.prospect}
+ROLE: ${deal.role}
+COMPANY: ${deal.company}${deal.opportunity ? `\nCONTEXT (what the rep may sell / the opening): ${deal.opportunity}` : ""}
+
+Research the company first, then the person. Reformulate searches that come up empty. Then return the JSON object with all nine cells.${needsRepContext ? `\n\nWhen inferring the three NEEDS cells: ${needsRepContext.trim()}` : ""}`;
+
+    let parsed = null;
+    try {
+      const resp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 3000,
+          system: RECON_SYSTEM_PROMPT,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 8 }],
+          messages: [{ role: "user", content: reconUser }],
+        }),
+      });
+      const data = await resp.json();
+      const textBlocks = (data.content || []).filter(b => b.type === "text");
+      const joined = textBlocks.map(b => b.text).join("\n");
+      const cleaned = joined.replace(/<cite[^>]*>|<\/cite>/gi, "").replace(/```json|```/g, "").trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) { try { parsed = JSON.parse(jsonMatch[0]); } catch { parsed = null; } }
+    } catch { parsed = null; }
+
+    setSearchProgress("Organizing what we found...");
+
+    // Map the recon object into the per-cell result shape the review UI expects.
+    // A partial or failed return degrades gracefully: any missing/empty cell
+    // becomes a clean {found:false}, never a broken run.
     const results = [];
-    let completed = 0;
-    const total = webKeys.length + inferKeys.length;
-
-    // Inference cells have no web round trip, so fire all three at once.
-    const inferPromise = Promise.all(inferKeys.map(({ key, row, col }) => searchOneCell(key, row, col)))
-      .then(r => { completed += r.length; setSearchProgress(`Searching... ${completed} of ${total} complete`); return r; });
-
-    // Web cells run concurrently in a wider batch; 6 at once is fine for one rep.
-    const BATCH = 6;
-    const webResultsNested = [];
-    for (let i = 0; i < webKeys.length; i += BATCH) {
-      const batch = webKeys.slice(i, i + BATCH);
-      const batchResults = await Promise.all(batch.map(({ key, row, col }) => searchOneCell(key, row, col)));
-      webResultsNested.push(...batchResults);
-      completed += batch.length;
-      setSearchProgress(`Searching... ${completed} of ${total} complete`);
-    }
-
-    const inferResults = await inferPromise;
-    results.push(...webResultsNested, ...inferResults);
+    MATRIX_ROWS.forEach(row => MATRIX_COLS.forEach(col => {
+      const key = `${row}|${col}`;
+      const existing = cells[key].trim();
+      let result = { found: false };
+      const cell = parsed && parsed[key];
+      if (cell && cell.found && cell.intel && String(cell.intel).trim()) {
+        result = {
+          found: true,
+          intel: String(cell.intel).replace(/<[^>]*>/g, "").trim(),
+          source: cell.source || "inferred",
+          source_label: cell.source_label || (String(cell.intel).startsWith("Inferred") ? "Inferred from role and trajectory" : "Web source"),
+        };
+      }
+      results.push({ key, row, col, existing, result });
+    }));
 
     setSearching(false);
     setSearchProgress(null);
