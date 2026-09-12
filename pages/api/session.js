@@ -1,73 +1,58 @@
-// api/session.js
-// Saves and loads a rep's Matrix session by resume code.
-// Storage: Upstash Redis (the "KV" integration in the Vercel Marketplace).
-// Provisioning the store auto-injects the env vars below — no code change needed.
-// If the store isn't set up yet, this returns 503 and the app quietly falls back
-// to this-device localStorage, so nothing breaks while you're setting it up.
-
-const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-
-// Sessions expire after 90 days of no updates — keeps the free tier tidy.
-// Every save resets the clock, so an actively-used Matrix never expires.
-const TTL_SECONDS = 60 * 60 * 24 * 90;
-
-// Cap stored payload size (defensive — a Matrix session is a few KB at most).
-const MAX_BYTES = 512 * 1024;
-
-async function redis(command) {
-  const resp = await fetch(REDIS_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${REDIS_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(command),
-  });
-  if (!resp.ok) throw new Error(`redis ${resp.status}`);
-  return resp.json();
-}
-
-function validCode(code) {
-  return typeof code === "string" && /^SEMPER-[A-Z0-9]{4,8}$/.test(code.toUpperCase());
-}
+// pages/api/session.js — Field Trainer opportunity store
+// ─────────────────────────────────────────────────────────────────────────────
+// The Field Trainer's own project has no working store wired to /api/session,
+// which is why reopen-by-code failed here while it works in the Matrix tool.
+// Rather than stand up a second store, this route forwards every save and
+// reopen to the Matrix tool's already-working /api/session. That's a plain
+// server-to-server call — no CORS, nothing to configure, and the Matrix tool
+// is not touched. A code saved in the Field Trainer lands in the same store the
+// Matrix tool uses, so it reopens in both apps.
+//
+// The front end (index.jsx) needs NO changes — it still calls /api/session on
+// this same origin exactly as before.
+//
+// ▼▼▼ THE ONLY LINE TO CHECK ▼▼▼
+// This must be the address of your WORKING Matrix app's session endpoint.
+// If your Matrix tool lives somewhere other than semper-matrix.vercel.app,
+// change this one line to match it.
+const MATRIX_API = "https://semper-matrix.vercel.app/api/session";
+// ▲▲▲ ───────────────────────── ▲▲▲
 
 export default async function handler(req, res) {
-  if (!REDIS_URL || !REDIS_TOKEN) {
-    // Storage not provisioned yet — app falls back to local save.
-    return res.status(503).json({ error: "storage_not_configured" });
-  }
-
   try {
     if (req.method === "GET") {
-      const code = (req.query.code || "").toString().toUpperCase();
-      if (!validCode(code)) return res.status(400).json({ error: "bad_code" });
-      const out = await redis(["GET", `matrix:${code}`]);
-      if (!out || out.result == null) return res.status(404).json({ error: "not_found" });
-      let session;
-      try { session = JSON.parse(out.result); } catch { return res.status(500).json({ error: "corrupt" }); }
-      return res.status(200).json({ session });
+      const code = (req.query.code || "").toString();
+      if (!code) return res.status(400).json({ session: null, error: "missing code" });
+
+      const r = await fetch(`${MATRIX_API}?code=${encodeURIComponent(code)}`);
+      const data = await r.json().catch(() => ({ session: null }));
+      // Pass the session straight back in the shape the front end expects.
+      return res.status(200).json({ session: data.session ?? null });
     }
 
     if (req.method === "POST") {
-      let body = req.body;
-      if (typeof body === "string") { try { body = JSON.parse(body); } catch { body = {}; } }
-      const { code, session } = body || {};
-      if (!validCode(code)) return res.status(400).json({ error: "bad_code" });
-      if (!session || typeof session !== "object") return res.status(400).json({ error: "missing_session" });
+      const body =
+        typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
+      const { code, session } = body;
+      if (!code || !session) {
+        return res.status(400).json({ ok: false, error: "missing code or session" });
+      }
 
-      const payload = JSON.stringify(session);
-      if (payload.length > MAX_BYTES) return res.status(413).json({ error: "too_large" });
-
-      const key = `matrix:${code.toUpperCase()}`;
-      await redis(["SET", key, payload]);
-      await redis(["EXPIRE", key, TTL_SECONDS]);
+      const r = await fetch(MATRIX_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, session }),
+      });
+      if (!r.ok) return res.status(502).json({ ok: false, error: "upstream save failed" });
       return res.status(200).json({ ok: true });
     }
 
     res.setHeader("Allow", "GET, POST");
-    return res.status(405).json({ error: "method_not_allowed" });
+    return res.status(405).json({ ok: false, error: "method not allowed" });
   } catch (e) {
-    return res.status(500).json({ error: "server_error" });
+    // Degrade gracefully so the app falls back to device-local storage instead
+    // of throwing at the rep.
+    if (req.method === "GET") return res.status(200).json({ session: null });
+    return res.status(500).json({ ok: false, error: "proxy error" });
   }
 }
